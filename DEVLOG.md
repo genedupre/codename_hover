@@ -111,3 +111,87 @@ Next experiment:
 
 - Load the compiled vertex and fragment shader assets, create the graphics
   pipeline for the active swapchain format, and draw three vertices.
+
+### 2026-08-10 — first SDL_GPU triangle
+
+Build/revision: `efe8ed9` plus the pending triangle change.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS, Intel Arc Vulkan
+driver.
+
+Input device: Laptop keyboard and window controls; no game controller tested.
+
+Track/scenario and settings: Build-generated SPIR-V vertex and fragment shaders,
+three vertices generated from `SV_VertexID`, 1280x720 resizable high-density
+window, Vulkan SDL_GPU backend, debug validation enabled. Tested through forced
+native Wayland and automatic X11/XWayland.
+
+Good:
+
+- Both backends loaded the offline-compiled shader assets, created the graphics
+  pipeline, rendered the colored triangle over the dark blue clear color, and
+  exited cleanly.
+- The owner confirmed the triangle looked correct during the interactive test.
+- SDL reported no GPU validation error during either run.
+- The runtime does not need a vertex buffer for this bootstrap triangle.
+- A deliberately missing shader asset fails startup with the exact expected path
+  and SDL filesystem error.
+
+Needs work:
+
+- Controller hotplugging and a controller exit action are not implemented.
+- Frame-time and FPS diagnostics are not implemented.
+
+Measurements:
+
+- No performance claim is recorded; this scene only proves the shader and
+  graphics-pipeline path.
+
+Next experiment:
+
+- Add controller discovery, hotplug handling, and a controller exit action while
+  preserving simultaneous keyboard input.
+
+### 2026-08-10 — presentation frame diagnostics
+
+Build/revision: `efe8ed9` plus the pending triangle and timing changes.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS, Intel Arc Vulkan
+driver, internal 1920x1200 display at approximately 59.88 Hz.
+
+Input device: Laptop keyboard and window controls; controller work explicitly
+deferred until before Steam Deck testing.
+
+Track/scenario and settings: Colored triangle, 1280x720 resizable high-density
+window, X11/XWayland, Vulkan SDL_GPU backend, debug validation enabled, default
+SDR/VSync swapchain.
+
+Good:
+
+- Once-per-second diagnostics report presented FPS plus average and worst frame
+  interval in both the log and window title.
+- Minimized or otherwise skipped swapchain frames reset the sample instead of
+  manufacturing a large restore-time spike.
+- The timing run exited cleanly without a reported GPU validation error.
+
+Needs work:
+
+- Controller input remains intentionally deferred.
+- These CPU-side presentation-loop intervals do not separate CPU submission,
+  GPU execution, and compositor/presentation latency.
+
+Measurements:
+
+- Stable samples were approximately 59.7-60.1 FPS with 16.64-16.75 ms average
+  frame intervals under the default VSync swapchain.
+- Worst intervals varied by sample and included approximately 17.7-26.8 ms in
+  the otherwise steady portion of the run. Short interaction/resize periods
+  produced different cadence and are not treated as performance results.
+- This empty bootstrap scene is a diagnostics verification, not a game
+  performance claim.
+
+Next experiment:
+
+- Commit the completed laptop triangle/timing checkpoint, then choose between
+  controller work and the first Steam Deck deployment preparation. Controller
+  support is required before calling the Deck bootstrap complete.

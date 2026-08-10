@@ -18,10 +18,12 @@ sessions. Complete one step before expanding the next:
   choose pinned compatible revisions and the minimum host dependencies.
 - [x] Scaffold the minimal C++23, CMake, and Ninja project plus its offline shader
   build path.
-- [ ] Implement the SDL3/SDL_GPU bootstrap executable incrementally through a
-  rendered triangle, keyboard/controller exit input, timing, and clear errors.
-- [ ] Validate the bootstrap locally with compiler warnings and GPU validation
-  enabled.
+- [x] Implement the SDL3/SDL_GPU bootstrap executable incrementally through a
+  rendered triangle, keyboard exit input, timing, and clear errors.
+- [x] Validate the laptop graphics bootstrap locally with compiler warnings and
+  GPU validation enabled.
+- [ ] Add controller discovery, hotplugging, and an exit action. The owner
+  deferred this on 2026-08-10; complete it before Steam Deck testing.
 - [ ] Establish and verify incremental deployment to Steam Deck.
 - [ ] Add initial Linux CI, then protect Windows portability with an early compile
   job.
