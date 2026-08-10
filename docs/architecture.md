@@ -12,18 +12,26 @@ separate engine repository is not planned.
 | --- | --- |
 | Language | C++23 |
 | Build | CMake and Ninja |
-| Platform/window/input/audio | SDL3 |
+| Platform/window/input/audio | SDL3 3.4.10 for bootstrap |
 | Graphics abstraction | SDL_GPU |
 | Shader source | HLSL |
-| Shader translation | SDL_shadercross, offline during builds |
+| Shader translation | Pinned SDL_shadercross host CLI, offline during builds |
 | Development assets | Programmatic primitives first; Blender and glTF/GLB later |
 | Version control | Git |
 | Primary toolchain | Clang and clangd on Linux |
 | Formatting/static analysis | clang-format and focused clang-tidy checks |
 | Debug UI | Minimal custom debug text; Dear ImGui only if debug tooling earns it |
 
-Third-party libraries should be vendored or pinned through a reproducible mechanism
-and wrapped only when doing so isolates volatility or a real platform boundary.
+SDL is a Git submodule at an exact release commit and is included with
+`add_subdirectory`. Bootstrap builds SDL statically and disables SDL tests and
+install targets. FetchContent is not the baseline because it adds configure-time
+network access and is less convenient for later platform-specific SDL forks.
+
+SDL_shadercross is a separate build-time tool, not a game library or runtime
+dependency. Use the exact official build recorded in `development-hardware.txt`.
+Third-party libraries should otherwise be vendored or pinned through a
+reproducible mechanism and wrapped only when doing so isolates volatility or a
+real platform boundary.
 
 ## Runtime boundaries
 
@@ -95,6 +103,10 @@ Keep the public rendering vocabulary small: device/frame lifecycle, buffers,
 meshes, textures, pipelines, cameras, instanced draws, and debug/UI draws. SDL_GPU
 owns cross-API translation. Do not add direct Vulkan, D3D12, or Metal paths unless
 a measured, shipping requirement cannot be met through SDL_GPU.
+
+Author shaders in HLSL and compile them before runtime. Produce SPIR-V for Vulkan,
+DXIL for D3D12, and MSL for Metal. The first Linux triangle needs only SPIR-V, but
+the source and build interface must not assume SPIR-V is the only eventual output.
 
 See `rendering.md` for presentation and performance requirements.
 

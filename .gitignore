@@ -1,0 +1,9 @@
+/build/
+/.tools/
+/compile_commands.json
+
+# Editor and platform-local files
+/.vscode/
+*.user
+*.swp
+*~

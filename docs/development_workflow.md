@@ -19,6 +19,26 @@ The repository should document exact supported versions once bootstrap work prov
 them. Do not install a large dependency set before the corresponding milestone
 needs it.
 
+## Bootstrap commands
+
+After installing the packages recorded in `development-hardware.txt`, initialize
+the pinned source dependency and host shader tool:
+
+```bash
+git submodule update --init --recursive
+tools/fetch-shadercross-linux-x64.sh
+```
+
+Configure and build with the checked-in presets:
+
+```bash
+cmake --preset development
+cmake --build --preset development
+```
+
+Generated build files and local host tools stay under ignored `build/` and
+`.tools/` directories. CMake must not download dependencies during configure.
+
 ## Inner development loop
 
 1. Choose one observable behavior from `roadmap.md`.
@@ -32,9 +52,10 @@ needs it.
 8. Commit a coherent, reviewable result.
 
 The desired eventual Deck loop is one documented command or small script that
-builds, incrementally deploys, launches, and makes logs easy to retrieve. Use the
-official SteamOS Devkit Client workflow if it fits the development environment;
-otherwise keep any SSH/rsync alternative minimal and explicit.
+builds, incrementally deploys with rsync, launches, and makes logs easy to retrieve.
+The Deck is initially a playtest target, not a compilation host. A Valve Devkit
+Client workflow can still be reconsidered if it offers a concrete advantage over
+the planned SSH/rsync path.
 
 ## Git practice
 

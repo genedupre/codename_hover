@@ -31,6 +31,9 @@ Deck. Do not jump ahead to full game systems until that path works.
   Steam, and future console plans.
 - [Development workflow](docs/development_workflow.md) — tools, build/test loop,
   assets, CI, and deployment.
+- [Environment audit](docs/environment_audit.md) — verified laptop hardware,
+  graphics state, installed tools, and bootstrap prerequisites.
+- [Development hardware](docs/development-hardware.txt) — laptop and, later, Steam Deck inventory.
 - [Roadmap](docs/roadmap.md) — incremental milestones from first triangle to a
   vertical slice.
 - [AI collaboration](docs/ai_collaboration.md) — responsibilities, patch sizing,
@@ -72,6 +75,7 @@ then read the smallest applicable set:
 | GPU code, shaders, visuals, resolutions, frame pacing, or UI rendering | `docs/rendering.md` |
 | Linux, Steam Deck, Windows, macOS, Steam, Xbox, or PlayStation | `docs/platforms_and_release.md` |
 | Local tools, builds, tests, CI, asset processing, or Deck deployment | `docs/development_workflow.md` |
+| Current laptop capabilities, missing tools, GPU state, or audit caveats | `docs/environment_audit.md` |
 | Choosing or completing the next milestone | `docs/roadmap.md` |
 | AI-authored changes and human review boundaries | `docs/ai_collaboration.md` |
 | Schedule, budget, feasibility, or project risk | `docs/feasibility_costs_and_risks.md` |

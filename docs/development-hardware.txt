@@ -1,0 +1,247 @@
+CODENAME HOVER DEVELOPMENT HARDWARE
+Last updated: 2026-07-27
+
+This file is the durable inventory of machines used to build and test the game.
+Do not include serial numbers, asset tags, or other unique private identifiers.
+
+
+DEVELOPMENT LAPTOP
+
+Role
+  Primary development, compilation, local testing, and Steam Deck deployment host.
+
+System
+  Manufacturer: HP
+  Model: HP ZBook Studio 16 inch G11 Mobile Workstation PC
+  Architecture: x86-64
+  Operating system: Ubuntu 24.04.4 LTS
+  Kernel at audit: Linux 6.14.0-37-generic
+  Desktop session: GNOME on Wayland, with XWayland available
+
+Processor and memory
+  CPU: Intel Core Ultra 7 155H
+  CPU topology: 16 cores, 22 logical CPUs
+  Maximum reported CPU frequency: 4.8 GHz
+  Usable memory: approximately 30 GiB
+  Swap: 30 GiB
+
+Storage
+  Primary drive: SK hynix PC801 HFS001TEJ9X101N NVMe SSD
+  Drive size: approximately 953.9 GiB
+  Project filesystem free space at audit: approximately 394 GiB
+
+Graphics
+  Integrated GPU: Intel Meteor Lake-P Intel Arc Graphics
+  Active kernel driver: i915
+  Vulkan userspace driver: Mesa Intel open-source driver 25.2.8
+  Reported Intel Vulkan API version: 1.4.318
+  Reported Intel Vulkan conformance: 1.4.0.0
+  Bootstrap status: verified as visible through Vulkan in the real desktop session
+
+  Discrete GPU: NVIDIA GeForce RTX 4070 Max-Q / Laptop GPU
+  Status at audit: detected on PCI but not exposed as a Vulkan device
+  Driver state at audit: no NVIDIA driver owned the device; NVIDIA tools absent
+  Project impact: not a blocker; develop and test initially on the Intel GPU
+
+Display
+  Internal panel: 1920x1200
+  Refresh rate at audit: approximately 59.88 Hz
+
+Input
+  Built-in keyboard and touchpad: present
+  Development game controller: none connected during the audit
+
+Environment note
+  The managed coding sandbox hides GPU, display, USB, and input device access.
+  Interactive graphics and controller checks may require explicit permission to
+  run outside that sandbox. Sandbox-only Vulkan checks can incorrectly show only
+  the llvmpipe software renderer.
+
+
+BOOTSTRAP SOFTWARE BASELINE
+Decision date: 2026-07-27
+
+Scope
+  This is the selected host and dependency baseline for the first SDL_GPU triangle.
+  It is recorded here alongside the machines that use it. Nothing in this section
+  was installed during Step 2.
+
+SDL runtime dependency
+  Project: SDL3, including SDL_GPU
+  Selected release: 3.4.10
+  Git tag: release-3.4.10
+  Git commit: 8e37db5e797b6167f3a00d697d816a684bd259c7
+  Official source archive SHA-256:
+    12b34280415ec8418c864408b93d008a20a6530687ee613d60bfbd20411f2785
+  Repository location planned: external/SDL
+  Acquisition: Git submodule pinned to the exact commit
+  CMake integration: add_subdirectory(... EXCLUDE_FROM_ALL)
+  Link mode for bootstrap: static SDL
+  Disabled for game builds: SDL tests, SDL test library, install targets, docs
+
+Shader compiler host tool
+  Project: SDL_shadercross
+  Role: offline build tool only; never a game runtime dependency
+  Release situation: the official repository has no releases or tags
+  Pinned source commit: e55cf5e31ced6f3d1be5cc6d0c50e99384f9f4ba
+  Declared minimum SDL version: 3.1.3; satisfied by selected SDL 3.4.10
+  Official GitHub Actions workflow: Build, run 28236415347
+  Official Linux artifact ID: 7904781252
+  Official artifact name: SDL3_shadercross-linux-x64
+  Artifact package: SDL3_shadercross-3.0.0-linux-x64.tar.gz
+  Artifact package SHA-256:
+    252de380a0a4c6b5479419be3e4f00e419805fc99a41bae840096f0708ce3e15
+  shadercross executable SHA-256:
+    03fbad1d5484253a06451c6d6c630d0624111f9665d35267d6f6f6fc4f9ec92b
+  Artifact status when checked: available and not expired
+  Local status: installed and hash-verified under .tools on 2026-07-27
+  Location: repository-local ignored tools directory
+  Runtime setup for tool: use the libraries bundled beside the executable
+
+  The acquisition script created in Step 3 must verify these hashes. GitHub
+  Actions artifacts can expire. If unavailable, build the exact pinned source
+  commit recursively with its recorded submodules or use a project-owned verified
+  mirror. Never replace it with a newer main-branch artifact implicitly.
+
+Shader asset policy
+  Authored source: HLSL
+  Linux and Steam Deck output: SPIR-V for Vulkan
+  Windows output: DXIL for D3D12
+  macOS output: MSL for Metal
+  Bootstrap output: SPIR-V only
+  Compilation time: build time, never game startup
+  Entry point default: main
+  Vertex attributes: follow SDL_GPU HLSL TEXCOORD semantic requirements
+  Resource bindings: follow SDL_GPU's documented per-stage spaces and sets
+
+Selected package baseline
+  Installation status: installed and verified on 2026-07-27.
+
+  Existing packages are left in this list when they are part of the baseline;
+  installation should let apt skip them normally.
+
+  Core build tools:
+    build-essential
+    git
+    cmake
+    ninja-build
+    pkg-config
+    clang
+    clangd
+    clang-format
+    clang-tidy
+
+  Wayland and X11 window/input development support:
+    libwayland-dev
+    wayland-protocols
+    libdecor-0-dev
+    libxkbcommon-dev
+    libegl1-mesa-dev
+    libx11-dev
+    libxext-dev
+    libxrandr-dev
+    libxcursor-dev
+    libxfixes-dev
+    libxi-dev
+    libxss-dev
+    libxtst-dev
+
+  Desktop, device, and controller support:
+    libudev-dev
+    libdbus-1-dev
+    libibus-1.0-dev
+    libusb-1.0-0-dev
+
+  GPU diagnostics required by the bootstrap definition of done:
+    vulkan-tools
+    vulkan-validationlayers
+
+Observed Ubuntu candidates before installation
+  Clang family: Ubuntu clang 18 meta packages
+  Ninja: 1.11.1
+  Vulkan validation layers: 1.3.275.0
+
+Installed development tool versions
+  Clang/clang++: 18.1.3
+  clangd: 18.1.3
+  clang-format: 18.1.3
+  clang-tidy: 18.1.3
+  Ninja: 1.11.1
+  Vulkan validation layers: 1.3.275.0
+
+Packages deliberately deferred
+  Audio development backends such as libasound2-dev, libpulse-dev, and
+  libpipewire-0.3-dev are deferred until the audio milestone. Direct KMS/DRM/GBM,
+  OpenGL/GLES, less common audio backends, RenderDoc, LLDB, ccache, mold, Neovim,
+  and evtest are not required to draw the first triangle. Add them only when a
+  milestone or diagnostic need justifies them.
+
+  This package set is a project-specific minimum inferred from the official SDL
+  all-features list and the first milestone's needs. During Step 3, inspect SDL's
+  CMake feature summary. Wayland, X11, udev/USB, and the Vulkan GPU path must be
+  present; optional omitted backends should be understood rather than ignored.
+
+Step 3 scaffold verification
+  A temporary GCC 13 / Unix Makefiles build was used before host package
+  installation. It built pinned SDL statically, compiled both HLSL shaders to
+  valid SPIR-V, linked the bootstrap executable without a dynamic SDL dependency,
+  and ran the executable successfully. SDL's normal desktop configuration also
+  correctly refused to configure while Wayland/X11 development support was
+  incomplete.
+
+  After installing the selected package baseline, the real development preset
+  configured and built successfully with Clang 18.1.3 and Ninja 1.11.1. SDL was
+  compiled statically with Wayland, X11, Vulkan/SDL_GPU, Linux haptics, HIDAPI,
+  udev, and USB controller support. Both HLSL bootstrap shaders compiled to valid
+  SPIR-V binaries, the executable linked without a dynamic SDL dependency, and
+  the bootstrap executable ran successfully. clang-format and clang-tidy checks
+  also passed for the current game source.
+
+  The Wayland protocol generator emitted non-fatal DTD validation warnings for
+  newer `deprecated-since` attributes. Generation and compilation still
+  completed. Audio-backend development libraries remain deliberately deferred,
+  so SDL's configuration warnings for ALSA, PipeWire, and PulseAudio are expected
+  until the audio milestone.
+
+Official sources checked
+  https://github.com/libsdl-org/SDL/releases/tag/release-3.4.10
+  https://wiki.libsdl.org/SDL3/README-linux
+  https://wiki.libsdl.org/SDL3/README-cmake
+  https://wiki.libsdl.org/SDL3/CategoryGPU
+  https://wiki.libsdl.org/SDL3/SDL_GPUShaderFormat
+  https://wiki.libsdl.org/SDL3/SDL_CreateGPUShader
+  https://wiki.libsdl.org/SDL3/FAQDevelopment
+  https://github.com/libsdl-org/SDL_shadercross
+  https://github.com/libsdl-org/SDL_shadercross/actions/runs/28236415347
+
+
+STEAM DECK
+
+Role
+  Primary handheld Linux target and controller, performance, UI, suspend/resume,
+  and couch-play test device.
+
+Development policy
+  Initially used only to run and playtest laptop-built code.
+  Not an initial compilation or code-authoring host.
+  Planned deployment transport: rsync over the local network.
+  A development workflow on the Deck itself may be considered later.
+  The first Deck audit will validate runtime and deployment requirements rather
+  than mirror the laptop compiler and shader-tool setup. Build tools are installed
+  on the Deck only if on-device development is deliberately adopted later.
+
+Inventory status
+  Hardware and SteamOS details have not been collected yet.
+
+Details to record later
+  Model and generation:
+  LCD or OLED:
+  Storage capacity:
+  SteamOS version:
+  Kernel version:
+  Display resolution and refresh modes:
+  APU/GPU details reported by SteamOS:
+  Available storage for development builds:
+  Network/deployment connection:
+  Devkit pairing status:
+  Relevant peripherals or docks:

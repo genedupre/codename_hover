@@ -6,6 +6,26 @@ Advance through playable evidence, not subsystem count. Do not begin content
 production or platform services while fundamental handling and deployment remain
 unproven. Time estimates are planning ranges, not deadlines.
 
+## Bootstrap execution checklist
+
+This checklist preserves the agreed implementation order across development
+sessions. Complete one step before expanding the next:
+
+- [x] Audit the Linux laptop: OS, CPU/GPU, display session, Vulkan, controller
+  visibility, toolchain, storage, and repository state. See
+  `environment_audit.md` for the 2026-07-27 result.
+- [x] Verify current first-party SDL3, SDL_GPU, and SDL_shadercross guidance, then
+  choose pinned compatible revisions and the minimum host dependencies.
+- [x] Scaffold the minimal C++23, CMake, and Ninja project plus its offline shader
+  build path.
+- [ ] Implement the SDL3/SDL_GPU bootstrap executable incrementally through a
+  rendered triangle, keyboard/controller exit input, timing, and clear errors.
+- [ ] Validate the bootstrap locally with compiler warnings and GPU validation
+  enabled.
+- [ ] Establish and verify incremental deployment to Steam Deck.
+- [ ] Add initial Linux CI, then protect Windows portability with an early compile
+  job.
+
 ## Internal bootstrap: first triangle
 
 Scope:

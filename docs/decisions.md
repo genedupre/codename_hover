@@ -68,6 +68,62 @@ content must not be copied.
 eventually, we should be able to have mod support (eg people can make changes to the game, add vechiles, maps)
 how this would like, we can decide later.
 
+### D-010: Pin stable SDL as a Git submodule
+
+Status: accepted for bootstrap on 2026-07-27.
+
+Use SDL 3.4.10 at commit `8e37db5e797b6167f3a00d697d816a684bd259c7`
+under `external/SDL` and include it with CMake `add_subdirectory`. Build the static
+SDL target and disable SDL tests and install targets for the game build.
+
+Git submodules make the exact source visible and avoid downloading dependencies
+during CMake configure. They also give a clearer future replacement point for
+platform-specific SDL forks than a hard-coded FetchContent declaration.
+
+### D-011: Use SDL_shadercross only as a pinned host tool
+
+Status: accepted for bootstrap on 2026-07-27.
+
+SDL_shadercross has no official releases or tags. Pin source commit
+`e55cf5e31ced6f3d1be5cc6d0c50e99384f9f4ba` and use the official Linux x64
+artifact from Actions run `28236415347` for that commit. The verified artifact and
+executable hashes are recorded in `development-hardware.txt`. That pinned source
+declares SDL 3.1.3 as its minimum, which is satisfied by the selected SDL 3.4.10.
+
+Do not link SDL_shadercross into the game or compile shaders at runtime. Keep the
+tool and its bundled libraries in a repository-local ignored tools directory. An
+acquisition script must verify hashes. If the GitHub artifact expires, build the
+same pinned commit with its recorded submodules or publish a verified project-owned
+mirror; do not silently move to current `main`.
+
+### D-012: Compile HLSL into backend-specific shader assets offline
+
+Status: accepted for bootstrap on 2026-07-27.
+
+HLSL is the only authored shader language. SDL_shadercross produces SPIR-V for the
+Linux/Vulkan build, DXIL for Windows/D3D12, and MSL for macOS/Metal. The game loads
+only compiled assets matching the selected SDL_GPU backend. The first triangle
+compiles SPIR-V only, while the build interface preserves the other outputs for
+later platform jobs.
+
+### D-013: Keep controller and keyboard/mouse input active together
+
+Status: accepted.
+
+Support the broad range of controllers exposed through SDL's gamepad APIs,
+including hotplugging and rumble where hardware capabilities allow it. Rumble must
+be optional and must never carry gameplay information that has no visual or audio
+equivalent.
+
+Keyboard and mouse input remain active at the same time as every connected
+controller. Never force the player into an exclusive input mode or require a menu
+toggle to change devices. UI glyphs may follow the last meaningful input, but that
+presentation choice must not disable or discard events from other devices.
+
+Test representative Xbox, PlayStation, Nintendo-style, Steam Deck, and common
+generic controllers as hardware becomes available. Device-specific features are
+progressive enhancements rather than requirements for basic play.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.
@@ -85,11 +141,6 @@ Deferred means “do not implement now,” not “silently rejected.”
 
 ## Open technical questions
 
-- Which SDL3, SDL_shadercross, and supporting dependency revisions should bootstrap
-  pin?
-- Should dependencies be Git submodules, CMake FetchContent with locked revisions,
-  or another reproducible local mechanism?
-- What shader build toolchain gives the cleanest Linux, Windows, and Deck workflow?
 - Which spline type and coordinate-frame transport behave best through loops,
   corkscrews, and closed-track seams?
 - Is 120 Hz the right simulation rate after latency, feel, and CPU tests?

@@ -1,0 +1,49 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "development",
+      "displayName": "Linux development",
+      "description": "Clang, Ninja, symbols, and compile commands",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/development",
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Linux release",
+      "description": "Clang and Ninja optimized build",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "development",
+      "configurePreset": "development"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    }
+  ]
+}
