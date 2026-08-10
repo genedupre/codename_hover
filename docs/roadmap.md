@@ -28,6 +28,12 @@ sessions. Complete one step before expanding the next:
 - [ ] Add initial Linux CI, then protect Windows portability with an early compile
   job.
 
+Sequencing note (2026-08-10): the owner is currently working only on the laptop.
+Controller completion and Steam Deck audit/deployment are deferred until the Deck
+is available. Continue laptop work with small Version 0.0.1 checkpoints in the
+meantime. This changes execution order only; it does not remove either bootstrap
+requirement.
+
 ## Internal bootstrap: first triangle
 
 Scope:
@@ -46,6 +52,11 @@ triangle renders without known validation errors, and the build/deploy steps are
 documented and reproducible.
 
 ## Version 0.0.1: drivable prototype
+
+Progress (2026-08-10): the stationary camera, perspective projection, primitive
+vehicle mesh, indexed GPU upload, and resize-safe depth target are implemented and
+verified on the laptop. Keyboard movement is next. Controller parity and Steam
+Deck verification remain required but deferred until the Deck is available.
 
 Scope:
 

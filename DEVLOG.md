@@ -195,3 +195,47 @@ Next experiment:
 - Commit the completed laptop triangle/timing checkpoint, then choose between
   controller work and the first Steam Deck deployment preparation. Controller
   support is required before calling the Deck bootstrap complete.
+
+### 2026-08-10 — first stationary 3D scene
+
+Build/revision: `26e4b44` plus the pending 3D scene change.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS, Intel Arc Vulkan
+driver.
+
+Input device: Laptop keyboard and window controls; controller work remains
+explicitly deferred until before Steam Deck testing.
+
+Track/scenario and settings: Code-generated 11-vertex low-poly hovercraft above a
+rectangular pad, fixed elevated perspective camera, resize-dependent projection,
+D16 depth target, 1280x720 resizable high-density window, X11/XWayland, Vulkan
+SDL_GPU backend, and debug validation enabled.
+
+Good:
+
+- The owner confirmed that the colorful hovercraft, dark pad, and elevated 3D
+  perspective were all visible as intended.
+- The owner confirmed the scene retained the expected appearance when the window
+  was resized.
+- Indexed vertex-buffer drawing, per-frame camera uniforms, and depth testing all
+  worked together without a reported GPU validation error.
+- Focused deterministic tests cover view placement, left-handed orientation,
+  zero-to-one projection depth, identity transforms, and matrix composition.
+
+Needs work:
+
+- The vehicle and camera are stationary; this checkpoint intentionally contains
+  no movement or simulation yet.
+- The pad is only a depth and perspective reference, not the generated test
+  track.
+- Controller input and Steam Deck deployment remain deferred, not completed.
+
+Measurements:
+
+- No new performance claim is recorded. This run verifies the 3D rendering path,
+  and the existing title diagnostics remained visible during the test.
+
+Next experiment:
+
+- Add a small keyboard input-state layer and move the vehicle freely in 3D before
+  introducing track-relative constraints or fixed-step racing physics.

@@ -232,6 +232,9 @@ Development policy
 
 Inventory status
   Hardware and SteamOS details have not been collected yet.
+  Collection and deployment were explicitly deferred on 2026-08-10 while the
+  owner is working only on the development laptop. Resume this audit when the
+  Deck is available; do not infer its details or mirror laptop build packages.
 
 Details to record later
   Model and generation:

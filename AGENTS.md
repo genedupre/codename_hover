@@ -16,6 +16,12 @@ one SDL3/SDL_GPU executable that draws a triangle, handles controller input, exi
 cleanly, reports frame timing, and runs on both the development laptop and Steam
 Deck. Do not jump ahead to full game systems until that path works.
 
+The laptop portion of that milestone is verified. As of 2026-08-10, Steam Deck
+deployment and controller completion are explicitly deferred until the Deck is
+available. Laptop-only work may proceed into the first 3D/drivable-prototype
+checkpoints, but do not mark the cross-device bootstrap complete or forget the
+controller and Deck exit criteria.
+
 ## Documentation
 
 - [Agent instructions](AGENTS.md) — concise project context and task-based reading

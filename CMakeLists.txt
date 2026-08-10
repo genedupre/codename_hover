@@ -24,26 +24,41 @@ set(SDL_INSTALL_TESTS OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(external/SDL EXCLUDE_FROM_ALL)
 
-add_executable(codename_hover src/main.cpp)
-target_link_libraries(codename_hover PRIVATE SDL3::SDL3)
+function(hover_enable_warnings target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4 /WX /permissive-)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+endfunction()
 
-if(MSVC)
-    target_compile_options(codename_hover PRIVATE /W4 /WX /permissive-)
-else()
-    target_compile_options(codename_hover PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_library(hover_math STATIC src/hover_math.cpp)
+target_include_directories(hover_math PUBLIC src)
+hover_enable_warnings(hover_math)
+
+add_executable(codename_hover src/main.cpp)
+target_link_libraries(codename_hover PRIVATE SDL3::SDL3 hover_math)
+hover_enable_warnings(codename_hover)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(hover_math_tests tests/math_tests.cpp)
+    target_link_libraries(hover_math_tests PRIVATE hover_math)
+    hover_enable_warnings(hover_math_tests)
+    add_test(NAME hover_math_tests COMMAND hover_math_tests)
 endif()
 
 include(cmake/HoverShaders.cmake)
 
 hover_add_shader(
-    NAME triangle_vertex
-    SOURCE shaders/triangle.vert.hlsl
+    NAME vehicle_vertex
+    SOURCE shaders/vehicle.vert.hlsl
     STAGE vertex
 )
 
 hover_add_shader(
-    NAME triangle_fragment
-    SOURCE shaders/triangle.frag.hlsl
+    NAME vehicle_fragment
+    SOURCE shaders/vehicle.frag.hlsl
     STAGE fragment
 )
 
