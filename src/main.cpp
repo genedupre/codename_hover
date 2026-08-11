@@ -1,12 +1,15 @@
 #include <SDL3/SDL.h>
 
+#include "assets/generated/presentation_pad.hpp"
+#include "assets/generated/prototype_01_mesh.hpp"
+#include "game/ships/prototype_01.hpp"
 #include "hover_math.hpp"
+#include "render/gpu_mesh.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>
 #include <memory>
 #include <string>
 
@@ -32,24 +35,6 @@ struct GpuDeviceDeleter {
 };
 
 using GpuDevice = std::unique_ptr<SDL_GPUDevice, GpuDeviceDeleter>;
-
-struct GpuBufferDeleter {
-    SDL_GPUDevice* device;
-
-    void operator()(SDL_GPUBuffer* buffer) const noexcept { SDL_ReleaseGPUBuffer(device, buffer); }
-};
-
-using GpuBuffer = std::unique_ptr<SDL_GPUBuffer, GpuBufferDeleter>;
-
-struct GpuTransferBufferDeleter {
-    SDL_GPUDevice* device;
-
-    void operator()(SDL_GPUTransferBuffer* buffer) const noexcept {
-        SDL_ReleaseGPUTransferBuffer(device, buffer);
-    }
-};
-
-using GpuTransferBuffer = std::unique_ptr<SDL_GPUTransferBuffer, GpuTransferBufferDeleter>;
 
 struct GpuTextureDeleter {
     SDL_GPUDevice* device;
@@ -97,125 +82,6 @@ class GpuWindowClaim final {
   private:
     SDL_GPUDevice* device_;
     SDL_Window* window_;
-};
-
-struct Vertex {
-    hover::math::Vec3 position;
-    hover::math::Vec3 color;
-};
-
-static_assert(sizeof(Vertex) == sizeof(float) * 6);
-
-constexpr std::array vehicle_vertices{
-    Vertex{{0.0F, 0.0F, 2.2F}, {1.0F, 0.22F, 0.08F}},
-    Vertex{{-0.85F, -0.15F, 0.65F}, {0.55F, 0.12F, 0.95F}},
-    Vertex{{0.85F, -0.15F, 0.65F}, {0.05F, 0.82F, 1.0F}},
-    Vertex{{-1.1F, -0.1F, -1.35F}, {0.12F, 0.28F, 0.9F}},
-    Vertex{{1.1F, -0.1F, -1.35F}, {0.95F, 0.12F, 0.62F}},
-    Vertex{{0.0F, 0.55F, 0.0F}, {1.0F, 0.9F, 0.35F}},
-    Vertex{{0.0F, -0.35F, 0.0F}, {0.03F, 0.18F, 0.28F}},
-    Vertex{{-3.2F, -0.55F, -2.5F}, {0.08F, 0.16F, 0.22F}},
-    Vertex{{3.2F, -0.55F, -2.5F}, {0.12F, 0.22F, 0.28F}},
-    Vertex{{3.2F, -0.55F, 3.5F}, {0.08F, 0.16F, 0.22F}},
-    Vertex{{-3.2F, -0.55F, 3.5F}, {0.12F, 0.22F, 0.28F}},
-};
-
-constexpr std::array<std::uint16_t, 36> vehicle_indices{
-    0, 5, 1, 0, 2, 5, 1, 5, 3, 3, 5, 4, 4, 5, 2, 0, 1, 6,
-    0, 6, 2, 1, 3, 6, 3, 4, 6, 4, 2, 6, 7, 8, 9, 7, 9, 10,
-};
-
-class VehicleMesh final {
-  public:
-    explicit VehicleMesh(SDL_GPUDevice* device)
-        : device_(device), vertex_buffer_(nullptr, GpuBufferDeleter{device}),
-          index_buffer_(nullptr, GpuBufferDeleter{device}) {}
-
-    VehicleMesh(const VehicleMesh&) = delete;
-    VehicleMesh& operator=(const VehicleMesh&) = delete;
-
-    [[nodiscard]] bool create() {
-        const Uint32 vertex_bytes = static_cast<Uint32>(sizeof(vehicle_vertices));
-        const Uint32 index_bytes = static_cast<Uint32>(sizeof(vehicle_indices));
-
-        SDL_GPUBufferCreateInfo vertex_info{};
-        vertex_info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-        vertex_info.size = vertex_bytes;
-        vertex_buffer_.reset(SDL_CreateGPUBuffer(device_, &vertex_info));
-        if (!vertex_buffer_) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                         "Could not create the vehicle vertex buffer: %s", SDL_GetError());
-            return false;
-        }
-
-        SDL_GPUBufferCreateInfo index_info{};
-        index_info.usage = SDL_GPU_BUFFERUSAGE_INDEX;
-        index_info.size = index_bytes;
-        index_buffer_.reset(SDL_CreateGPUBuffer(device_, &index_info));
-        if (!index_buffer_) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                         "Could not create the vehicle index buffer: %s", SDL_GetError());
-            return false;
-        }
-
-        SDL_GPUTransferBufferCreateInfo transfer_info{};
-        transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-        transfer_info.size = vertex_bytes + index_bytes;
-        GpuTransferBuffer transfer_buffer{SDL_CreateGPUTransferBuffer(device_, &transfer_info),
-                                          GpuTransferBufferDeleter{device_}};
-        if (!transfer_buffer) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                         "Could not create the mesh transfer buffer: %s", SDL_GetError());
-            return false;
-        }
-
-        void* mapped_data = SDL_MapGPUTransferBuffer(device_, transfer_buffer.get(), false);
-        if (mapped_data == nullptr) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not map the mesh transfer buffer: %s",
-                         SDL_GetError());
-            return false;
-        }
-        std::memcpy(mapped_data, vehicle_vertices.data(), vertex_bytes);
-        std::memcpy(static_cast<std::byte*>(mapped_data) + vertex_bytes, vehicle_indices.data(),
-                    index_bytes);
-        SDL_UnmapGPUTransferBuffer(device_, transfer_buffer.get());
-
-        SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device_);
-        if (command_buffer == nullptr) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                         "Could not acquire a mesh upload command buffer: %s", SDL_GetError());
-            return false;
-        }
-
-        SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
-        const SDL_GPUTransferBufferLocation vertex_source{transfer_buffer.get(), 0};
-        const SDL_GPUBufferRegion vertex_destination{vertex_buffer_.get(), 0, vertex_bytes};
-        SDL_UploadToGPUBuffer(copy_pass, &vertex_source, &vertex_destination, false);
-
-        const SDL_GPUTransferBufferLocation index_source{transfer_buffer.get(), vertex_bytes};
-        const SDL_GPUBufferRegion index_destination{index_buffer_.get(), 0, index_bytes};
-        SDL_UploadToGPUBuffer(copy_pass, &index_source, &index_destination, false);
-        SDL_EndGPUCopyPass(copy_pass);
-
-        if (!SDL_SubmitGPUCommandBuffer(command_buffer)) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not submit the mesh upload: %s",
-                         SDL_GetError());
-            return false;
-        }
-
-        SDL_Log("Uploaded %zu vertices and %zu indices for the prototype 3D scene.",
-                vehicle_vertices.size(), vehicle_indices.size());
-        return true;
-    }
-
-    [[nodiscard]] SDL_GPUBuffer* vertex_buffer() const { return vertex_buffer_.get(); }
-    [[nodiscard]] SDL_GPUBuffer* index_buffer() const { return index_buffer_.get(); }
-    [[nodiscard]] Uint32 index_count() const { return static_cast<Uint32>(vehicle_indices.size()); }
-
-  private:
-    SDL_GPUDevice* device_;
-    GpuBuffer vertex_buffer_;
-    GpuBuffer index_buffer_;
 };
 
 class DepthTarget final {
@@ -403,14 +269,16 @@ GraphicsPipeline create_vehicle_pipeline(SDL_GPUDevice* device, SDL_Window* wind
 
     SDL_GPUVertexBufferDescription vertex_buffer_description{};
     vertex_buffer_description.slot = 0;
-    vertex_buffer_description.pitch = static_cast<Uint32>(sizeof(Vertex));
+    vertex_buffer_description.pitch = static_cast<Uint32>(sizeof(hover::render::Vertex));
     vertex_buffer_description.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
 
     const std::array vertex_attributes{
         SDL_GPUVertexAttribute{0, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-                               static_cast<Uint32>(offsetof(Vertex, position))},
+                               static_cast<Uint32>(offsetof(hover::render::Vertex, position))},
         SDL_GPUVertexAttribute{1, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-                               static_cast<Uint32>(offsetof(Vertex, color))},
+                               static_cast<Uint32>(offsetof(hover::render::Vertex, normal))},
+        SDL_GPUVertexAttribute{2, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+                               static_cast<Uint32>(offsetof(hover::render::Vertex, color))},
     };
 
     SDL_GPUGraphicsPipelineCreateInfo pipeline_info{};
@@ -445,8 +313,21 @@ GraphicsPipeline create_vehicle_pipeline(SDL_GPUDevice* device, SDL_Window* wind
     return pipeline;
 }
 
+void draw_mesh(SDL_GPURenderPass* render_pass, const hover::render::GpuMesh& mesh) {
+    const SDL_GPUBufferBinding vertex_binding{mesh.vertex_buffer(), 0};
+    const SDL_GPUBufferBinding index_binding{mesh.index_buffer(), 0};
+    SDL_BindGPUVertexBuffers(render_pass, 0, &vertex_binding, 1);
+    SDL_BindGPUIndexBuffer(render_pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+    SDL_DrawGPUIndexedPrimitives(render_pass, mesh.index_count(), 1, 0, 0, 0);
+}
+
+struct SceneMeshes {
+    const hover::render::GpuMesh& ship;
+    const hover::render::GpuMesh& presentation_pad;
+};
+
 RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
-                          SDL_GPUGraphicsPipeline* pipeline, const VehicleMesh& mesh,
+                          SDL_GPUGraphicsPipeline* pipeline, const SceneMeshes& meshes,
                           DepthTarget& depth_target) {
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     if (command_buffer == nullptr) {
@@ -515,12 +396,8 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
     SDL_GPURenderPass* render_pass =
         SDL_BeginGPURenderPass(command_buffer, &color_target, 1, &depth_target_info);
     SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
-
-    const SDL_GPUBufferBinding vertex_binding{mesh.vertex_buffer(), 0};
-    const SDL_GPUBufferBinding index_binding{mesh.index_buffer(), 0};
-    SDL_BindGPUVertexBuffers(render_pass, 0, &vertex_binding, 1);
-    SDL_BindGPUIndexBuffer(render_pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
-    SDL_DrawGPUIndexedPrimitives(render_pass, mesh.index_count(), 1, 0, 0, 0);
+    draw_mesh(render_pass, meshes.presentation_pad);
+    draw_mesh(render_pass, meshes.ship);
     SDL_EndGPURenderPass(render_pass);
 
     if (!SDL_SubmitGPUCommandBuffer(command_buffer)) {
@@ -560,11 +437,33 @@ int run() {
         return EXIT_FAILURE;
     }
 
-    VehicleMesh vehicle_mesh{gpu_device.get()};
-    if (!vehicle_mesh.create()) {
+    const hover::game::ShipDefinition& ship_definition =
+        hover::game::ships::prototype_01_definition();
+    if (!hover::game::is_valid(ship_definition)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Ship definition '%.*s' is invalid.",
+                     static_cast<int>(ship_definition.id.size()), ship_definition.id.data());
         return EXIT_FAILURE;
     }
+
+    hover::render::GpuMesh ship_mesh{gpu_device.get()};
+    if (!ship_mesh.upload(hover::assets::generated::make_prototype_01_mesh(),
+                          ship_definition.visual_mesh_id)) {
+        return EXIT_FAILURE;
+    }
+
+    hover::render::GpuMesh presentation_pad{gpu_device.get()};
+    if (!presentation_pad.upload(hover::assets::generated::make_presentation_pad_mesh(),
+                                 "generated/presentation_pad")) {
+        return EXIT_FAILURE;
+    }
+    const SceneMeshes scene_meshes{ship_mesh, presentation_pad};
     DepthTarget depth_target{gpu_device.get()};
+
+    SDL_Log("Loaded ship '%.*s': %.0f m/s top speed, %.0f energy, %.2f relative mass.",
+            static_cast<int>(ship_definition.display_name.size()),
+            ship_definition.display_name.data(),
+            ship_definition.handling.maximum_forward_speed_metres_per_second,
+            ship_definition.collision.maximum_energy, ship_definition.collision.relative_mass);
 
     const char* video_driver = SDL_GetCurrentVideoDriver();
     SDL_Log("Window created with the %s video driver. Press Escape or close the window to exit.",
@@ -587,7 +486,7 @@ int run() {
 
         if (running) {
             const RenderResult render_result = render_frame(
-                gpu_device.get(), window.get(), vehicle_pipeline.get(), vehicle_mesh, depth_target);
+                gpu_device.get(), window.get(), vehicle_pipeline.get(), scene_meshes, depth_target);
             if (render_result == RenderResult::failed) {
                 return EXIT_FAILURE;
             }

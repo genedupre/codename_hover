@@ -239,3 +239,51 @@ Next experiment:
 
 - Add a small keyboard input-state layer and move the vehicle freely in 3D before
   introducing track-relative constraints or fixed-step racing physics.
+
+### 2026-08-11 — Prototype 01 ship and asset boundary
+
+Build/revision: `4ccc91a` plus the pending Prototype 01 change.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS, Intel Arc Vulkan
+driver.
+
+Input device: Laptop keyboard and window controls; the ship is stationary and no
+driving input was tested.
+
+Track/scenario and settings: Generated Prototype 01 above a separately uploaded
+center-striped presentation pad, fixed elevated camera, flat directional lighting,
+1280x720 resizable high-density X11/XWayland window, Vulkan SDL_GPU backend, and
+debug validation enabled.
+
+Good:
+
+- The owner confirmed that the result was recognizably a ship.
+- The generated ship, presentation pad, and generic 32-bit indexed `GpuMesh`
+  uploads rendered together and exited cleanly.
+- The 96-triangle ship has unit flat normals and fits completely inside its
+  declared local collider according to deterministic tests.
+- Gameplay definition data is now independent from mesh creation, allowing later
+  generated or Blender/GLB visuals to use the same runtime upload path.
+
+Needs work:
+
+- The owner explicitly expects substantial visual improvement; the silhouette,
+  colors, canopy, wings, engines, name, and proportions are not final art.
+- Handling, drift, collider, mass, energy, and damage values exist as provisional
+  data but have no simulation behavior yet.
+- There is no per-object model transform, collider visualization, ship roster, or
+  GLB loader.
+
+Measurements:
+
+- Prototype 01 uploads 288 face-duplicated vertices and 288 indices (96
+  triangles). The presentation pad uploads 18 vertices and 18 indices.
+- The long interactive development run varied broadly around 115-144 presented
+  FPS with approximately 6.95-8.67 ms sampled averages and interaction-related
+  worst-frame spikes. This stationary debug scene is not a representative
+  performance benchmark or product claim.
+
+Next experiment:
+
+- Add fixed-step keyboard movement, an interpolated ship model transform, and a
+  following camera while keeping the visual mesh and gameplay definition separate.

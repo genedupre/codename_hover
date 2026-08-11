@@ -1,0 +1,34 @@
+#include "game/ships/prototype_01.hpp"
+
+namespace hover::game::ships {
+
+const ShipDefinition& prototype_01_definition() {
+    static constexpr ShipDefinition definition{
+        .id = "prototype_01",
+        .display_name = "Prototype 01",
+        .visual_mesh_id = prototype_01_mesh_id,
+        .handling =
+            {
+                .maximum_forward_speed_metres_per_second = 260.0F,
+                .forward_acceleration_metres_per_second_squared = 78.0F,
+                .braking_deceleration_metres_per_second_squared = 105.0F,
+                .steering_rate_radians_per_second = 1.65F,
+                .normal_lateral_grip_per_second = 7.0F,
+                .drift_lateral_grip_per_second = 2.4F,
+            },
+        .collision =
+            {
+                .local_bounds =
+                    {
+                        .center = {0.0F, 0.10F, 0.21F},
+                        .half_extents = {2.0F, 0.58F, 2.72F},
+                    },
+                .relative_mass = 1.0F,
+                .maximum_energy = 100.0F,
+                .collision_damage_multiplier = 1.0F,
+            },
+    };
+    return definition;
+}
+
+} // namespace hover::game::ships

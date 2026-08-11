@@ -28,6 +28,21 @@ Candidate vehicle state includes:
 The exact model is not yet specified. Add only the state required by observable
 handling behavior, and record important tuning results in `../DEVLOG.md`.
 
+Ship types use explicit definitions rather than deriving gameplay behavior from
+their render meshes. The current definition boundary supports:
+
+- a stable ship identity and visual-mesh reference;
+- a local-space box collider sized for that ship;
+- maximum forward speed, acceleration, braking, and steering rate;
+- separate normal and drift lateral-grip rates;
+- relative collision mass, maximum energy, and a collision-damage multiplier.
+
+These are direct simulation parameters rather than menu rating bars. Prototype 01
+establishes provisional balanced values so later ships can be meaningfully larger,
+heavier, more agile, drift-oriented, fragile, or durable. Tune them through
+controlled driving and collision tests once the corresponding behavior exists;
+the initial constants are not claims about final balance.
+
 ## Track representation
 
 The working model is a sampled path with a stable local coordinate frame:

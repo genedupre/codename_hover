@@ -129,6 +129,18 @@ Track-specific metadata may initially accompany a mesh as explicit data. Add a
 compiled runtime format only after profiling shows a real loading or deployment
 need.
 
+All mesh sources converge on the same CPU-side `MeshData` value containing the
+renderer's vertex and index data. `GpuMesh` validates and uploads that value, but
+does not know whether it came from generated C++, a future GLB loader, or another
+approved asset source. This is the interchange boundary inside the runtime; do not
+make the renderer depend on ship-specific generators or Blender concepts.
+
+A ship's gameplay `ShipDefinition` is separate from its visual mesh. It contains a
+stable identity and visual-mesh key plus handling and collision profiles. The
+collision profile owns local-space bounds, relative mass, energy, and collision
+damage response. Replacing a generated prototype mesh with a Blender-authored GLB
+must not silently replace or derive these gameplay values.
+
 ## Error handling and diagnostics
 
 - Fail startup with a clear message when required GPU or asset initialization

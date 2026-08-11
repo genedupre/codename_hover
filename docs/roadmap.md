@@ -53,10 +53,12 @@ documented and reproducible.
 
 ## Version 0.0.1: drivable prototype
 
-Progress (2026-08-10): the stationary camera, perspective projection, primitive
-vehicle mesh, indexed GPU upload, and resize-safe depth target are implemented and
-verified on the laptop. Keyboard movement is next. Controller parity and Steam
-Deck verification remain required but deferred until the Deck is available.
+Progress (2026-08-11): the stationary camera, perspective projection, generic
+indexed mesh upload, resize-safe depth target, and first generated ship are
+implemented and verified on the laptop. Prototype 01 also has a separate,
+provisional handling/collision definition; its behavior is not simulated yet.
+Keyboard movement is next. Controller parity and Steam Deck verification remain
+required but deferred until the Deck is available.
 
 Scope:
 

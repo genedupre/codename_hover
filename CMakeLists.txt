@@ -36,8 +36,30 @@ add_library(hover_math STATIC src/hover_math.cpp)
 target_include_directories(hover_math PUBLIC src)
 hover_enable_warnings(hover_math)
 
+add_library(hover_render STATIC src/render/gpu_mesh.cpp)
+target_include_directories(hover_render PUBLIC src)
+target_link_libraries(hover_render PUBLIC SDL3::SDL3 hover_math)
+hover_enable_warnings(hover_render)
+
+add_library(hover_assets STATIC
+    src/assets/generated/mesh_builder.cpp
+    src/assets/generated/presentation_pad.cpp
+    src/assets/generated/prototype_01_mesh.cpp
+)
+target_include_directories(hover_assets PUBLIC src)
+target_link_libraries(hover_assets PUBLIC hover_math)
+hover_enable_warnings(hover_assets)
+
+add_library(hover_game STATIC
+    src/game/ship_definition.cpp
+    src/game/ships/prototype_01.cpp
+)
+target_include_directories(hover_game PUBLIC src)
+target_link_libraries(hover_game PUBLIC hover_math)
+hover_enable_warnings(hover_game)
+
 add_executable(codename_hover src/main.cpp)
-target_link_libraries(codename_hover PRIVATE SDL3::SDL3 hover_math)
+target_link_libraries(codename_hover PRIVATE SDL3::SDL3 hover_assets hover_game hover_render)
 hover_enable_warnings(codename_hover)
 
 include(CTest)
@@ -46,6 +68,11 @@ if(BUILD_TESTING)
     target_link_libraries(hover_math_tests PRIVATE hover_math)
     hover_enable_warnings(hover_math_tests)
     add_test(NAME hover_math_tests COMMAND hover_math_tests)
+
+    add_executable(hover_ship_tests tests/ship_tests.cpp)
+    target_link_libraries(hover_ship_tests PRIVATE hover_assets hover_game)
+    hover_enable_warnings(hover_ship_tests)
+    add_test(NAME hover_ship_tests COMMAND hover_ship_tests)
 endif()
 
 include(cmake/HoverShaders.cmake)

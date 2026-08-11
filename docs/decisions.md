@@ -124,6 +124,21 @@ Test representative Xbox, PlayStation, Nintendo-style, Steam Deck, and common
 generic controllers as hardware becomes available. Device-specific features are
 progressive enhancements rather than requirements for basic play.
 
+### D-014: Separate ship definitions from visual mesh sources
+
+Status: accepted on 2026-08-11.
+
+Each ship has an explicit gameplay definition containing its identity, visual-mesh
+key, handling parameters, local collider, collision mass, energy, and damage
+response. Gameplay values are not inferred from render geometry.
+
+Generated C++ geometry and future Blender/GLB assets both produce the same generic
+CPU `MeshData`, which is then uploaded as a renderer-owned `GpuMesh`. Adding,
+removing, or replacing a visual source must not require a new renderer path or
+silently change the associated gameplay definition. Do not add a generator class
+hierarchy or proprietary asset database until a concrete source requires more than
+this value boundary.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.
