@@ -2,9 +2,11 @@
 
 #include "assets/generated/presentation_pad.hpp"
 #include "assets/generated/prototype_01_mesh.hpp"
+#include "assets/generated/track_surface_mesh.hpp"
 #include "core/fixed_step.hpp"
 #include "core/launch_options.hpp"
 #include "game/ships/prototype_01.hpp"
+#include "game/tracks/oval_track.hpp"
 #include "game/vehicle_simulation.hpp"
 #include "hover_math.hpp"
 #include "input/player_input.hpp"
@@ -12,6 +14,7 @@
 #include "render/gpu_mesh.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -365,8 +368,51 @@ void draw_mesh(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_p
 
 struct SceneMeshes {
     const hover::render::GpuMesh& ship;
-    const hover::render::GpuMesh& presentation_pad;
+    const hover::render::GpuMesh& world;
 };
+
+struct ScenarioSetup {
+    hover::render::MeshData world_mesh;
+    std::string_view world_mesh_id;
+    hover::game::VehicleState initial_vehicle_state;
+};
+
+ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
+    switch (scenario) {
+    case hover::core::DevelopmentScenario::runway:
+        return ScenarioSetup{
+            hover::assets::generated::make_presentation_pad_mesh(),
+            "generated/presentation_pad",
+            {},
+        };
+    case hover::core::DevelopmentScenario::oval: {
+        constexpr hover::game::tracks::OvalTrackDefinition oval_definition{
+            .straight_length_metres = 600.0F,
+            .turn_radius_metres = 180.0F,
+            .half_width_metres = 24.0F,
+            .elevation_metres = -0.62F,
+        };
+        constexpr std::uint32_t sample_count = 512U;
+        const hover::game::SampledTrack track = hover::game::tracks::make_sampled_oval(
+            hover::game::tracks::OvalTrackBuild{oval_definition, sample_count});
+        const hover::game::TrackFrame start = hover::game::sample_track(track, 0.0F);
+
+        hover::game::VehicleState initial_vehicle_state{};
+        initial_vehicle_state.pose.position = hover::game::point_on_track_frame(
+            start, hover::game::TrackOffset{.lateral_metres = 0.0F, .height_metres = 0.62F});
+        initial_vehicle_state.pose.yaw_radians = std::atan2(start.tangent.x, start.tangent.z);
+
+        return ScenarioSetup{
+            hover::assets::generated::make_track_surface_mesh(track),
+            "generated/oval_track_surface",
+            initial_vehicle_state,
+        };
+    }
+    }
+
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unknown development scenario.");
+    std::abort();
+}
 
 RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
                           SDL_GPUGraphicsPipeline* pipeline, const SceneMeshes& meshes,
@@ -436,7 +482,7 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
     SDL_GPURenderPass* render_pass =
         SDL_BeginGPURenderPass(command_buffer, &color_target, 1, &depth_target_info);
     SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
-    draw_mesh(command_buffer, render_pass, meshes.presentation_pad,
+    draw_mesh(command_buffer, render_pass, meshes.world,
               VertexUniforms{view_projection, hover::math::identity()});
     draw_mesh(command_buffer, render_pass, meshes.ship,
               VertexUniforms{view_projection, hover::game::model_matrix(ship_pose)});
@@ -493,12 +539,12 @@ int run(hover::core::DevelopmentScenario scenario) {
         return EXIT_FAILURE;
     }
 
-    hover::render::GpuMesh presentation_pad{gpu_device.get()};
-    if (!presentation_pad.upload(hover::assets::generated::make_presentation_pad_mesh(),
-                                 "generated/presentation_pad")) {
+    const ScenarioSetup scenario_setup = make_scenario_setup(scenario);
+    hover::render::GpuMesh world_mesh{gpu_device.get()};
+    if (!world_mesh.upload(scenario_setup.world_mesh, scenario_setup.world_mesh_id)) {
         return EXIT_FAILURE;
     }
-    const SceneMeshes scene_meshes{ship_mesh, presentation_pad};
+    const SceneMeshes scene_meshes{ship_mesh, world_mesh};
     DepthTarget depth_target{gpu_device.get()};
 
     const std::string_view active_scenario = hover::core::scenario_name(scenario);
@@ -533,8 +579,8 @@ int run(hover::core::DevelopmentScenario scenario) {
     }};
     FrameTimer frame_timer;
     FrameStatistics frame_statistics{window.get()};
-    hover::game::VehicleState previous_vehicle_state{};
-    hover::game::VehicleState current_vehicle_state{};
+    hover::game::VehicleState previous_vehicle_state = scenario_setup.initial_vehicle_state;
+    hover::game::VehicleState current_vehicle_state = scenario_setup.initial_vehicle_state;
     bool running = true;
     while (running) {
         const double elapsed_seconds = frame_timer.elapsed_seconds();

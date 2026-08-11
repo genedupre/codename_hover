@@ -67,10 +67,12 @@ phase or roadmap milestone. Keep one executable and shared runtime path. Each
 scenario should only select its generated world, spawn/configuration, and relevant
 diagnostics; it must not grow a parallel engine or duplicate game systems.
 
-Current scenario:
+Current scenarios:
 
 - `runway`: Prototype 01, the long presentation runway, free planar movement,
   follow camera, and full input/timing diagnostics.
+- `oval`: Prototype 01 at the highlighted seam of a generated closed stadium
+  track, with the same provisional free planar movement and diagnostics.
 
 Running without `--scenario` currently defaults to `runway`. The eventual normal
 game/menu boot may replace that default without removing explicit development

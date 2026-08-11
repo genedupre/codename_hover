@@ -60,19 +60,23 @@ add_library(hover_assets STATIC
     src/assets/generated/mesh_builder.cpp
     src/assets/generated/presentation_pad.cpp
     src/assets/generated/prototype_01_mesh.cpp
+    src/assets/generated/track_surface_mesh.cpp
 )
 target_include_directories(hover_assets PUBLIC src)
 target_link_libraries(hover_assets PUBLIC hover_math)
 hover_enable_warnings(hover_assets)
 
 add_library(hover_game STATIC
+    src/game/track.cpp
     src/game/ship_definition.cpp
     src/game/ships/prototype_01.cpp
+    src/game/tracks/oval_track.cpp
     src/game/vehicle_simulation.cpp
 )
 target_include_directories(hover_game PUBLIC src)
 target_link_libraries(hover_game PUBLIC hover_input hover_math)
 hover_enable_warnings(hover_game)
+target_link_libraries(hover_assets PUBLIC hover_game)
 
 add_executable(codename_hover src/main.cpp)
 target_link_libraries(codename_hover PRIVATE
@@ -111,6 +115,11 @@ if(BUILD_TESTING)
     target_link_libraries(hover_launch_options_tests PRIVATE hover_core)
     hover_enable_warnings(hover_launch_options_tests)
     add_test(NAME hover_launch_options_tests COMMAND hover_launch_options_tests)
+
+    add_executable(hover_track_tests tests/track_tests.cpp)
+    target_link_libraries(hover_track_tests PRIVATE hover_assets hover_game)
+    hover_enable_warnings(hover_track_tests)
+    add_test(NAME hover_track_tests COMMAND hover_track_tests)
 endif()
 
 include(cmake/HoverShaders.cmake)

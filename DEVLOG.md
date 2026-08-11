@@ -455,3 +455,87 @@ Next experiment:
 
 - Add `oval` as the second scenario using a minimal sampled track frame and
   generated mesh while leaving `runway` unchanged.
+
+### 2026-08-11 — sampled track and oval math
+
+Build/revision: `44f03a7` plus the track-math change.
+
+Hardware and OS: Deterministic host tests on the HP ZBook Studio 16 G11, Ubuntu
+24.04.4 LTS.
+
+Input device: Not applicable; this checkpoint has no interactive behavior.
+
+Track/scenario and settings: A flat stadium oval generated as 512 evenly spaced
+frames for focused tests. Test definition uses 100 m straights, 40 m centerline
+turn radius, 12 m half-width, and 3 m elevation.
+
+Good:
+
+- The runtime boundary is a generic closed `SampledTrack`, not oval-specific
+  vehicle or rendering code.
+- Frames carry center, tangent, surface normal, track-right binormal, and width;
+  validation enforces finite orthonormal frames and ordered distances.
+- Sampling wraps positive and negative distances, interpolates the implicit seam,
+  and re-orthonormalizes orientation.
+- Six test executables pass. Track tests cover exact length, landmarks, frame
+  quality, midpoint interpolation, seam continuity, wrapping, and local offsets.
+
+Needs work:
+
+- The oval is not registered as a scenario or rendered yet.
+- The track is flat; banking, elevation changes, loops, corkscrews, and general
+  frame transport remain intentionally unresolved.
+- Vehicle simulation still uses free planar position and yaw.
+
+Measurements:
+
+- Test oval length: approximately 451.327 m from `200 + 80π`.
+- Stored test frames: 512, with no duplicate end frame.
+
+Next experiment:
+
+- Register `oval`, generate a visible mesh from the sampled frames, and inspect the
+  closed seam while preserving the runway scenario.
+
+### 2026-08-11 — visible closed oval scenario
+
+Build/revision: `44f03a7` plus the sampled-track and visible-oval changes.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS, Wayland, Vulkan with
+development GPU validation enabled.
+
+Input device: Wired Steam Controller detected by the shared SDL input path;
+keyboard/mouse remained available.
+
+Track/scenario and settings: `--scenario oval`; 600 m straights, 180 m centerline
+turn radius, 24 m half-width, 512 samples, and a copper-colored first segment at
+the implicit closed seam. The scenario uses the existing 90 Hz free-planar
+simulation and follow camera.
+
+Good:
+
+- The owner confirmed that the generated oval looked good in the interactive
+  laptop test.
+- The world mesh is generated from generic `SampledTrack` frames, including the
+  last-to-first closing segment; the renderer does not know the oval formula.
+- `runway` remains the default separate scenario and continues to use the same
+  runtime, renderer, simulation, and input paths.
+- All six test executables pass and focused clang-tidy checks are clean.
+
+Needs work:
+
+- Vehicle movement in `oval` remains deliberately planar and can leave the track.
+- The flat surface does not yet test banking, elevation, loops, or general 3D
+  frame transport.
+- Steam Deck deployment and runtime verification remain outstanding.
+
+Measurements:
+
+- Runtime oval length: approximately 2330.973 m (`1200 + 360π`).
+- Surface mesh: 9,216 vertices and 9,216 indices across three bands and 512 closed
+  segments.
+
+Next experiment:
+
+- Establish the first incremental Steam Deck deployment path, then introduce the
+  smallest track-relative vehicle state while keeping `runway` unchanged.

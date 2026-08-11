@@ -108,7 +108,9 @@ scene graph, scripting layer, or project milestone.
 Scenario names are parsed into a closed enum so unknown names fail clearly. Keep
 the registry small and retain a scenario when it remains a useful regression or
 hardware diagnostic. The `runway` scenario is the current default and permanent
-free-driving/input sandbox; the first oval will be added alongside it.
+free-driving/input sandbox. `oval` uses the same runtime with a generated closed
+track surface and a scenario-specific spawn; it deliberately retains free planar
+simulation until the mesh and seam are visually verified.
 
 ## Input boundary
 
@@ -155,6 +157,11 @@ renderer's vertex and index data. `GpuMesh` validates and uploads that value, bu
 does not know whether it came from generated C++, a future GLB loader, or another
 approved asset source. This is the interchange boundary inside the runtime; do not
 make the renderer depend on ship-specific generators or Blender concepts.
+
+Track sources similarly converge on `game::SampledTrack`: ordered distance frames
+with center, tangent, normal, track-right binormal, and width. The initial analytic
+oval is a source of those frames, not a special runtime track type that vehicle or
+renderer code should depend upon. See `tracks.md`.
 
 A ship's gameplay `ShipDefinition` is separate from its visual mesh. It contains a
 stable identity and visual-mesh key plus handling and collision profiles. The

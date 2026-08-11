@@ -13,6 +13,11 @@ constexpr std::array scenario_registry{
         "runway",
         "Generated ship, long presentation runway, and free planar driving.",
     },
+    DevelopmentScenarioInfo{
+        DevelopmentScenario::oval,
+        "oval",
+        "Generated ship and closed sampled oval with provisional free planar driving.",
+    },
 };
 
 std::optional<DevelopmentScenario> parse_scenario(std::string_view name) {

@@ -9,6 +9,7 @@ namespace hover::core {
 
 enum class DevelopmentScenario : std::uint8_t {
     runway,
+    oval,
 };
 
 struct LaunchOptions {

@@ -19,8 +19,8 @@ void check(bool condition, std::string_view description) {
 void test_default_and_named_runway() {
     const std::span<const hover::core::DevelopmentScenarioInfo> scenarios =
         hover::core::development_scenarios();
-    check(scenarios.size() == 1 && scenarios.front().name == "runway",
-          "the scenario registry exposes the runway");
+    check(scenarios.size() == 2 && scenarios[0].name == "runway" && scenarios[1].name == "oval",
+          "the scenario registry exposes runway and oval in stable order");
 
     const hover::core::LaunchOptionsParseResult defaults = hover::core::parse_launch_options({});
     check(defaults.succeeded(), "empty arguments parse successfully");
@@ -39,6 +39,16 @@ void test_default_and_named_runway() {
         hover::core::parse_launch_options(equals_arguments);
     check(equals.succeeded() && equals.options.scenario == hover::core::DevelopmentScenario::runway,
           "runway can be selected with equals syntax");
+}
+
+void test_named_oval() {
+    constexpr std::array arguments{std::string_view{"--scenario=oval"}};
+    const hover::core::LaunchOptionsParseResult result =
+        hover::core::parse_launch_options(arguments);
+    check(result.succeeded() && result.options.scenario == hover::core::DevelopmentScenario::oval,
+          "oval can be selected by name");
+    check(hover::core::scenario_name(hover::core::DevelopmentScenario::oval) == "oval",
+          "oval has a stable display name");
 }
 
 void test_information_actions() {
@@ -75,6 +85,7 @@ void test_invalid_arguments() {
 
 int main() {
     test_default_and_named_runway();
+    test_named_oval();
     test_information_actions();
     test_invalid_arguments();
 

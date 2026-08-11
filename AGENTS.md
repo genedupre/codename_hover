@@ -11,17 +11,19 @@ needed by this game. Linux is the primary development platform and Steam Deck is
 the first real target device. Windows follows; macOS and consoles must remain
 architecturally possible without blocking the first playable prototype.
 
-The project is currently in pre-production. The laptop prototype now has a
-generated ship moving on a long presentation runway, fixed-step simulation,
-interpolated rendering, a follow camera, and simultaneous keyboard/mouse/SDL
-gamepad input. The active checkpoint is validating input and presentation policy
-before introducing track-relative movement; laptop controller discovery, rumble,
-hotplug, reconnect, and simultaneous keyboard input are verified. Select/Back/View
-maps to the prototype Escape action; Start/Menu and B/East remain free. This final
-binding was verified interactively.
-The next implementation is the smallest generated track frame and oval; do not
-jump ahead to full race systems. Preserve the runway as the named `runway`
-development scenario and add the oval as a separate scenario.
+The project is currently in pre-production. The laptop prototype has fixed-step
+simulation, interpolated rendering, a follow camera, and simultaneous
+keyboard/mouse/SDL gamepad input. Laptop controller discovery, rumble, hotplug,
+reconnect, and simultaneous keyboard input are verified. Select/Back/View maps to
+the prototype Escape action; Start/Menu and B/East remain free.
+
+Two named development scenarios now share that runtime: `runway` preserves the
+long free-driving/input sandbox, while `oval` renders a closed strip from the
+generic sampled-track representation and spawns the ship at its seam. The oval
+surface and closed seam were visually verified on the laptop on 2026-08-11. Its
+driving remains deliberately free and planar; the next gameplay implementation is
+the smallest track-relative vehicle state rather than jumping ahead to race
+systems.
 
 The cross-device bootstrap is not complete. A wired Steam Controller was detected
 and used on the laptop on 2026-08-11. Steam Deck deployment remains deferred until
@@ -36,6 +38,8 @@ the Deck is available; retain its build, deployment, input, and exit criteria.
 - [Game design](docs/game_design.md) — handling, tracks, race systems, and AI.
 - [Ship system](docs/ships.md) — ship definitions, visual sources, collider
   contracts, and the current Prototype 01 state.
+- [Track system](docs/tracks.md) — sampled frames, distance wrapping, coordinate
+  conventions, and generated track sources.
 - [Input](docs/input.md) — semantic actions, simultaneous-device merging,
   current bindings, hotplugging, and rumble policy.
 - [Technical architecture](docs/architecture.md) — stack, system boundaries, and
@@ -87,6 +91,7 @@ then read the smallest applicable set:
 | Product direction, scope, or originality | `docs/project_brief.md` |
 | Handling, track geometry, racing, AI, or camera feel | `docs/game_design.md` |
 | Ship definitions, colliders, visual sources, or adding a ship | `docs/ships.md` |
+| Track samples, frames, seams, offsets, or generated track geometry | `docs/tracks.md` |
 | Keyboard, mouse, gamepad, Steam Input, bindings, or rumble | `docs/input.md` |
 | C++ structure, dependencies, ownership, simulation, or services | `docs/architecture.md` |
 | GPU code, shaders, visuals, resolutions, frame pacing, or UI rendering | `docs/rendering.md` |

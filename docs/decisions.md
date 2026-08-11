@@ -203,6 +203,22 @@ not create one executable per experiment, a general scene framework, or divergen
 copies of simulation/render/input logic. The default launch is `runway` during the
 current prototype and may become the normal menu/game flow later.
 
+### D-018: Use a closed distance-sampled track boundary
+
+Status: accepted for the first oval on 2026-08-11.
+
+Represent a runtime track as an ordered set of orthonormal frames in the half-open
+range `[0, length)`. Each frame owns center, forward tangent, surface normal,
+track-right binormal, and half-width. Define track-right as `normal × tangent` and
+wrap both positive and negative query distances across the implicit last-to-first
+seam.
+
+Generated and future authored paths must converge on this boundary. The first flat
+stadium oval analytically produces evenly spaced frames; sampling interpolates and
+re-orthonormalizes them. This validates distance, seam, and lateral-offset behavior
+without prematurely choosing the general spline or 3D frame-transport algorithm
+needed for loops and corkscrews.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.

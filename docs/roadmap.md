@@ -64,8 +64,11 @@ interpolates its model transform and uses a following camera. Keyboard, mouse, a
 SDL gamepad actions can remain active simultaneously; a wired Steam Controller was
 detected and used on the laptop. Its hotplug, resumed input, rumble, and exit paths
 are verified. Track-relative movement and Steam Deck verification remain required.
-The runway is retained as the named `runway` development scenario; the oval will
-be introduced as another scenario rather than replacing the verified sandbox.
+The runway is retained as the named `runway` development scenario. The closed
+`SampledTrack` boundary, deterministic flat oval generator, generic surface mesh,
+and separate `oval` scenario are implemented and tested. The surface and closed
+seam were visually verified on the laptop on 2026-08-11; track-relative vehicle
+state is next.
 
 Scope:
 

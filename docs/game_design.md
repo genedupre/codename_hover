@@ -63,6 +63,12 @@ Prevent frame flips and discontinuities when constructing the sampled coordinate
 basis. The exact spline and frame-transport algorithm remains an engineering
 decision to validate with a generated test track.
 
+The first concrete `SampledTrack` uses frames in `[0, length)`, wraps distance at
+the closed seam, and treats binormal as track-right (`normal × tangent`). Its flat
+stadium-oval generator provides exact straight/semicircle frames that are evenly
+sampled and interpolated with re-orthonormalization. See `tracks.md` for the data
+contract and current verification; general 3D frame transport remains unresolved.
+
 ## Fixed simulation
 
 Game state advances at a fixed tick rate and is independent of rendered frame
