@@ -90,11 +90,20 @@ scenario selection.
 7. Record game-feel observations in `../DEVLOG.md`.
 8. Commit a coherent, reviewable result.
 
-The desired eventual Deck loop is one documented command or small script that
-builds, incrementally deploys with rsync, launches, and makes logs easy to retrieve.
-The Deck is initially a playtest target, not a compilation host. A Valve Devkit
-Client workflow can still be reconsidered if it offers a concrete advantage over
-the planned SSH/rsync path.
+The first Deck loop uses `tools/deploy-deck.sh`. It creates the project directory
+on the `SR01T` MicroSD card, incrementally deploys the executable and compiled
+shaders with rsync, and runs a headless scenario listing remotely. Build first,
+then deploy:
+
+```bash
+cmake --build --preset development
+./tools/deploy-deck.sh
+```
+
+Graphical launch remains manual on the Deck for this checkpoint; the exact command
+and overrides are in the repository `README.md`. The Deck is a playtest target,
+not a compilation host. Later, extend the loop with safe launch and log retrieval,
+or reconsider Valve's Devkit Client if it offers a concrete advantage.
 
 ## Git practice
 

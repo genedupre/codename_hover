@@ -76,7 +76,42 @@ void test_controller_exit_binding() {
     SDL_Event east_button{};
     east_button.type = SDL_EVENT_GAMEPAD_BUTTON_DOWN;
     east_button.gbutton.button = SDL_GAMEPAD_BUTTON_EAST;
-    check(!input.handle_event(east_button), "B/East remains available for gameplay");
+    check(!input.handle_event(east_button), "B/East braking does not request exit");
+}
+
+void test_virtual_controller_brake_binding() {
+    check(SDL_InitSubSystem(SDL_INIT_GAMEPAD), "SDL gamepad subsystem initializes for input test");
+
+    SDL_VirtualJoystickDesc description;
+    SDL_INIT_INTERFACE(&description);
+    description.type = SDL_JOYSTICK_TYPE_GAMEPAD;
+    description.naxes = SDL_GAMEPAD_AXIS_COUNT;
+    description.nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
+    description.name = "Codename Hover virtual test gamepad";
+
+    const SDL_JoystickID gamepad_id = SDL_AttachVirtualJoystick(&description);
+    check(gamepad_id != 0, "virtual gamepad attaches for mapping test");
+    if (gamepad_id != 0) {
+        {
+            hover::platform::SdlInput input;
+            check(input.initialize(), "input system initializes with virtual gamepad");
+
+            SDL_Joystick* joystick = SDL_GetJoystickFromID(gamepad_id);
+            check(joystick != nullptr, "attached virtual gamepad has an open joystick");
+            if (joystick != nullptr) {
+                check(SDL_SetJoystickVirtualButton(joystick, SDL_GAMEPAD_BUTTON_EAST, true),
+                      "virtual B/East button can be pressed");
+                SDL_UpdateJoysticks();
+
+                const hover::input::PlayerInput sample = input.sample_player_one();
+                check(nearly_equal(sample.brake, 1.0F),
+                      "B/East contributes full braking to the analog brake action");
+            }
+        }
+        check(SDL_DetachVirtualJoystick(gamepad_id), "virtual gamepad detaches after mapping test");
+    }
+
+    SDL_QuitSubSystem(SDL_INIT_GAMEPAD);
 }
 
 } // namespace
@@ -85,6 +120,7 @@ int main() {
     test_axis_normalization();
     test_simultaneous_merge();
     test_controller_exit_binding();
+    test_virtual_controller_brake_binding();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " input test(s) failed\n";

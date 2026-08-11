@@ -247,20 +247,75 @@ Development policy
   on the Deck only if on-device development is deliberately adopted later.
 
 Inventory status
-  Hardware and SteamOS details have not been collected yet.
-  Collection and deployment were explicitly deferred on 2026-08-10 while the
-  owner is working only on the development laptop. Resume this audit when the
-  Deck is available; do not infer its details or mirror laptop build packages.
+  First remote audit completed over SSH on 2026-08-11.
 
-Details to record later
-  Model and generation:
-  LCD or OLED:
-  Storage capacity:
-  SteamOS version:
-  Kernel version:
-  Display resolution and refresh modes:
-  APU/GPU details reported by SteamOS:
-  Available storage for development builds:
-  Network/deployment connection:
-  Devkit pairing status:
-  Relevant peripherals or docks:
+System
+  Hardware-reported model/platform: Galileo
+  LCD or OLED designation: not independently confirmed during the SSH audit
+  Architecture: x86-64
+  Operating system: SteamOS 3.8.16, stable branch
+  SteamOS build: 20260716.1
+  Kernel: Linux 6.16.12-valve24.5-1-neptune-616-gb2f7cfe85e45
+  Root policy: retain normal SteamOS behavior; no development packages required
+
+Processor and memory
+  CPU: AMD Custom APU 0932
+  CPU topology: 4 cores, 8 logical CPUs
+  Maximum reported CPU frequency: approximately 3.5 GHz
+  Usable memory: approximately 14 GiB
+  Swap: approximately 8.2 GiB
+
+Graphics and display
+  GPU: AMD Custom GPU 0405 / Vulkan device AMD Custom GPU 0932 (RADV VANGOGH)
+  Active kernel driver: amdgpu
+  Vulkan userspace driver: Mesa RADV 26.0.0-devel, git 9cc9241790
+  Reported Vulkan API version: 1.4.330
+  Reported Vulkan conformance: 1.4.0.0
+  Internal connector mode reported by DRM: 800x1280 in native panel orientation
+  Logical resolution and refresh modes: still require an interactive display audit
+
+Storage
+  Internal drive: KINGSTON OM3PDP3512B-A01 NVMe SSD
+  Internal drive size: approximately 476.9 GiB
+  Internal home filesystem free space at audit: approximately 90 GiB
+  MicroSD device: /dev/mmcblk0, approximately 953.6 GiB
+  MicroSD partition: /dev/mmcblk0p1, ext4, label SR01T
+  Canonical MicroSD mount: /run/media/deck/SR01T
+  Convenience symlink: /run/media/SR01T
+  MicroSD free space at audit: approximately 210 GiB
+  Mount/access result: read-write, executable, and owned by deck:deck
+  Deployment root: /run/media/deck/SR01T/development/codename_hover
+  Deployment-root status: created and populated on 2026-08-11
+
+Runtime compatibility snapshot
+  Deck glibc: 2.41
+  Deck maximum reported GLIBCXX symbol version: 3.4.34
+  Current laptop development build requires glibc symbols through 2.38 and
+    GLIBCXX symbols through 3.4.31
+  Result: basic runtime versions are compatible; the deployed executable ran its
+    headless scenario-listing path successfully on the Deck
+
+Deployment
+  Network transport: local-network SSH as user deck through host alias steamdeck
+  Planned file transport: rsync from the development laptop
+  Planned payload: runnable build tree only, including executable, shaders, and
+    later runtime assets; do not copy the source repository by default
+  Deployment command: ./tools/deploy-deck.sh
+  First transfer: executable and four compiled SPIR-V shaders copied successfully
+    on 2026-08-11; remote --list-scenarios reported runway and oval
+  Valve Devkit pairing status: not configured; unnecessary for the first rsync
+    experiment
+
+Still to verify
+  Exact LCD/OLED product designation.
+  Logical display resolution and supported refresh modes in the active session.
+  Relevant docks or external peripherals.
+  Exact drawable/swapchain dimensions used by the first graphical Deck run.
+  Built-in controls, frame timing, clean exit, suspend/resume, and log retrieval.
+
+First graphical result
+  The owner launched the deployed `oval` scenario successfully on 2026-08-11 and
+  reported that it looked good. The Deck was connected to a 2560x1440 TV, while
+  the prototype requests a decorated 1280x720 window, explaining the reported
+  low-resolution appearance. The game did not yet log actual window pixel or
+  swapchain dimensions, so no more precise rendered-resolution claim is recorded.

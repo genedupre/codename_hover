@@ -539,3 +539,118 @@ Next experiment:
 
 - Establish the first incremental Steam Deck deployment path, then introduce the
   smallest track-relative vehicle state while keeping `runway` unchanged.
+
+### 2026-08-11 — first Steam Deck rsync deployment
+
+Build/revision: `9edd632` plus the Deck deployment script and documentation.
+
+Hardware and OS: Valve hardware platform `Galileo`, SteamOS 3.8.16 stable,
+MicroSD card `SR01T` mounted at `/run/media/deck/SR01T`.
+
+Input device: Not yet tested on the Deck.
+
+Track/scenario and settings: Laptop development build deployed to
+`/run/media/deck/SR01T/development/codename_hover`; graphical scenario not yet
+started.
+
+Good:
+
+- The Deck was reachable through the `steamdeck` SSH host alias.
+- The deployment script created the isolated MicroSD directory and incrementally
+  copied the executable plus four compiled SPIR-V shaders without copying source
+  files or touching `steamapps`.
+- The deployed executable ran `--list-scenarios` directly on SteamOS and reported
+  both `runway` and `oval`, proving basic executable and C++ runtime compatibility.
+- The MicroSD mount is writable and executable and had approximately 210 GiB free
+  during the audit.
+
+Needs work:
+
+- Graphical SDL/Wayland/Vulkan startup has not yet been tested on the Deck.
+- Built-in controls, frame timing, clean exit, suspend/resume, and log retrieval
+  remain unverified.
+
+Measurements:
+
+- Deployed executable size: approximately 12 MiB, unstripped development build.
+- Deployed shaders: four SPIR-V files totaling approximately 20 KiB locally.
+
+Next experiment:
+
+- Launch `--scenario oval` from the Deck graphical desktop and record rendering,
+  input, exit behavior, and any SDL/GPU diagnostics.
+
+### 2026-08-11 — first graphical Steam Deck launch
+
+Build/revision: `9edd632` plus the uncommitted Deck deployment tooling and
+documentation.
+
+Hardware and OS: Valve hardware platform `Galileo`, SteamOS 3.8.16 stable,
+connected to a 2560x1440 TV.
+
+Input device: Not specifically reported during this check.
+
+Track/scenario and settings: Deployed `--scenario oval` launched manually from
+the graphical desktop. The executable requests a resizable, high-density 1280x720
+window. It renders directly to the acquired SDL_GPU swapchain and uses one sample
+per pixel; borderless fullscreen, explicit native resolution, and MSAA are not yet
+implemented.
+
+Good:
+
+- The owner confirmed that the graphical build ran and the oval looked good on
+  the Deck.
+- The laptop-build-to-MicroSD deployment path is now proven through actual
+  graphical execution, not only a headless parser check.
+
+Needs work:
+
+- The owner perceived the displayed resolution as low.
+- The executable does not log logical window size, pixel size, or acquired
+  swapchain size, so the actual render dimensions from this run are unknown.
+- The hardcoded 1280x720 window was displayed on a 2560x1440 TV, so it had one
+  quarter of the TV's native pixel count before any compositor behavior;
+  single-sample rasterization can make polygon edges look coarser still.
+- Built-in input, clean exit, refresh rate, frame pacing, and suspend/resume were
+  not specifically reported.
+
+Deferred follow-up:
+
+- Add a validated INI-backed display settings path, dimension logging, native
+  borderless fullscreen, and optional MSAA at the display-settings milestone.
+  The detailed checklist is in `TODO.md`; this does not replace the next
+  track-relative gameplay checkpoint.
+
+### 2026-08-11 — B/East full-brake binding
+
+Build/revision: `9edd632` plus the pending Deck workflow and input-binding changes.
+
+Hardware and OS: Automated host test on the HP ZBook Studio 16 G11, Ubuntu
+24.04.4 LTS.
+
+Input device: SDL virtual standard gamepad for the automated mapping test;
+interactive Steam Controller and Deck verification pending.
+
+Track/scenario and settings: Shared semantic input path used by both `runway` and
+`oval`; no scenario-specific mapping.
+
+Good:
+
+- B/East now contributes 1.0 to the analog brake action and does not request exit.
+- Left-trigger proportional braking and X/West full braking remain available.
+- Keyboard/mouse and every controller still merge through the existing
+  simultaneous-device policy.
+- A virtual SDL gamepad test exercises the actual platform mapping and all six
+  test executables pass; focused clang-tidy is clean.
+
+Needs work:
+
+- The new B/East mapping needs an interactive Deck or Steam Controller check.
+- User-configurable mappings remain deferred. `TODO.md` records independent
+  keyboard/mouse and controller configurations without changing the semantic
+  action boundary.
+
+Next experiment:
+
+- Deploy the updated executable to the Deck and confirm B/East braking during the
+  existing free-planar scenario.

@@ -29,15 +29,17 @@ sessions. Complete one step before expanding the next:
   B/East exit were verified interactively on the same hardware. The exit action is
   now bound to Select/Back/View; focused and interactive tests confirm that it
   exits while Start/Menu and B/East remain free.
-- [ ] Establish and verify incremental deployment to Steam Deck.
+- [x] Establish and verify incremental deployment to Steam Deck. The first rsync
+  payload passed its headless check and the owner launched the graphical oval on
+  2026-08-11; broader Deck input/display/lifecycle validation remains below.
 - [ ] Add initial Linux CI, then protect Windows portability with an early compile
   job.
 
 Sequencing note (updated 2026-08-11): the owner is currently working only on the
-laptop. The laptop controller checkpoint is complete. Steam Deck audit/deployment
-remains deferred until the Deck is available. Continue laptop work with small
-Version 0.0.1 checkpoints in the meantime; this does not remove the Deck bootstrap
-requirement.
+laptop. The laptop controller checkpoint is complete. The Deck hardware and
+MicroSD mount were audited, and the first rsync deployment plus headless executable
+check succeeded. Interactive Deck graphics, built-in input, and exit verification
+remain before the deployment checklist item is complete.
 
 ## Internal bootstrap: first triangle
 

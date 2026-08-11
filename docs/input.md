@@ -37,15 +37,16 @@ before local multiplayer, but are not part of this one-player prototype.
 | --- | --- | --- |
 | Steer | A/D or Left/Right | Left stick X or D-pad |
 | Throttle | W/Up or left mouse | A/South button, 100% |
-| Brake | S/Down or right mouse | Left trigger analog or X/West button |
+| Brake | S/Down or right mouse | Left trigger analog or B/East or X/West button |
 | Drift | Space or mouse X1 | Left shoulder |
 | Boost | Shift or mouse X2 | Right shoulder |
 | Rumble test | R | Y/North button |
 | Escape | Escape/window close | Select/Back/View button |
 
 The Select/Back/View button currently exits because the prototype has no menu flow.
-Start/Menu and B/East are intentionally left available for future pause/menu and
-gameplay/back actions.
+Start/Menu remains available for a future pause/menu action. B/East and X/West
+both contribute 100% to the analog brake action; the left trigger preserves
+proportional braking.
 
 The right trigger is deliberately unbound for throttle in this checkpoint. The
 logical position names South/East/West/North are authoritative; printed letters
@@ -69,7 +70,8 @@ laptop on 2026-08-11: startup discovery, Y/North rumble, removal, reconnection
 under a new SDL instance ID, and resumed steering/throttle all worked as intended.
 The exit binding was subsequently moved from B/East to Select/Back/View. Focused
 tests and a Steam Controller playtest confirmed that Select exits while Start and B
-leave the prototype running.
+leave the prototype running. B/East was subsequently assigned to braking; a
+virtual SDL gamepad test protects both its full-brake value and non-exit behavior.
 
 SDL currently opens the wired Steam Controller as a standard gamepad while Steam
 is running. Steam Input may later become an optional platform provider for richer

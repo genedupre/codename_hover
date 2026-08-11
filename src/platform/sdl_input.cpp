@@ -46,7 +46,8 @@ input::PlayerInput sample_gamepad(SDL_Gamepad* gamepad) {
         static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT)) -
         static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_LEFT));
     digital.throttle = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH) ? 1.0F : 0.0F;
-    digital.brake = static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST));
+    digital.brake = static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST) ||
+                                       SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST));
     return input::merge(analog, digital);
 }
 

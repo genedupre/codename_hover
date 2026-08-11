@@ -15,7 +15,8 @@ The project is currently in pre-production. The laptop prototype has fixed-step
 simulation, interpolated rendering, a follow camera, and simultaneous
 keyboard/mouse/SDL gamepad input. Laptop controller discovery, rumble, hotplug,
 reconnect, and simultaneous keyboard input are verified. Select/Back/View maps to
-the prototype Escape action; Start/Menu and B/East remain free.
+the prototype Escape action; Start/Menu remains free, and B/East applies full
+braking alongside the analog left trigger and X/West button.
 
 Two named development scenarios now share that runtime: `runway` preserves the
 long free-driving/input sandbox, while `oval` renders a closed strip from the
@@ -26,8 +27,15 @@ the smallest track-relative vehicle state rather than jumping ahead to race
 systems.
 
 The cross-device bootstrap is not complete. A wired Steam Controller was detected
-and used on the laptop on 2026-08-11. Steam Deck deployment remains deferred until
-the Deck is available; retain its build, deployment, input, and exit criteria.
+and used on the laptop on 2026-08-11. The first laptop-built executable and
+shaders were rsynced to the Steam Deck MicroSD card, where the headless scenario
+listing succeeded. Interactive Deck graphics, built-in input, clean exit, and
+frame behavior are the active verification. The owner subsequently confirmed
+that the graphical oval ran and looked good, but perceived its resolution as low.
+The Deck was connected to a 2560x1440 TV while the prototype requested its
+hardcoded decorated 1280x720 window, explaining the low-resolution appearance.
+Persistent INI-backed display settings are recorded in `TODO.md` and remain
+deferred. Retain the remaining input, exit, suspend/resume, and display criteria.
 
 ## Documentation
 
@@ -55,6 +63,8 @@ the Deck is available; retain its build, deployment, input, and exit criteria.
 - [Development hardware](docs/development-hardware.txt) — laptop and, later, Steam Deck inventory.
 - [Roadmap](docs/roadmap.md) — incremental milestones from first triangle to a
   vertical slice.
+- [Deferred TODO](TODO.md) — concise work intentionally recorded for later rather
+  than inserted into the active milestone.
 - [AI collaboration](docs/ai_collaboration.md) — responsibilities, patch sizing,
   and review practices.
 - [Feasibility, cost, and risk](docs/feasibility_costs_and_risks.md) — planning
