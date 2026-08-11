@@ -1,5 +1,5 @@
 CODENAME HOVER DEVELOPMENT HARDWARE
-Last updated: 2026-07-27
+Last updated: 2026-08-11
 
 This file is the durable inventory of machines used to build and test the game.
 Do not include serial numbers, asset tags, or other unique private identifiers.
@@ -49,7 +49,18 @@ Display
 
 Input
   Built-in keyboard and touchpad: present
-  Development game controller: none connected during the audit
+  Development game controller: wired Valve Steam Controller
+  USB identity: Valve 28de:1302
+  Without Steam: exposed fallback mouse and keyboard input nodes (lizard mode)
+  With Steam: exposed one virtual Microsoft Xbox 360 pad at event/js input nodes
+  Access: the desktop user had read/write ACL access to the virtual gamepad nodes
+  SDL runtime result: SDL3 opened one device named "Steam Controller" as a
+    standard gamepad, reported rumble support, and accepted a connection-rumble
+    command on 2026-08-11
+  Interactive result: the owner used the controller in the moving-ship prototype
+    and confirmed the A/South button's 100% throttle behavior; physical rumble
+    sensation, disconnect/reconnect, and controller-button exit remain separately
+    unrecorded
 
 Environment note
   The managed coding sandbox hides GPU, display, USB, and input device access.

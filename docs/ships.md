@@ -66,6 +66,7 @@ Its provisional definition currently specifies:
 | Maximum forward speed | 260 m/s |
 | Forward acceleration | 78 m/s² |
 | Braking deceleration | 105 m/s² |
+| Coasting deceleration | 12 m/s² |
 | Steering rate | 1.65 rad/s |
 | Normal lateral grip | 7.0/s |
 | Drift lateral grip | 2.4/s |
@@ -97,14 +98,25 @@ When Blender begins, keep the definition and mesh key stable where practical and
 change the key's source from generated C++ to an exported GLB. Do not derive the
 collider or handling automatically merely because the authored mesh changed.
 
+## Current provisional simulation
+
+Prototype 01 now has a planar runway simulation that consumes semantic input at a
+fixed 90 Hz. It accelerates up to its definition's maximum speed, brakes without
+reversing, coasts, rotates with speed-dependent steering authority, and moves along
+its local forward direction. Rendering interpolates its previous/current pose and
+applies a per-object model matrix; the camera follows that interpolated pose.
+
+This exists to validate timing, input, transforms, and camera plumbing. It is not
+the intended track-relative hover physics and its feel is not final.
+
 ## Known missing pieces
 
 - `main.cpp` explicitly loads Prototype 01; there is no roster or asset registry.
-- There is no per-object model transform or mesh instancing yet.
+- There is no mesh instancing yet.
 - The current vertex format has position, normal, and color but no UV coordinates.
-- Colliders and handling values are validated as data but not simulated or drawn.
+- Colliders are validated as data but not simulated or drawn.
 - Damage, explosions, boost, hover behavior, and ship selection do not exist.
 - GLB loading and Blender export conventions remain future work.
 
-Introduce each missing piece when a playable checkpoint needs it. The next one is
-a model transform driven by fixed-step keyboard movement.
+Introduce each missing piece when a playable checkpoint needs it. The next major
+physics boundary is replacing free runway movement with a generated track frame.

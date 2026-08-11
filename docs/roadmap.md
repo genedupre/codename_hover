@@ -22,8 +22,10 @@ sessions. Complete one step before expanding the next:
   rendered triangle, keyboard exit input, timing, and clear errors.
 - [x] Validate the laptop graphics bootstrap locally with compiler warnings and
   GPU validation enabled.
-- [ ] Add controller discovery, hotplugging, and an exit action. The owner
-  deferred this on 2026-08-10; complete it before Steam Deck testing.
+- [ ] Complete controller discovery, hotplugging, and an exit action. Startup
+  detection, semantic input, capability-aware rumble, and simultaneous keyboard
+  input were implemented and laptop-playtested with a wired Steam Controller on
+  2026-08-11. Still interactively verify disconnect/reconnect and controller exit.
 - [ ] Establish and verify incremental deployment to Steam Deck.
 - [ ] Add initial Linux CI, then protect Windows portability with an early compile
   job.
@@ -53,12 +55,12 @@ documented and reproducible.
 
 ## Version 0.0.1: drivable prototype
 
-Progress (2026-08-11): the stationary camera, perspective projection, generic
-indexed mesh upload, resize-safe depth target, and first generated ship are
-implemented and verified on the laptop. Prototype 01 also has a separate,
-provisional handling/collision definition; its behavior is not simulated yet.
-Keyboard movement is next. Controller parity and Steam Deck verification remain
-required but deferred until the Deck is available.
+Progress (2026-08-11): Prototype 01 can accelerate, brake, coast, and steer on a
+generated runway through a provisional planar fixed-step simulation. Rendering
+interpolates its model transform and uses a following camera. Keyboard, mouse, and
+SDL gamepad actions can remain active simultaneously; a wired Steam Controller was
+detected and used on the laptop. Track-relative movement, controller hotplug/exit
+playtests, and Steam Deck verification remain required.
 
 Scope:
 

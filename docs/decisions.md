@@ -41,7 +41,13 @@ portability.
 
 Status: accepted.
 
-Gameplay must not depend on rendered frame rate. A 90 Hz is a first desired state (steamdeck) but we should be able to get 244hz as well, but should also work well on 60hz or lower, since we want broad compatability.
+Gameplay must not depend on rendered frame rate. The prototype simulation runs at
+90 Hz and interpolates rendering, including when rendering is slower or faster
+than simulation. Treat 90 Hz as a provisional tuning choice, not the Steam Deck's
+refresh rate and not a rendering limit.
+
+Render correctly at common low and high rates. Presentation and limiter policy is
+recorded separately in D-015.
 
 ### D-006: Use specialized track-relative vehicle physics
 
@@ -124,6 +130,12 @@ Test representative Xbox, PlayStation, Nintendo-style, Steam Deck, and common
 generic controllers as hardware becomes available. Device-specific features are
 progressive enhancements rather than requirements for basic play.
 
+SDL3 is the baseline input provider. Platform code converts every device into
+semantic analog/digital actions before simulation. Signed axes merge by greatest
+absolute magnitude, unsigned axes by maximum, and buttons by logical OR; inputs
+are never summed. Steam Input may later feed the same boundary but is neither a
+runtime requirement nor permission to place Steam calls in gameplay code.
+
 ### D-014: Separate ship definitions from visual mesh sources
 
 Status: accepted on 2026-08-11.
@@ -138,6 +150,27 @@ removing, or replacing a visual source must not require a new renderer path or
 silently change the associated gameplay definition. Do not add a generator class
 hierarchy or proprietary asset database until a concrete source requires more than
 this value boundary.
+
+### D-015: Treat 240 FPS as a target, not an engine ceiling
+
+Status: accepted on 2026-08-11.
+
+Support 240 FPS as an important performance target and explicit limiter choice,
+but do not impose it as the maximum render rate. The settings milestone should
+offer refresh-matched/VSync behavior, common explicit limits such as 30, 60, 90,
+120, 144, 165, 240, and 360 FPS, plus uncapped rendering. Refresh matching covers
+displays with nonstandard or fractional rates without requiring every rate to be a
+preset.
+
+Expose only SDL_GPU presentation modes supported by the active window/device.
+VSync is the portable fallback; mailbox and immediate are latency/tearing choices,
+not universally available upgrades. Treat frames in flight, limiter pacing, frame-
+time variance, power draw, and end-to-end input latency as measured concerns.
+
+The bootstrap remains VSync-presented with no custom frame limiter. The 90 Hz
+fixed simulation remains independent and provisional; compare higher simulation
+rates later using game feel, latency, deterministic behavior, and representative
+full-race CPU cost. Do not increase simulation frequency merely to match a monitor.
 
 ## Deferred decisions
 

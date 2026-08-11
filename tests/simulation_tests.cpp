@@ -4,6 +4,7 @@
 #include "input/player_input.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -54,17 +55,20 @@ hover::game::VehicleState simulate_with_render_schedule(RenderSchedule schedule)
 
 void test_render_rate_independence() {
     constexpr double test_duration_seconds = 1.0;
-    const hover::game::VehicleState after_30_fps_rendering =
-        simulate_with_render_schedule(RenderSchedule{test_duration_seconds, 30.0});
-    const hover::game::VehicleState after_144_fps_rendering =
-        simulate_with_render_schedule(RenderSchedule{test_duration_seconds, 144.0});
+    constexpr std::array render_rates{24.0,  30.0,  60.0,  90.0,  120.0, 144.0,
+                                      165.0, 240.0, 244.0, 360.0, 500.0};
+    const hover::game::VehicleState reference =
+        simulate_with_render_schedule(RenderSchedule{test_duration_seconds, 90.0});
 
-    check(nearly_equal(after_30_fps_rendering.forward_speed_metres_per_second,
-                       after_144_fps_rendering.forward_speed_metres_per_second),
-          "render rate does not change one second of acceleration");
-    check(nearly_equal(after_30_fps_rendering.pose.position.z,
-                       after_144_fps_rendering.pose.position.z),
-          "render rate does not change one second of travel");
+    for (double render_rate : render_rates) {
+        const hover::game::VehicleState candidate =
+            simulate_with_render_schedule(RenderSchedule{test_duration_seconds, render_rate});
+        check(nearly_equal(candidate.forward_speed_metres_per_second,
+                           reference.forward_speed_metres_per_second),
+              "render rate does not change one second of acceleration");
+        check(nearly_equal(candidate.pose.position.z, reference.pose.position.z),
+              "render rate does not change one second of travel");
+    }
 }
 
 void test_catch_up_limit() {

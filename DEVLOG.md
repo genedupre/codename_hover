@@ -287,3 +287,49 @@ Next experiment:
 
 - Add fixed-step keyboard movement, an interpolated ship model transform, and a
   following camera while keeping the visual mesh and gameplay definition separate.
+
+### 2026-08-11 — fixed-step movement and Steam Controller input
+
+Build/revision: `41bf6ee` plus the A-button binding and documentation refinement.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS, Intel Arc Vulkan
+driver.
+
+Input device: Laptop keyboard/mouse and wired Valve Steam Controller through
+Steam's virtual gamepad path.
+
+Track/scenario and settings: Prototype 01 on a generated 5.25 km presentation
+runway, 90 Hz fixed planar simulation, interpolated model transform, following
+camera, X11/XWayland window, Vulkan SDL_GPU backend, and debug validation enabled.
+
+Good:
+
+- SDL opened exactly one device named `Steam Controller`, classified it as a
+  standard gamepad, reported rumble capability, and accepted the startup pulse.
+- The controller and keyboard/mouse feed the same semantic action state and can be
+  used simultaneously without summing their values.
+- The owner described the moving result as already “pretty cool.”
+- The owner confirmed the revised A/South-button throttle behavior. Runtime
+  diagnostics showed full `1.0` throttle while the action remained analog-valued.
+- Deterministic tests produce the same one-second speed and travel result across
+  render schedules from 24 through 500 FPS, including 240 and 244 FPS.
+
+Needs work:
+
+- This is free planar runway movement, not track-relative hover handling.
+- The follow camera, acceleration curve, steering response, and speed sensation
+  are only plumbing defaults and need controlled playtesting.
+- Rumble sensation, hot disconnect/reconnect, controller exit, and Steam Deck
+  behavior have not been explicitly confirmed by the owner.
+
+Measurements:
+
+- Simulation tick: fixed 90 Hz (11.11 ms per tick).
+- Prototype test schedules: 24, 30, 60, 90, 120, 144, 165, 240, 244, 360, and
+  500 rendered frames per second; these are deterministic test inputs, not laptop
+  performance measurements.
+
+Next experiment:
+
+- Interactively verify controller disconnect/reconnect and controller exit, then
+  introduce a generated track frame without coupling physics to render FPS.

@@ -11,16 +11,15 @@ needed by this game. Linux is the primary development platform and Steam Deck is
 the first real target device. Windows follows; macOS and consoles must remain
 architecturally possible without blocking the first playable prototype.
 
-The project is currently in pre-production. The laptop graphics bootstrap is
-verified through a stationary generated 3D ship, indexed meshes, flat lighting,
-depth testing, resize-safe projection, and frame diagnostics. The active laptop
-checkpoint is keyboard movement using a fixed-step simulation and interpolated
-render transform; do not jump ahead to track content or full game systems.
+The project is currently in pre-production. The laptop prototype now has a
+generated ship moving on a long presentation runway, fixed-step simulation,
+interpolated rendering, a follow camera, and simultaneous keyboard/mouse/SDL
+gamepad input. The active checkpoint is validating input and presentation policy
+before introducing track-relative movement; do not jump ahead to full race systems.
 
-The cross-device bootstrap is not complete. As of 2026-08-10, Steam Deck
-deployment and controller completion are explicitly deferred until the Deck is
-available. Laptop-only work may proceed through small drivable-prototype
-checkpoints, but retain the controller and Deck exit criteria.
+The cross-device bootstrap is not complete. A wired Steam Controller was detected
+and used on the laptop on 2026-08-11. Steam Deck deployment remains deferred until
+the Deck is available; retain its build, deployment, input, and exit criteria.
 
 ## Documentation
 
@@ -31,6 +30,8 @@ checkpoints, but retain the controller and Deck exit criteria.
 - [Game design](docs/game_design.md) — handling, tracks, race systems, and AI.
 - [Ship system](docs/ships.md) — ship definitions, visual sources, collider
   contracts, and the current Prototype 01 state.
+- [Input](docs/input.md) — semantic actions, simultaneous-device merging,
+  current bindings, hotplugging, and rumble policy.
 - [Technical architecture](docs/architecture.md) — stack, system boundaries, and
   runtime design.
 - [Rendering and display](docs/rendering.md) — visual direction, display behavior,
@@ -80,6 +81,7 @@ then read the smallest applicable set:
 | Product direction, scope, or originality | `docs/project_brief.md` |
 | Handling, track geometry, racing, AI, or camera feel | `docs/game_design.md` |
 | Ship definitions, colliders, visual sources, or adding a ship | `docs/ships.md` |
+| Keyboard, mouse, gamepad, Steam Input, bindings, or rumble | `docs/input.md` |
 | C++ structure, dependencies, ownership, simulation, or services | `docs/architecture.md` |
 | GPU code, shaders, visuals, resolutions, frame pacing, or UI rendering | `docs/rendering.md` |
 | Linux, Steam Deck, Windows, macOS, Steam, Xbox, or PlayStation | `docs/platforms_and_release.md` |

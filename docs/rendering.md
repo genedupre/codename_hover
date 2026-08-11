@@ -54,6 +54,19 @@ not assume 1920x1080 or 16:9.
 Supporting 4K and 240 Hz means the game can select those display modes and behave
 correctly. It does not mean guaranteeing 4K at 240 frames per second on every GPU.
 
+Treat 240 FPS as an important target and future limiter choice, not a hard engine
+maximum. Displays beyond 240 Hz already exist, so long-term settings should include
+display-refresh/VSync behavior, common explicit limits (including 240), and an
+uncapped option. The bootstrap remains on SDL_GPU's always-supported VSync present
+mode until settings work can expose supported modes deliberately.
+
+SDL_GPU distinguishes VSync, immediate, and mailbox presentation. VSync avoids
+tearing but may add queue latency; immediate prioritizes latency but may tear;
+mailbox can reduce queued visual latency without tearing where supported. Query
+capabilities rather than assuming immediate or mailbox exists. Frames in flight
+also trade throughput for latency and must be measured before changing the SDL
+default.
+
 The target art style makes high frame rates plausible on modern hardware, but all
 performance statements must name:
 
@@ -85,3 +98,18 @@ deferred until the base renderer and art direction are stable.
 The internal triangle milestone proves the API and deployment path, not final
 rendering performance. The first meaningful graphics benchmark is a generated
 track with a moving vehicle and representative camera.
+
+## Frame-rate evidence checked on 2026-08-11
+
+- SDL present-mode behavior and capability requirements:
+  https://wiki.libsdl.org/SDL3/SDL_GPUPresentMode
+- SDL's explicit throughput/latency tradeoff for frames in flight:
+  https://wiki.libsdl.org/SDL3/SDL_SetGPUAllowedFramesInFlight
+- 2019 controlled 60/120/240 Hz targeting study reporting monotonic performance
+  improvement with refresh rate:
+  https://research.nvidia.com/publication/2019-09_esports-arms-race-latency-and-refresh-rate-competitive-gaming-tasks
+- 2024 study finding visibly worse smoothness from sufficiently variable frame
+  times across tested rates up to 240 Hz:
+  https://research.nvidia.com/publication/2024-08_variable-frame-timing-affects-perception-smoothness-first-person-gaming
+- Current evidence that 240 Hz is not a hardware ceiling (500 Hz display):
+  https://news.samsung.com/us/samsung-launches-worlds-first-500hz-oled-gaming-monitor-and-new-odyssey-g7-lineup/

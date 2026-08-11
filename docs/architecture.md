@@ -97,6 +97,14 @@ Do not scatter variable frame delta through gameplay code. Define pause, focus
 loss, long-stall, and simulation catch-up behavior explicitly when the loop is
 implemented.
 
+## Input boundary
+
+SDL keyboard, mouse, and gamepad state is translated by platform code into
+semantic `PlayerInput` values before reaching simulation. All connected input
+classes remain active together. Vehicle logic consumes normalized steering,
+throttle, brake, drift, and boost values and does not know which device produced
+them. See `input.md` for merge rules and current prototype bindings.
+
 ## Rendering boundary
 
 Keep the public rendering vocabulary small: device/frame lifecycle, buffers,

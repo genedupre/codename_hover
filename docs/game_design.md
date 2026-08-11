@@ -69,9 +69,11 @@ Game state advances at a fixed tick rate and is independent of rendered frame
 rate. Rendering interpolates between simulation states. Input may be sampled per
 rendered frame but must be consumed deterministically by simulation ticks.
 
-A 90 Hz simulation is the initial aim, not a permanent promise, since we want wide capability (30, 60, 244hz). Benchmark
-and feel-test it against other rates. High rendering rates must not give different
-vehicle acceleration, grip, lap times, or AI behavior.
+A 90 Hz simulation is the initial implementation, not a permanent promise and not
+the render rate. Benchmark and feel-test it against 120 Hz or higher when input
+latency and full race CPU costs can be measured. Rendering at 24, 30, 60, 90, 120,
+144, 165, 240, 360, or other rates must not change vehicle acceleration, grip, lap
+times, or AI behavior.
 
 ## Race systems
 

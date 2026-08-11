@@ -36,8 +36,6 @@ input::PlayerInput sample_gamepad(SDL_Gamepad* gamepad) {
     input::PlayerInput analog{};
     analog.steering = input::normalize_signed_axis(
         input::AxisSample{SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX), stick_dead_zone});
-    analog.throttle = input::normalize_trigger(input::AxisSample{
-        SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER), trigger_dead_zone});
     analog.brake = input::normalize_trigger(input::AxisSample{
         SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER), trigger_dead_zone});
     analog.drift = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
@@ -47,7 +45,7 @@ input::PlayerInput sample_gamepad(SDL_Gamepad* gamepad) {
     digital.steering =
         static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT)) -
         static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_LEFT));
-    digital.throttle = static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH));
+    digital.throttle = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH) ? 1.0F : 0.0F;
     digital.brake = static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST));
     return input::merge(analog, digital);
 }
