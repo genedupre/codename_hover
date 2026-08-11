@@ -38,11 +38,15 @@ struct Perspective {
 };
 
 [[nodiscard]] Vec3 operator-(Vec3 left, Vec3 right);
+[[nodiscard]] Vec3 operator+(Vec3 left, Vec3 right);
+[[nodiscard]] Vec3 operator*(Vec3 vector, float scalar);
 [[nodiscard]] float dot(Vec3 left, Vec3 right);
 [[nodiscard]] Vec3 cross(Vec3 left, Vec3 right);
 [[nodiscard]] Vec3 normalized(Vec3 value);
 
 [[nodiscard]] Mat4 identity();
+[[nodiscard]] Mat4 translation(Vec3 offset);
+[[nodiscard]] Mat4 rotation_y(float radians);
 [[nodiscard]] Mat4 operator*(const Mat4& left, const Mat4& right);
 [[nodiscard]] Vec4 transform(const Mat4& matrix, Vec4 vector);
 

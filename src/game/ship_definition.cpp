@@ -12,6 +12,7 @@ bool is_valid(const ShipDefinition& definition) {
            handling.maximum_forward_speed_metres_per_second > 0.0F &&
            handling.forward_acceleration_metres_per_second_squared > 0.0F &&
            handling.braking_deceleration_metres_per_second_squared > 0.0F &&
+           handling.coasting_deceleration_metres_per_second_squared >= 0.0F &&
            handling.steering_rate_radians_per_second > 0.0F &&
            handling.normal_lateral_grip_per_second >= 0.0F &&
            handling.drift_lateral_grip_per_second >= 0.0F && half_extents.x > 0.0F &&

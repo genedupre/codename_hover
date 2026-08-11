@@ -2,8 +2,12 @@
 
 #include "assets/generated/presentation_pad.hpp"
 #include "assets/generated/prototype_01_mesh.hpp"
+#include "core/fixed_step.hpp"
 #include "game/ships/prototype_01.hpp"
+#include "game/vehicle_simulation.hpp"
 #include "hover_math.hpp"
+#include "input/player_input.hpp"
+#include "platform/sdl_input.hpp"
 #include "render/gpu_mesh.hpp"
 
 #include <array>
@@ -131,11 +135,6 @@ class DepthTarget final {
     Uint32 height_ = 0;
 };
 
-bool requests_exit(const SDL_Event& event) {
-    return event.type == SDL_EVENT_QUIT ||
-           (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE);
-}
-
 enum class RenderResult : std::uint8_t {
     presented,
     skipped,
@@ -148,7 +147,8 @@ class FrameStatistics final {
         : window_(window),
           performance_frequency_(static_cast<double>(SDL_GetPerformanceFrequency())) {}
 
-    void record_presented_frame() {
+    void record_presented_frame(float speed_metres_per_second,
+                                const hover::input::PlayerInput& input) {
         const Uint64 current_counter = SDL_GetPerformanceCounter();
         if (previous_counter_ == 0) {
             previous_counter_ = current_counter;
@@ -176,14 +176,21 @@ class FrameStatistics final {
             (sample_frame_seconds_ / static_cast<double>(sample_frame_count_)) * 1000.0;
         const double worst_frame_ms = sample_worst_frame_seconds_ * 1000.0;
 
-        SDL_Log("Frame timing: %.1f FPS | %.3f ms average | %.3f ms worst", frames_per_second,
-                average_frame_ms, worst_frame_ms);
+        SDL_Log("Frame timing: %.1f FPS | %.3f ms average | %.3f ms worst | %.1f km/h | "
+                "steer %.2f throttle %.2f brake %.2f",
+                frames_per_second, average_frame_ms, worst_frame_ms,
+                static_cast<double>(speed_metres_per_second) * 3.6,
+                static_cast<double>(input.steering), static_cast<double>(input.throttle),
+                static_cast<double>(input.brake));
 
         if (title_updates_enabled_) {
-            char title[128]{};
+            char title[192]{};
             SDL_snprintf(title, sizeof(title),
-                         "Codename Hover | %.1f FPS | %.2f ms average | %.2f ms worst",
-                         frames_per_second, average_frame_ms, worst_frame_ms);
+                         "Codename Hover | %.1f FPS | %.2f ms | %.0f km/h | S %.2f T %.2f B %.2f",
+                         frames_per_second, average_frame_ms,
+                         static_cast<double>(speed_metres_per_second) * 3.6,
+                         static_cast<double>(input.steering), static_cast<double>(input.throttle),
+                         static_cast<double>(input.brake));
             if (!SDL_SetWindowTitle(window_, title)) {
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Could not update the window title: %s",
                             SDL_GetError());
@@ -215,6 +222,27 @@ class FrameStatistics final {
     double sample_worst_frame_seconds_ = 0.0;
     size_t sample_frame_count_ = 0;
     bool title_updates_enabled_ = true;
+};
+
+class FrameTimer final {
+  public:
+    FrameTimer()
+        : performance_frequency_(static_cast<double>(SDL_GetPerformanceFrequency())),
+          previous_counter_(SDL_GetPerformanceCounter()) {}
+
+    [[nodiscard]] double elapsed_seconds() {
+        const Uint64 current_counter = SDL_GetPerformanceCounter();
+        const double elapsed =
+            static_cast<double>(current_counter - previous_counter_) / performance_frequency_;
+        previous_counter_ = current_counter;
+        return elapsed;
+    }
+
+    void reset() { previous_counter_ = SDL_GetPerformanceCounter(); }
+
+  private:
+    double performance_frequency_;
+    Uint64 previous_counter_;
 };
 
 GpuShader load_shader(SDL_GPUDevice* device, const std::string& path, SDL_GPUShaderStage stage) {
@@ -313,7 +341,17 @@ GraphicsPipeline create_vehicle_pipeline(SDL_GPUDevice* device, SDL_Window* wind
     return pipeline;
 }
 
-void draw_mesh(SDL_GPURenderPass* render_pass, const hover::render::GpuMesh& mesh) {
+struct VertexUniforms {
+    hover::math::Mat4 view_projection;
+    hover::math::Mat4 model;
+};
+
+static_assert(sizeof(VertexUniforms) == sizeof(float) * 32);
+
+void draw_mesh(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass,
+               const hover::render::GpuMesh& mesh, const VertexUniforms& uniforms) {
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniforms,
+                                 static_cast<Uint32>(sizeof(uniforms)));
     const SDL_GPUBufferBinding vertex_binding{mesh.vertex_buffer(), 0};
     const SDL_GPUBufferBinding index_binding{mesh.index_buffer(), 0};
     SDL_BindGPUVertexBuffers(render_pass, 0, &vertex_binding, 1);
@@ -328,7 +366,7 @@ struct SceneMeshes {
 
 RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
                           SDL_GPUGraphicsPipeline* pipeline, const SceneMeshes& meshes,
-                          DepthTarget& depth_target) {
+                          const hover::game::VehiclePose& ship_pose, DepthTarget& depth_target) {
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     if (command_buffer == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not acquire a GPU command buffer: %s",
@@ -369,17 +407,15 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
 
     const float aspect_ratio =
         static_cast<float>(swapchain_width) / static_cast<float>(swapchain_height);
+    const hover::math::Vec3 ship_forward = hover::game::forward_direction(ship_pose);
     const hover::math::Mat4 view = hover::math::look_at_lh(hover::math::LookAt{
-        hover::math::Vec3{0.0F, 2.4F, -5.8F},
-        hover::math::Vec3{0.0F, -0.05F, 0.15F},
+        ship_pose.position - ship_forward * 8.5F + hover::math::Vec3{0.0F, 3.8F, 0.0F},
+        ship_pose.position + ship_forward * 3.0F + hover::math::Vec3{0.0F, 0.35F, 0.0F},
         hover::math::Vec3{0.0F, 1.0F, 0.0F},
     });
     const hover::math::Mat4 projection = hover::math::perspective_lh(
-        hover::math::Perspective{1.0471975512F, aspect_ratio, 0.1F, 100.0F});
+        hover::math::Perspective{1.0471975512F, aspect_ratio, 0.1F, 400.0F});
     const hover::math::Mat4 view_projection = projection * view;
-    static_assert(sizeof(hover::math::Mat4) == sizeof(float) * 16);
-    SDL_PushGPUVertexUniformData(command_buffer, 0, view_projection.elements.data(),
-                                 static_cast<Uint32>(sizeof(view_projection)));
 
     SDL_GPUColorTargetInfo color_target{};
     color_target.texture = swapchain_texture;
@@ -396,8 +432,10 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
     SDL_GPURenderPass* render_pass =
         SDL_BeginGPURenderPass(command_buffer, &color_target, 1, &depth_target_info);
     SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
-    draw_mesh(render_pass, meshes.presentation_pad);
-    draw_mesh(render_pass, meshes.ship);
+    draw_mesh(command_buffer, render_pass, meshes.presentation_pad,
+              VertexUniforms{view_projection, hover::math::identity()});
+    draw_mesh(command_buffer, render_pass, meshes.ship,
+              VertexUniforms{view_projection, hover::game::model_matrix(ship_pose)});
     SDL_EndGPURenderPass(render_pass);
 
     if (!SDL_SubmitGPUCommandBuffer(command_buffer)) {
@@ -459,6 +497,11 @@ int run() {
     const SceneMeshes scene_meshes{ship_mesh, presentation_pad};
     DepthTarget depth_target{gpu_device.get()};
 
+    hover::platform::SdlInput input_system;
+    if (!input_system.initialize()) {
+        return EXIT_FAILURE;
+    }
+
     SDL_Log("Loaded ship '%.*s': %.0f m/s top speed, %.0f energy, %.2f relative mass.",
             static_cast<int>(ship_definition.display_name.size()),
             ship_definition.display_name.data(),
@@ -474,26 +517,57 @@ int run() {
             gpu_driver != nullptr ? gpu_driver : "unknown",
             gpu_debug_mode ? "enabled" : "disabled");
 
+    constexpr double simulation_tick_seconds = 1.0 / 90.0;
+    hover::core::FixedStepAccumulator simulation_clock{hover::core::FixedStepConfig{
+        simulation_tick_seconds,
+        0.25,
+        8,
+    }};
+    FrameTimer frame_timer;
     FrameStatistics frame_statistics{window.get()};
+    hover::game::VehicleState previous_vehicle_state{};
+    hover::game::VehicleState current_vehicle_state{};
     bool running = true;
     while (running) {
+        const double elapsed_seconds = frame_timer.elapsed_seconds();
         SDL_Event event{};
         while (SDL_PollEvent(&event)) {
-            if (requests_exit(event)) {
+            if (input_system.handle_event(event)) {
                 running = false;
             }
         }
 
         if (running) {
-            const RenderResult render_result = render_frame(
-                gpu_device.get(), window.get(), vehicle_pipeline.get(), scene_meshes, depth_target);
+            const hover::input::PlayerInput player_input = input_system.sample_player_one();
+            const hover::core::FixedStepPlan step_plan = simulation_clock.advance(elapsed_seconds);
+            if (step_plan.dropped_time) {
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                            "Simulation catch-up limit reached; excess accumulated time dropped.");
+            }
+            for (std::uint32_t tick = 0; tick < step_plan.tick_count; ++tick) {
+                previous_vehicle_state = current_vehicle_state;
+                hover::game::simulate_vehicle(
+                    current_vehicle_state,
+                    hover::game::VehicleTick{player_input, ship_definition,
+                                             static_cast<float>(simulation_tick_seconds)});
+            }
+            const hover::game::VehiclePose render_pose =
+                hover::game::interpolate(previous_vehicle_state.pose, current_vehicle_state.pose,
+                                         step_plan.interpolation_alpha);
+
+            const RenderResult render_result =
+                render_frame(gpu_device.get(), window.get(), vehicle_pipeline.get(), scene_meshes,
+                             render_pose, depth_target);
             if (render_result == RenderResult::failed) {
                 return EXIT_FAILURE;
             }
             if (render_result == RenderResult::skipped) {
+                frame_timer.reset();
+                simulation_clock.reset();
                 frame_statistics.reset_after_skipped_frame();
             } else {
-                frame_statistics.record_presented_frame();
+                frame_statistics.record_presented_frame(
+                    current_vehicle_state.forward_speed_metres_per_second, player_input);
             }
         }
     }

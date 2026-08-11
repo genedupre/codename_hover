@@ -36,6 +36,18 @@ add_library(hover_math STATIC src/hover_math.cpp)
 target_include_directories(hover_math PUBLIC src)
 hover_enable_warnings(hover_math)
 
+add_library(hover_core STATIC src/core/fixed_step.cpp)
+target_include_directories(hover_core PUBLIC src)
+hover_enable_warnings(hover_core)
+
+add_library(hover_input STATIC
+    src/input/player_input.cpp
+    src/platform/sdl_input.cpp
+)
+target_include_directories(hover_input PUBLIC src)
+target_link_libraries(hover_input PUBLIC SDL3::SDL3)
+hover_enable_warnings(hover_input)
+
 add_library(hover_render STATIC src/render/gpu_mesh.cpp)
 target_include_directories(hover_render PUBLIC src)
 target_link_libraries(hover_render PUBLIC SDL3::SDL3 hover_math)
@@ -53,13 +65,21 @@ hover_enable_warnings(hover_assets)
 add_library(hover_game STATIC
     src/game/ship_definition.cpp
     src/game/ships/prototype_01.cpp
+    src/game/vehicle_simulation.cpp
 )
 target_include_directories(hover_game PUBLIC src)
-target_link_libraries(hover_game PUBLIC hover_math)
+target_link_libraries(hover_game PUBLIC hover_input hover_math)
 hover_enable_warnings(hover_game)
 
 add_executable(codename_hover src/main.cpp)
-target_link_libraries(codename_hover PRIVATE SDL3::SDL3 hover_assets hover_game hover_render)
+target_link_libraries(codename_hover PRIVATE
+    SDL3::SDL3
+    hover_assets
+    hover_core
+    hover_game
+    hover_input
+    hover_render
+)
 hover_enable_warnings(codename_hover)
 
 include(CTest)
@@ -73,6 +93,16 @@ if(BUILD_TESTING)
     target_link_libraries(hover_ship_tests PRIVATE hover_assets hover_game)
     hover_enable_warnings(hover_ship_tests)
     add_test(NAME hover_ship_tests COMMAND hover_ship_tests)
+
+    add_executable(hover_input_tests tests/input_tests.cpp)
+    target_link_libraries(hover_input_tests PRIVATE hover_input)
+    hover_enable_warnings(hover_input_tests)
+    add_test(NAME hover_input_tests COMMAND hover_input_tests)
+
+    add_executable(hover_simulation_tests tests/simulation_tests.cpp)
+    target_link_libraries(hover_simulation_tests PRIVATE hover_core hover_game)
+    hover_enable_warnings(hover_simulation_tests)
+    add_test(NAME hover_simulation_tests COMMAND hover_simulation_tests)
 endif()
 
 include(cmake/HoverShaders.cmake)

@@ -21,6 +21,14 @@ Vec3 operator-(Vec3 left, Vec3 right) {
     return Vec3{left.x - right.x, left.y - right.y, left.z - right.z};
 }
 
+Vec3 operator+(Vec3 left, Vec3 right) {
+    return Vec3{left.x + right.x, left.y + right.y, left.z + right.z};
+}
+
+Vec3 operator*(Vec3 vector, float scalar) {
+    return Vec3{vector.x * scalar, vector.y * scalar, vector.z * scalar};
+}
+
 float dot(Vec3 left, Vec3 right) { return left.x * right.x + left.y * right.y + left.z * right.z; }
 
 Vec3 cross(Vec3 left, Vec3 right) {
@@ -43,6 +51,26 @@ Mat4 identity() {
     result.at(1, 1) = 1.0F;
     result.at(2, 2) = 1.0F;
     result.at(3, 3) = 1.0F;
+    return result;
+}
+
+Mat4 translation(Vec3 offset) {
+    Mat4 result = identity();
+    result.at(0, 3) = offset.x;
+    result.at(1, 3) = offset.y;
+    result.at(2, 3) = offset.z;
+    return result;
+}
+
+Mat4 rotation_y(float radians) {
+    const float cosine = std::cos(radians);
+    const float sine = std::sin(radians);
+
+    Mat4 result = identity();
+    result.at(0, 0) = cosine;
+    result.at(0, 2) = sine;
+    result.at(2, 0) = -sine;
+    result.at(2, 2) = cosine;
     return result;
 }
 

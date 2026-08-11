@@ -12,6 +12,7 @@ const ShipDefinition& prototype_01_definition() {
                 .maximum_forward_speed_metres_per_second = 260.0F,
                 .forward_acceleration_metres_per_second_squared = 78.0F,
                 .braking_deceleration_metres_per_second_squared = 105.0F,
+                .coasting_deceleration_metres_per_second_squared = 12.0F,
                 .steering_rate_radians_per_second = 1.65F,
                 .normal_lateral_grip_per_second = 7.0F,
                 .drift_lateral_grip_per_second = 2.4F,
