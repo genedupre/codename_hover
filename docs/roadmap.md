@@ -22,18 +22,19 @@ sessions. Complete one step before expanding the next:
   rendered triangle, keyboard exit input, timing, and clear errors.
 - [x] Validate the laptop graphics bootstrap locally with compiler warnings and
   GPU validation enabled.
-- [ ] Complete controller discovery, hotplugging, and an exit action. Startup
+- [x] Complete controller discovery, hotplugging, and an exit action. Startup
   detection, semantic input, capability-aware rumble, and simultaneous keyboard
   input were implemented and laptop-playtested with a wired Steam Controller on
-  2026-08-11. Still interactively verify disconnect/reconnect and controller exit.
+  2026-08-11. Rumble, disconnect/reconnect, resumed input, and B/East exit were
+  then verified interactively on the same hardware.
 - [ ] Establish and verify incremental deployment to Steam Deck.
 - [ ] Add initial Linux CI, then protect Windows portability with an early compile
   job.
 
-Sequencing note (2026-08-10): the owner is currently working only on the laptop.
-Controller completion and Steam Deck audit/deployment are deferred until the Deck
-is available. Continue laptop work with small Version 0.0.1 checkpoints in the
-meantime. This changes execution order only; it does not remove either bootstrap
+Sequencing note (updated 2026-08-11): the owner is currently working only on the
+laptop. The laptop controller checkpoint is complete. Steam Deck audit/deployment
+remains deferred until the Deck is available. Continue laptop work with small
+Version 0.0.1 checkpoints in the meantime; this does not remove the Deck bootstrap
 requirement.
 
 ## Internal bootstrap: first triangle
@@ -59,8 +60,8 @@ Progress (2026-08-11): Prototype 01 can accelerate, brake, coast, and steer on a
 generated runway through a provisional planar fixed-step simulation. Rendering
 interpolates its model transform and uses a following camera. Keyboard, mouse, and
 SDL gamepad actions can remain active simultaneously; a wired Steam Controller was
-detected and used on the laptop. Track-relative movement, controller hotplug/exit
-playtests, and Steam Deck verification remain required.
+detected and used on the laptop. Its hotplug, resumed input, rumble, and exit paths
+are verified. Track-relative movement and Steam Deck verification remain required.
 
 Scope:
 

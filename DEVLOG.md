@@ -374,3 +374,39 @@ Next experiment:
 
 - Test controller hotplug and exit when convenient, then proceed toward the first
   generated track frame.
+
+### 2026-08-11 — complete laptop controller lifecycle
+
+Build/revision: `bca563d`.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS, native SDL Wayland,
+Intel Arc Vulkan driver.
+
+Input device: Wired Steam Controller with Steam running, plus physical keyboard.
+
+Track/scenario and settings: Moving-ship runway build with live input values in the
+window title and SDL device lifecycle logging.
+
+Good:
+
+- Y/North produced the expected rumble.
+- SDL logged removal of gamepad instance 5 after unplugging.
+- SDL opened the reconnected controller as instance 7, reported rumble capability,
+  and accepted its connection pulse.
+- Steering and A/South throttle resumed after reconnection.
+- B/East followed the controller exit path and the game shut down cleanly.
+- The owner confirmed every requested lifecycle check worked as expected.
+
+Needs work:
+
+- Repeat controller and lifecycle validation on Steam Deck when deployment begins.
+- Test other controller families as representative hardware becomes available.
+
+Measurements:
+
+- No performance conclusion; this was a behavior and lifecycle verification.
+
+Next experiment:
+
+- Define a minimal sampled track frame and generate the first closed oval while
+  preserving the fixed-step/input boundaries.

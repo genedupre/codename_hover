@@ -15,7 +15,10 @@ The project is currently in pre-production. The laptop prototype now has a
 generated ship moving on a long presentation runway, fixed-step simulation,
 interpolated rendering, a follow camera, and simultaneous keyboard/mouse/SDL
 gamepad input. The active checkpoint is validating input and presentation policy
-before introducing track-relative movement; do not jump ahead to full race systems.
+before introducing track-relative movement; laptop controller discovery, rumble,
+hotplug, reconnect, simultaneous keyboard input, and controller exit are verified.
+The next implementation is the smallest generated track frame and oval; do not
+jump ahead to full race systems.
 
 The cross-device bootstrap is not complete. A wired Steam Controller was detected
 and used on the laptop on 2026-08-11. Steam Deck deployment remains deferred until

@@ -60,6 +60,11 @@ runway simulation.
   startup or gameplay failure.
 - Never encode essential information only as vibration.
 
+The wired Steam Controller lifecycle was interactively verified on the Linux
+laptop on 2026-08-11: startup discovery, Y/North rumble, removal, reconnection
+under a new SDL instance ID, resumed steering/throttle, and B/East clean exit all
+worked as intended.
+
 SDL currently opens the wired Steam Controller as a standard gamepad while Steam
 is running. Steam Input may later become an optional platform provider for richer
 remapping and glyph behavior, but it must feed the same semantic actions and remain
