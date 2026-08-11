@@ -25,8 +25,10 @@ sessions. Complete one step before expanding the next:
 - [x] Complete controller discovery, hotplugging, and an exit action. Startup
   detection, semantic input, capability-aware rumble, and simultaneous keyboard
   input were implemented and laptop-playtested with a wired Steam Controller on
-  2026-08-11. Rumble, disconnect/reconnect, resumed input, and B/East exit were
-  then verified interactively on the same hardware.
+  2026-08-11. Rumble, disconnect/reconnect, resumed input, and the then-current
+  B/East exit were verified interactively on the same hardware. The exit action is
+  now bound to Select/Back/View; focused and interactive tests confirm that it
+  exits while Start/Menu and B/East remain free.
 - [ ] Establish and verify incremental deployment to Steam Deck.
 - [ ] Add initial Linux CI, then protect Windows portability with an early compile
   job.
@@ -62,6 +64,8 @@ interpolates its model transform and uses a following camera. Keyboard, mouse, a
 SDL gamepad actions can remain active simultaneously; a wired Steam Controller was
 detected and used on the laptop. Its hotplug, resumed input, rumble, and exit paths
 are verified. Track-relative movement and Steam Deck verification remain required.
+The runway is retained as the named `runway` development scenario; the oval will
+be introduced as another scenario rather than replacing the verified sandbox.
 
 Scope:
 

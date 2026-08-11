@@ -1,4 +1,5 @@
 #include "input/player_input.hpp"
+#include "platform/sdl_input.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -59,11 +60,31 @@ void test_simultaneous_merge() {
     check(merged.drift && merged.boost, "digital actions combine with logical OR");
 }
 
+void test_controller_exit_binding() {
+    hover::platform::SdlInput input;
+
+    SDL_Event select_button{};
+    select_button.type = SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+    select_button.gbutton.button = SDL_GAMEPAD_BUTTON_BACK;
+    check(input.handle_event(select_button), "Select/Back/View requests exit in the prototype");
+
+    SDL_Event start_button{};
+    start_button.type = SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+    start_button.gbutton.button = SDL_GAMEPAD_BUTTON_START;
+    check(!input.handle_event(start_button), "Start/Menu remains available for gameplay");
+
+    SDL_Event east_button{};
+    east_button.type = SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+    east_button.gbutton.button = SDL_GAMEPAD_BUTTON_EAST;
+    check(!input.handle_event(east_button), "B/East remains available for gameplay");
+}
+
 } // namespace
 
 int main() {
     test_axis_normalization();
     test_simultaneous_merge();
+    test_controller_exit_binding();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " input test(s) failed\n";

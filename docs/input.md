@@ -41,7 +41,11 @@ before local multiplayer, but are not part of this one-player prototype.
 | Drift | Space or mouse X1 | Left shoulder |
 | Boost | Shift or mouse X2 | Right shoulder |
 | Rumble test | R | Y/North button |
-| Exit | Escape/window close | B/East button |
+| Escape | Escape/window close | Select/Back/View button |
+
+The Select/Back/View button currently exits because the prototype has no menu flow.
+Start/Menu and B/East are intentionally left available for future pause/menu and
+gameplay/back actions.
 
 The right trigger is deliberately unbound for throttle in this checkpoint. The
 logical position names South/East/West/North are authoritative; printed letters
@@ -62,8 +66,10 @@ runway simulation.
 
 The wired Steam Controller lifecycle was interactively verified on the Linux
 laptop on 2026-08-11: startup discovery, Y/North rumble, removal, reconnection
-under a new SDL instance ID, resumed steering/throttle, and B/East clean exit all
-worked as intended.
+under a new SDL instance ID, and resumed steering/throttle all worked as intended.
+The exit binding was subsequently moved from B/East to Select/Back/View. Focused
+tests and a Steam Controller playtest confirmed that Select exits while Start and B
+leave the prototype running.
 
 SDL currently opens the wired Steam Controller as a standard gamepad while Steam
 is running. Steam Input may later become an optional platform provider for richer

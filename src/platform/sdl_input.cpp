@@ -92,7 +92,7 @@ bool SdlInput::handle_event(const SDL_Event& event) {
     } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat && event.key.key == SDLK_R) {
         rumble_all(RumbleEffect{0.22F, 0.48F, 180});
     } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
-        if (event.gbutton.button == SDL_GAMEPAD_BUTTON_EAST) {
+        if (event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
             return true;
         }
         if (event.gbutton.button == SDL_GAMEPAD_BUTTON_NORTH) {

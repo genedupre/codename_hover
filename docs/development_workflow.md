@@ -39,6 +39,43 @@ cmake --build --preset development
 Generated build files and local host tools stay under ignored `build/` and
 `.tools/` directories. CMake must not download dependencies during configure.
 
+## Development scenarios
+
+Boot a small named test world through the same executable and production startup
+path:
+
+```bash
+./build/development/codename_hover --scenario runway
+```
+
+The Linux build already prefers native Wayland with X11 fallback. Use an
+environment override only for deliberate backend diagnostics, for example:
+
+```bash
+SDL_VIDEO_DRIVER=x11 ./build/development/codename_hover --scenario runway
+```
+
+Discover the available names without initializing SDL or opening a window:
+
+```bash
+./build/development/codename_hover --list-scenarios
+./build/development/codename_hover --help
+```
+
+Call these scenarios rather than stages: a stage can be confused with a loading
+phase or roadmap milestone. Keep one executable and shared runtime path. Each
+scenario should only select its generated world, spawn/configuration, and relevant
+diagnostics; it must not grow a parallel engine or duplicate game systems.
+
+Current scenario:
+
+- `runway`: Prototype 01, the long presentation runway, free planar movement,
+  follow camera, and full input/timing diagnostics.
+
+Running without `--scenario` currently defaults to `runway`. The eventual normal
+game/menu boot may replace that default without removing explicit development
+scenario selection.
+
 ## Inner development loop
 
 1. Choose one observable behavior from `roadmap.md`.

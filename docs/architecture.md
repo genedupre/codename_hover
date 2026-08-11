@@ -97,6 +97,19 @@ Do not scatter variable frame delta through gameplay code. Define pause, focus
 loss, long-stall, and simulation catch-up behavior explicitly when the loop is
 implemented.
 
+## Development scenario boundary
+
+One executable may boot named, deterministic development scenarios through
+`--scenario NAME`. A scenario selects the smallest world/configuration needed for
+an interactive experiment while reusing the real SDL initialization, input,
+simulation, renderer, and shutdown paths. It is not a separate executable, general
+scene graph, scripting layer, or project milestone.
+
+Scenario names are parsed into a closed enum so unknown names fail clearly. Keep
+the registry small and retain a scenario when it remains a useful regression or
+hardware diagnostic. The `runway` scenario is the current default and permanent
+free-driving/input sandbox; the first oval will be added alongside it.
+
 ## Input boundary
 
 SDL keyboard, mouse, and gamepad state is translated by platform code into

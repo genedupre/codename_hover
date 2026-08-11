@@ -36,7 +36,10 @@ add_library(hover_math STATIC src/hover_math.cpp)
 target_include_directories(hover_math PUBLIC src)
 hover_enable_warnings(hover_math)
 
-add_library(hover_core STATIC src/core/fixed_step.cpp)
+add_library(hover_core STATIC
+    src/core/fixed_step.cpp
+    src/core/launch_options.cpp
+)
 target_include_directories(hover_core PUBLIC src)
 hover_enable_warnings(hover_core)
 
@@ -103,6 +106,11 @@ if(BUILD_TESTING)
     target_link_libraries(hover_simulation_tests PRIVATE hover_core hover_game)
     hover_enable_warnings(hover_simulation_tests)
     add_test(NAME hover_simulation_tests COMMAND hover_simulation_tests)
+
+    add_executable(hover_launch_options_tests tests/launch_options_tests.cpp)
+    target_link_libraries(hover_launch_options_tests PRIVATE hover_core)
+    hover_enable_warnings(hover_launch_options_tests)
+    add_test(NAME hover_launch_options_tests COMMAND hover_launch_options_tests)
 endif()
 
 include(cmake/HoverShaders.cmake)

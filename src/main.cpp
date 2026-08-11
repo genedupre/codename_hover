@@ -3,6 +3,7 @@
 #include "assets/generated/presentation_pad.hpp"
 #include "assets/generated/prototype_01_mesh.hpp"
 #include "core/fixed_step.hpp"
+#include "core/launch_options.hpp"
 #include "game/ships/prototype_01.hpp"
 #include "game/vehicle_simulation.hpp"
 #include "hover_math.hpp"
@@ -13,9 +14,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace {
 
@@ -447,7 +451,7 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
     return RenderResult::presented;
 }
 
-int run() {
+int run(hover::core::DevelopmentScenario scenario) {
     Window window{SDL_CreateWindow("Codename Hover", initial_window_width, initial_window_height,
                                    SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY)};
     if (!window) {
@@ -496,6 +500,10 @@ int run() {
     }
     const SceneMeshes scene_meshes{ship_mesh, presentation_pad};
     DepthTarget depth_target{gpu_device.get()};
+
+    const std::string_view active_scenario = hover::core::scenario_name(scenario);
+    SDL_Log("Development scenario: %.*s.", static_cast<int>(active_scenario.size()),
+            active_scenario.data());
 
     hover::platform::SdlInput input_system;
     if (!input_system.initialize()) {
@@ -579,8 +587,38 @@ int run() {
 } // namespace
 
 int main(int argc, char* argv[]) {
-    static_cast<void>(argc);
-    static_cast<void>(argv);
+    std::vector<std::string_view> arguments;
+    arguments.reserve(argc > 1 ? static_cast<std::size_t>(argc - 1) : 0U);
+    for (int index = 1; index < argc; ++index) {
+        arguments.emplace_back(argv[index]);
+    }
+
+    const hover::core::LaunchOptionsParseResult parsed =
+        hover::core::parse_launch_options(arguments);
+    if (!parsed.succeeded()) {
+        std::fprintf(stderr, "codename_hover: %s\nTry '--help' for usage.\n", parsed.error.c_str());
+        return EXIT_FAILURE;
+    }
+    if (parsed.options.show_help) {
+        std::fputs("Usage: codename_hover [--scenario NAME]\n"
+                   "\n"
+                   "Options:\n"
+                   "  --scenario NAME   Start a named development scenario.\n"
+                   "  --list-scenarios  List available scenarios without starting SDL.\n"
+                   "  -h, --help        Show this help without starting SDL.\n",
+                   stdout);
+    }
+    if (parsed.options.list_scenarios) {
+        for (const hover::core::DevelopmentScenarioInfo& scenario :
+             hover::core::development_scenarios()) {
+            std::fprintf(stdout, "%.*s  %.*s\n", static_cast<int>(scenario.name.size()),
+                         scenario.name.data(), static_cast<int>(scenario.description.size()),
+                         scenario.description.data());
+        }
+    }
+    if (parsed.options.show_help || parsed.options.list_scenarios) {
+        return EXIT_SUCCESS;
+    }
 
 #if defined(SDL_PLATFORM_LINUX)
     if (SDL_GetHint(SDL_HINT_VIDEO_DRIVER) == nullptr &&
@@ -595,7 +633,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    const int result = run();
+    const int result = run(parsed.options.scenario);
     SDL_Quit();
     return result;
 }

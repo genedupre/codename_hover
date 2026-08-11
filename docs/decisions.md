@@ -188,6 +188,21 @@ standard SDL gamepad input without receiving the synthetic key. Prefer the clean
 backend boundary over a device-specific timing heuristic or disabling simultaneous
 keyboard/controller support.
 
+### D-017: Keep named development scenarios in the game executable
+
+Status: accepted on 2026-08-11.
+
+Use `--scenario NAME` for fast, focused interactive environments that still pass
+through the real game executable and shared runtime. Use `--list-scenarios` and
+`--help` for headless discovery. Parse scenario names into a closed, tested enum;
+reject unknown and duplicate selections rather than silently choosing a default.
+
+Retain the generated runway as the `runway` input, movement, camera, and hardware
+diagnostic when the oval arrives. Add the oval as a separate named scenario. Do
+not create one executable per experiment, a general scene framework, or divergent
+copies of simulation/render/input logic. The default launch is `runway` during the
+current prototype and may become the normal menu/game flow later.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.

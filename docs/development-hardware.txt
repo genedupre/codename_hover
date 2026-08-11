@@ -59,7 +59,9 @@ Input
     command on 2026-08-11
   Interactive result: the owner used the controller in the moving-ship prototype
     and confirmed the A/South button's 100% throttle behavior, Y/North rumble,
-    disconnect/reconnect with resumed steering and throttle, and B/East clean exit
+    disconnect/reconnect with resumed steering and throttle, and the former B/East
+    clean-exit binding; Select/Back/View later replaced B/East and was verified to
+    exit while Start/Menu and B/East left the prototype running
   Duplicate-input diagnosis: under SDL's X11/XWayland backend, moving the left
     stick forward caused Steam's desktop layout to inject keyboard W through the
     aggregate X11 keyboard; native SDL Wayland retained the real keyboard and

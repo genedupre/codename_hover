@@ -410,3 +410,48 @@ Next experiment:
 
 - Define a minimal sampled track frame and generate the first closed oval while
   preserving the fixed-step/input boundaries.
+
+### 2026-08-11 — named development scenario entry point
+
+Build/revision: `72fe297` plus the scenario-launch change.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS.
+
+Input device: Not applicable to parser tests; the runway retains all previously
+verified keyboard/mouse/controller behavior.
+
+Track/scenario and settings: Command-line selection for small development worlds
+through the main `codename_hover` executable.
+
+Good:
+
+- `--scenario runway` and `--scenario=runway` select a typed scenario while the
+  no-argument launch continues to default to the runway.
+- `--help` and `--list-scenarios` return before SDL initialization, making scenario
+  discovery fast and usable in headless shells.
+- Missing, unknown, duplicate, and unrelated arguments fail with clear messages.
+- Focused automated tests cover default, named, informational, and invalid parsing.
+- The runway remains available as a stable input/movement/camera sandbox instead
+  of being replaced by the upcoming oval.
+- The real `--scenario runway` launch logged the selected scenario, opened the
+  native Wayland/Vulkan path with the Steam Controller, accepted steering and
+  throttle, and shut down cleanly.
+- The final controller Escape binding uses Select/Back/View. The owner confirmed
+  that Start/Menu and B/East leave the runway running, while Select/Back/View exits
+  cleanly; focused tests enforce all three cases.
+
+Needs work:
+
+- Only `runway` exists, so scenario-dependent world construction begins when the
+  oval is implemented.
+- The eventual normal game/menu launch needs a distinct default, but not during
+  this prototype milestone.
+
+Measurements:
+
+- Help and scenario listing do not initialize SDL or open a window.
+
+Next experiment:
+
+- Add `oval` as the second scenario using a minimal sampled track frame and
+  generated mesh while leaving `runway` unchanged.
