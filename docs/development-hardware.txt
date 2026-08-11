@@ -61,6 +61,10 @@ Input
     and confirmed the A/South button's 100% throttle behavior; physical rumble
     sensation, disconnect/reconnect, and controller-button exit remain separately
     unrecorded
+  Duplicate-input diagnosis: under SDL's X11/XWayland backend, moving the left
+    stick forward caused Steam's desktop layout to inject keyboard W through the
+    aggregate X11 keyboard; native SDL Wayland retained the real keyboard and
+    gamepad without receiving that synthetic throttle input
 
 Environment note
   The managed coding sandbox hides GPU, display, USB, and input device access.

@@ -60,11 +60,26 @@ runway simulation.
   startup or gameplay failure.
 - Never encode essential information only as vibration.
 
-Steam currently exposes the wired Steam Controller as a virtual gamepad that SDL
-can consume. Steam Input may later become an optional platform provider for richer
+SDL currently opens the wired Steam Controller as a standard gamepad while Steam
+is running. Steam Input may later become an optional platform provider for richer
 remapping and glyph behavior, but it must feed the same semantic actions and remain
 outside vehicle logic. Do not add direct XInput, DirectInput, HID, or vendor calls
 while SDL supplies the required capability.
+
+### Linux Steam desktop-layout duplication
+
+On the audited GNOME Wayland laptop, Steam's desktop controller layout injects a
+synthetic keyboard `W` through XTEST when the Steam Controller's left stick moves
+forward. When the game used SDL's X11 backend through XWayland, SDL received the
+synthetic event and the real keyboard through one aggregate keyboard. Game code
+could not filter only the controller-generated `W` without also risking legitimate
+keyboard input.
+
+The verified fix is to prefer SDL's native Wayland backend on Linux and retain X11
+as fallback. The native client still receives the real keyboard and SDL gamepad,
+but does not receive the XWayland-only XTEST injection. Do not add a timing-based
+`W`/stick suppression heuristic. If X11 fallback is required with this controller,
+use a Steam per-game gamepad layout that does not emit keyboard movement.
 
 ## Simulation timing
 

@@ -333,3 +333,44 @@ Next experiment:
 
 - Interactively verify controller disconnect/reconnect and controller exit, then
   introduce a generated track frame without coupling physics to render FPS.
+
+### 2026-08-11 — isolate Steam desktop-layout keyboard duplication
+
+Build/revision: `75fdeff` plus the Linux video-backend preference.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS, GNOME Wayland,
+Intel Arc Vulkan driver.
+
+Input device: Physical keyboard and wired Steam Controller with Steam running.
+
+Track/scenario and settings: The same moving-ship runway build, compared through
+SDL's X11/XWayland and native Wayland video backends.
+
+Good:
+
+- Event diagnostics proved that left-stick forward did not report A/South. At
+  roughly half forward it caused a separate keyboard `W` down event, followed by
+  `W` up as the stick returned.
+- XWayland exposed the injected and real keys as one aggregate keyboard, confirming
+  that a game-level device-name filter could not preserve genuine keyboard input.
+- Under native Wayland, left-stick forward did not apply throttle; A/South still
+  supplied `1.0` throttle, physical keyboard W still supplied `1.0` throttle, and
+  the owner confirmed the behavior looked correct.
+- A final launch without an environment override logged the `wayland` video driver,
+  confirming that the code-selected `wayland,x11` preference takes effect. The
+  normal build again kept stick-only steering at zero throttle and exited cleanly.
+
+Needs work:
+
+- X11 remains a required fallback. Steam Controller use through that fallback may
+  need a per-game Steam layout without synthetic WASD bindings.
+- The Steam Deck/Gamescope path still requires its own deployment test.
+
+Measurements:
+
+- No performance conclusion; this was an input-source isolation test.
+
+Next experiment:
+
+- Test controller hotplug and exit when convenient, then proceed toward the first
+  generated track frame.

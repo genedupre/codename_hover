@@ -172,6 +172,22 @@ fixed simulation remains independent and provisional; compare higher simulation
 rates later using game feel, latency, deterministic behavior, and representative
 full-race CPU cost. Do not increase simulation frequency merely to match a monitor.
 
+### D-016: Prefer native Wayland on Linux with X11 fallback
+
+Status: accepted on 2026-08-11.
+
+When the user has not explicitly selected an SDL video driver, Linux builds request
+`wayland,x11` in that order before SDL initialization. This preserves an X11
+fallback and user diagnostic overrides.
+
+The decision follows an interactive Steam Controller diagnosis on GNOME Wayland.
+Steam's desktop layout emitted a synthetic `W` through XTEST when the left stick
+moved forward; SDL's X11/XWayland path reported that input through the same
+aggregate keyboard as legitimate keys. Native Wayland retained real keyboard and
+standard SDL gamepad input without receiving the synthetic key. Prefer the clean
+backend boundary over a device-specific timing heuristic or disabling simultaneous
+keyboard/controller support.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.

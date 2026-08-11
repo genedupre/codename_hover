@@ -27,6 +27,13 @@ a supportable runtime environment suitable for Steam. CI should compile Linux fr
 the beginning. Before a release, test at least SteamOS/Steam Deck plus documented
 desktop Linux configurations rather than claiming universal distribution support.
 
+On Linux, prefer SDL's native Wayland video backend and fall back to X11 when
+Wayland is unavailable. Respect an explicit `SDL_VIDEO_DRIVER` override for
+diagnostics. Both paths remain supported targets, but native Wayland avoids an
+observed XWayland/XTEST duplicate keyboard path from Steam's desktop controller
+layout on the development laptop. This ordering is a platform default, not a
+gameplay input filter.
+
 ## Steam Deck
 
 Treat the Deck as target hardware, not the primary development workstation. Avoid

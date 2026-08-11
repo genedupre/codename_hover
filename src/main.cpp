@@ -582,6 +582,14 @@ int main(int argc, char* argv[]) {
     static_cast<void>(argc);
     static_cast<void>(argv);
 
+#if defined(SDL_PLATFORM_LINUX)
+    if (SDL_GetHint(SDL_HINT_VIDEO_DRIVER) == nullptr &&
+        !SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11")) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Could not set the Linux video-driver preference: %s", SDL_GetError());
+    }
+#endif
+
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s", SDL_GetError());
         return EXIT_FAILURE;
