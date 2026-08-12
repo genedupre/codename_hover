@@ -49,6 +49,7 @@ struct Perspective {
 [[nodiscard]] Mat4 scaling(float uniform_scale);
 [[nodiscard]] Mat4 scaling(Vec3 scale);
 [[nodiscard]] Mat4 rotation_y(float radians);
+[[nodiscard]] Mat4 rotation_z(float radians);
 [[nodiscard]] Mat4 operator*(const Mat4& left, const Mat4& right);
 [[nodiscard]] Vec4 transform(const Mat4& matrix, Vec4 vector);
 

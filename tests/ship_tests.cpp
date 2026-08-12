@@ -30,6 +30,13 @@ void test_first_ship_definition() {
     check(ship.handling.normal_lateral_grip_per_second >
               ship.handling.drift_lateral_grip_per_second,
           "Prototype 01 loses lateral grip while drifting");
+    check(ship.handling.coasting_deceleration_metres_per_second_squared > 12.0F,
+          "Prototype 01 has the more aggressive coasting slowdown");
+    check(ship.handling.steering_rate_radians_per_second > 1.65F,
+          "Prototype 01 has the faster provisional steering rate");
+    check(ship.presentation.maximum_turn_roll_radians > 0.0F &&
+              ship.presentation.turn_roll_response_per_second > 0.0F,
+          "Prototype 01 defines its visual turn-roll behavior explicitly");
     check(ship.collision.maximum_energy == 100.0F,
           "Prototype 01 establishes the baseline energy scale");
 }

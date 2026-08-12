@@ -28,11 +28,17 @@ struct CollisionProfile {
     float collision_damage_multiplier;
 };
 
+struct ShipPresentationProfile {
+    float maximum_turn_roll_radians;
+    float turn_roll_response_per_second;
+};
+
 struct ShipDefinition {
     std::string_view id;
     std::string_view display_name;
     std::string_view visual_mesh_id;
     HandlingProfile handling;
+    ShipPresentationProfile presentation;
     CollisionProfile collision;
 };
 

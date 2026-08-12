@@ -91,14 +91,51 @@ void test_vehicle_pose_and_interpolation() {
 
     check(state.forward_speed_metres_per_second > 0.0F, "throttle accelerates the vehicle");
     check(state.pose.yaw_radians > 0.0F, "positive steering turns the vehicle right");
+    check(state.pose.turn_roll_radians < 0.0F,
+          "a right turn visually lowers the ship's right wing");
     check(state.pose.position.x > 0.0F && state.pose.position.z > 0.0F,
           "turned vehicle moves along its local forward direction");
 
     const hover::game::VehiclePose halfway = hover::game::interpolate(
-        hover::game::VehiclePose{}, hover::game::VehiclePose{{10.0F, 2.0F, 4.0F}, 1.0F}, 0.5F);
+        hover::game::VehiclePose{},
+        hover::game::VehiclePose{{10.0F, 2.0F, 4.0F}, 1.0F, -0.2F}, 0.5F);
     check(nearly_equal(halfway.position.x, 5.0F) && nearly_equal(halfway.position.y, 1.0F) &&
-              nearly_equal(halfway.position.z, 2.0F) && nearly_equal(halfway.yaw_radians, 0.5F),
-          "render pose interpolates position and heading");
+              nearly_equal(halfway.position.z, 2.0F) && nearly_equal(halfway.yaw_radians, 0.5F) &&
+              nearly_equal(halfway.turn_roll_radians, -0.1F),
+          "render pose interpolates position, heading, and turn roll");
+}
+
+void test_coasting_and_speed_scaled_turn_roll() {
+    const hover::game::ShipDefinition& ship = hover::game::ships::prototype_01_definition();
+    hover::game::VehicleState coasting{};
+    coasting.forward_speed_metres_per_second = 100.0F;
+    hover::game::simulate_vehicle(
+        coasting, hover::game::VehicleTick{{}, ship, 1.0F});
+    check(nearly_equal(coasting.forward_speed_metres_per_second, 76.0F),
+          "one second without propulsion applies the stronger coasting slowdown");
+
+    hover::game::VehicleState slow_turn{};
+    slow_turn.forward_speed_metres_per_second =
+        ship.handling.maximum_forward_speed_metres_per_second * 0.1F;
+    hover::game::VehicleState fast_turn{};
+    fast_turn.forward_speed_metres_per_second =
+        ship.handling.maximum_forward_speed_metres_per_second;
+    const hover::input::PlayerInput right_turn{.steering = 1.0F, .throttle = 1.0F};
+    constexpr float tick_seconds = 1.0F / 90.0F;
+    hover::game::simulate_vehicle(slow_turn,
+                                  hover::game::VehicleTick{right_turn, ship, tick_seconds});
+    hover::game::simulate_vehicle(fast_turn,
+                                  hover::game::VehicleTick{right_turn, ship, tick_seconds});
+
+    check(fast_turn.pose.turn_roll_radians < slow_turn.pose.turn_roll_radians &&
+              slow_turn.pose.turn_roll_radians < 0.0F,
+          "turn roll is stronger at high speed and follows steering direction");
+
+    const float initial_roll = fast_turn.pose.turn_roll_radians;
+    hover::game::simulate_vehicle(
+        fast_turn, hover::game::VehicleTick{{.throttle = 1.0F}, ship, tick_seconds});
+    check(std::abs(fast_turn.pose.turn_roll_radians) < std::abs(initial_roll),
+          "ship begins returning level when steering is released");
 }
 
 } // namespace
@@ -107,6 +144,7 @@ int main() {
     test_render_rate_independence();
     test_catch_up_limit();
     test_vehicle_pose_and_interpolation();
+    test_coasting_and_speed_scaled_turn_roll();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " simulation test(s) failed\n";

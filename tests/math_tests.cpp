@@ -97,6 +97,14 @@ void test_nonuniform_scaling() {
           "nonuniform scaling independently controls three local axes");
 }
 
+void test_local_roll_rotation() {
+    const hover::math::Vec4 right_wing = hover::math::transform(
+        hover::math::rotation_z(-0.25F), hover::math::Vec4{1.0F, 0.0F, 0.0F, 0.0F});
+
+    check(right_wing.x > 0.0F && right_wing.y < 0.0F,
+          "negative local roll lowers the right side of a forward-facing ship");
+}
+
 } // namespace
 
 int main() {
@@ -106,6 +114,7 @@ int main() {
     test_matrix_composition_order();
     test_uniform_scaling();
     test_nonuniform_scaling();
+    test_local_roll_rotation();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " math test(s) failed\n";

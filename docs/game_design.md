@@ -52,6 +52,13 @@ heavier, more agile, drift-oriented, fragile, or durable. Tune them through
 controlled driving and collision tests once the corresponding behavior exists;
 the initial constants are not claims about final balance.
 
+The runway prototype also gives each ship a small presentation profile. Its first
+parameters control maximum visual turn roll and response speed. The roll follows
+steering direction, grows with normalized speed, and eases back to level. It does
+not change planar travel or collision behavior; future track-relative orientation
+will compose ship lean with the sampled surface frame rather than assuming
+world-up.
+
 ## Track representation
 
 The working model is a sampled path with a stable local coordinate frame:

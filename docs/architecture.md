@@ -172,10 +172,12 @@ world-up. Truly airborne motion will be a separate state that can later reacquir
 any eligible path; the graph and airborne transition are not implemented yet.
 
 A ship's gameplay `ShipDefinition` is separate from its visual mesh. It contains a
-stable identity and visual-mesh key plus handling and collision profiles. The
-collision profile owns local-space bounds, relative mass, energy, and collision
-damage response. Replacing a generated prototype mesh with a Blender-authored GLB
-must not silently replace or derive these gameplay values.
+stable identity and visual-mesh key plus handling, presentation, and collision
+profiles. The small presentation profile currently owns speed-scaled visual turn
+roll rather than placing that tuning in the renderer. The collision profile owns
+local-space bounds, relative mass, energy, and collision-damage response.
+Replacing a generated prototype mesh with a Blender-authored GLB must not silently
+replace or derive these gameplay values.
 
 ## Error handling and diagnostics
 

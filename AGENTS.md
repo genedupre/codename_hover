@@ -33,6 +33,12 @@ core and 50%-transparent outer shell. A presentation-only release envelope
 shrinks it for about 0.2 seconds before it disappears. Its canopy is also a
 separate 50%-transparent mesh over a simple opaque driver silhouette.
 
+The runway handling tune now uses 24 m/s² coasting deceleration and a 1.90 rad/s
+maximum steering rate. Steering drives a smoothed ship-specific visual roll up to
+0.18 radians, scaled by speed; this roll does not affect planar travel or the
+future collision model. The driver silhouette is explicitly deferred for later
+visual improvement.
+
 The cross-device bootstrap is not complete. A wired Steam Controller was detected
 and used on the laptop on 2026-08-11. The first laptop-built executable and
 shaders were rsynced to the Steam Deck MicroSD card, where the headless scenario

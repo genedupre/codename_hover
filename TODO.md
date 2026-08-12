@@ -59,3 +59,10 @@ no intentional low-resolution internal renderer yet.
 - [ ] Move engine socket placement into ship visual data when a second ship or a
   Blender-authored mesh needs the effect; do not build a general attachment system
   before then.
+
+## Ship visual polish
+
+- [ ] Replace or substantially improve Prototype 01's provisional low-poly driver
+  silhouette. Owner feedback on 2026-08-12 was that the layered exhaust and canopy
+  looked much better, but the driver itself did not look good. Revisit it alongside
+  authored ship work rather than delaying handling experiments now.

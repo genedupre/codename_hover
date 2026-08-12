@@ -87,6 +87,18 @@ Mat4 rotation_y(float radians) {
     return result;
 }
 
+Mat4 rotation_z(float radians) {
+    const float cosine = std::cos(radians);
+    const float sine = std::sin(radians);
+
+    Mat4 result = identity();
+    result.at(0, 0) = cosine;
+    result.at(0, 1) = -sine;
+    result.at(1, 0) = sine;
+    result.at(1, 1) = cosine;
+    return result;
+}
+
 Mat4 operator*(const Mat4& left, const Mat4& right) {
     Mat4 result{};
     for (int column = 0; column < 4; ++column) {

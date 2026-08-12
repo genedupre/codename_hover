@@ -4,6 +4,7 @@ namespace hover::game {
 
 bool is_valid(const ShipDefinition& definition) {
     const HandlingProfile& handling = definition.handling;
+    const ShipPresentationProfile& presentation = definition.presentation;
     const CollisionProfile& collision = definition.collision;
     const math::Vec3 half_extents = collision.local_bounds.half_extents;
 
@@ -15,7 +16,9 @@ bool is_valid(const ShipDefinition& definition) {
            handling.coasting_deceleration_metres_per_second_squared >= 0.0F &&
            handling.steering_rate_radians_per_second > 0.0F &&
            handling.normal_lateral_grip_per_second >= 0.0F &&
-           handling.drift_lateral_grip_per_second >= 0.0F && half_extents.x > 0.0F &&
+           handling.drift_lateral_grip_per_second >= 0.0F &&
+           presentation.maximum_turn_roll_radians >= 0.0F &&
+           presentation.turn_roll_response_per_second > 0.0F && half_extents.x > 0.0F &&
            half_extents.y > 0.0F && half_extents.z > 0.0F && collision.relative_mass > 0.0F &&
            collision.maximum_energy > 0.0F && collision.collision_damage_multiplier > 0.0F;
 }

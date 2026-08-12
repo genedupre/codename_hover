@@ -768,3 +768,39 @@ Next experiment:
 
 - Inspect the revised ship in `runway`, then return to advancing track-relative
   state along the oval unless the new presentation has a concrete visual defect.
+
+### 2026-08-12 — faster handling and speed-scaled turn roll
+
+Build/revision: `ec78180` plus the first runway handling-tune changes.
+
+Hardware and OS: Automated tests and interactive graphical test on the HP ZBook
+Studio 16 G11, Ubuntu 24.04.4 LTS, Wayland and Vulkan.
+
+Input device: Wired Steam Controller with analog steering, A/South acceleration,
+and the existing brake controls.
+
+Track/scenario and settings: `--scenario runway`; fixed 90 Hz simulation and
+interpolated rendering in the decorated 1280x720 development window.
+
+Good:
+
+- Coasting deceleration increased from 12 to 24 m/s² and the maximum steering
+  rate increased from 1.65 to 1.90 rad/s.
+- A ship-specific visual roll now follows steering direction, scales with speed
+  up to 0.18 radians, and eases back to level without changing planar travel.
+- The owner tested the complete tune from rest through maximum speed and reported
+  that it feels good.
+- All eight test executables pass and focused clang-tidy is clean.
+
+Needs work:
+
+- Owner feedback requests another pass with more aggressive braking and coasting.
+- Full-speed steering should remain as accepted, while low-speed steering needs
+  more authority than the current linear speed curve provides.
+- The provisional driver silhouette does not look good and remains deferred in
+  `TODO.md` for later authored-visual work.
+
+Next experiment:
+
+- Increase braking and coasting modestly, then reshape steering authority so its
+  low-speed floor is higher and it converges to the accepted full-speed response.

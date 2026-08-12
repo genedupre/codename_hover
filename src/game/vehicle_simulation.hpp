@@ -9,6 +9,7 @@ namespace hover::game {
 struct VehiclePose {
     math::Vec3 position{0.0F, 0.0F, 0.0F};
     float yaw_radians = 0.0F;
+    float turn_roll_radians = 0.0F;
 };
 
 struct VehicleState {

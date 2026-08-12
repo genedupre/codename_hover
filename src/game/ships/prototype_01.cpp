@@ -12,10 +12,15 @@ const ShipDefinition& prototype_01_definition() {
                 .maximum_forward_speed_metres_per_second = 260.0F,
                 .forward_acceleration_metres_per_second_squared = 78.0F,
                 .braking_deceleration_metres_per_second_squared = 105.0F,
-                .coasting_deceleration_metres_per_second_squared = 12.0F,
-                .steering_rate_radians_per_second = 1.65F,
+                .coasting_deceleration_metres_per_second_squared = 24.0F,
+                .steering_rate_radians_per_second = 1.90F,
                 .normal_lateral_grip_per_second = 7.0F,
                 .drift_lateral_grip_per_second = 2.4F,
+            },
+        .presentation =
+            {
+                .maximum_turn_roll_radians = 0.18F,
+                .turn_roll_response_per_second = 8.0F,
             },
         .collision =
             {

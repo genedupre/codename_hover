@@ -27,6 +27,14 @@ void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
     state.pose.yaw_radians += tick.input.steering * handling.steering_rate_radians_per_second *
                               steering_authority * tick.tick_seconds;
 
+    const ShipPresentationProfile& presentation = tick.definition.presentation;
+    const float target_roll = -tick.input.steering * presentation.maximum_turn_roll_radians *
+                              speed_ratio;
+    const float roll_blend =
+        1.0F - std::exp(-presentation.turn_roll_response_per_second * tick.tick_seconds);
+    state.pose.turn_roll_radians +=
+        (target_roll - state.pose.turn_roll_radians) * roll_blend;
+
     state.pose.position =
         state.pose.position +
         forward_direction(state.pose) * (state.forward_speed_metres_per_second * tick.tick_seconds);
@@ -37,6 +45,8 @@ VehiclePose interpolate(const VehiclePose& previous, const VehiclePose& current,
     return VehiclePose{
         previous.position + (current.position - previous.position) * clamped_alpha,
         previous.yaw_radians + (current.yaw_radians - previous.yaw_radians) * clamped_alpha,
+        previous.turn_roll_radians +
+            (current.turn_roll_radians - previous.turn_roll_radians) * clamped_alpha,
     };
 }
 
@@ -45,7 +55,8 @@ math::Vec3 forward_direction(const VehiclePose& pose) {
 }
 
 math::Mat4 model_matrix(const VehiclePose& pose) {
-    return math::translation(pose.position) * math::rotation_y(pose.yaw_radians);
+    return math::translation(pose.position) * math::rotation_y(pose.yaw_radians) *
+           math::rotation_z(pose.turn_roll_radians);
 }
 
 } // namespace hover::game

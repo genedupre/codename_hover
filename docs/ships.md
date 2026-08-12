@@ -15,7 +15,7 @@ generated C++ mesh ----\
                        -> MeshData -> GpuMesh -> SDL_GPU draw
 future Blender GLB ----/
 
-ShipDefinition -> identity, visual-mesh key, handling, collider, mass, energy
+ShipDefinition -> identity, visual-mesh key, handling, presentation, collider
 ```
 
 - `render::MeshData` is CPU-owned position, flat normal, color, opacity, and
@@ -23,7 +23,8 @@ ShipDefinition -> identity, visual-mesh key, handling, collider, mass, energy
 - `render::GpuMesh` validates and uploads a `MeshData`. It owns SDL_GPU vertex and
   index buffers and does not know which ship or source produced them.
 - `game::ShipDefinition` owns gameplay-facing data and references a visual mesh by
-  stable key. It never owns GPU resources.
+  stable key. Its small presentation profile holds ship-specific visual handling
+  response such as turn roll. It never owns GPU resources.
 - Generated mesh functions live under `src/assets/generated/`. A future GLB loader
   belongs under `src/assets/` and should produce the same `MeshData`.
 - Per-racer simulation state will reference a ship definition. Racers using the
@@ -78,10 +79,12 @@ Its provisional definition currently specifies:
 | Maximum forward speed | 260 m/s |
 | Forward acceleration | 78 m/s² |
 | Braking deceleration | 105 m/s² |
-| Coasting deceleration | 12 m/s² |
-| Steering rate | 1.65 rad/s |
+| Coasting deceleration | 24 m/s² |
+| Steering rate | 1.90 rad/s |
 | Normal lateral grip | 7.0/s |
 | Drift lateral grip | 2.4/s |
+| Maximum visual turn roll | 0.18 rad (~10.3°) |
+| Visual turn-roll response | 8.0/s |
 | Relative collision mass | 1.0 |
 | Maximum energy | 100 |
 | Collision damage multiplier | 1.0 |
@@ -114,9 +117,12 @@ collider or handling automatically merely because the authored mesh changed.
 
 Prototype 01 now has a planar runway simulation that consumes semantic input at a
 fixed 90 Hz. It accelerates up to its definition's maximum speed, brakes without
-reversing, coasts, rotates with speed-dependent steering authority, and moves along
-its local forward direction. Rendering interpolates its previous/current pose and
-applies a per-object model matrix; the camera follows that interpolated pose.
+reversing, coasts with stronger passive deceleration, rotates with speed-dependent
+steering authority, and moves along its local forward direction. Steering also
+drives a smoothed visual roll that grows with speed and returns to level after
+release. Rendering interpolates its previous/current pose and applies a per-object
+model matrix; the camera follows that interpolated pose without inheriting the
+ship's visual roll.
 
 This exists to validate timing, input, transforms, and camera plumbing. It is not
 the intended track-relative hover physics and its feel is not final.
