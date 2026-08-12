@@ -908,3 +908,35 @@ Needs interactive verification:
 - Confirm the FOV, pullback, and look-ahead preserve steering readability.
 - Check that release carries the speed sensation without lingering too long or
   causing discomfort.
+
+### 2026-08-12 — throttle-gated boost acceleration and activation rumble
+
+Build/revision: uncommitted changes after `fa9c0ef`.
+
+Hardware and OS: Compilation and automated tests on the HP ZBook Studio 16 G11,
+Ubuntu 24.04.4 LTS. Interactive handling and physical rumble are not yet verified.
+
+Track/scenario and settings: `runway` is the intended first test scenario; wired
+Steam Controller is the intended first rumble device.
+
+Implemented:
+
+- Boost acceleration now scales with the existing analog throttle action. At zero
+  throttle it contributes no acceleration.
+- Releasing throttle during an active burst applies ordinary coasting from the
+  current boosted speed while the timer, flare, and eligible camera response
+  continue.
+- A successful rising boost edge emits one semantic `boost_activated` event.
+- The single-player runtime maps that event to a 160 ms rumble pulse with 35%
+  low-frequency and 80% high-frequency strength on capable attached controllers.
+- Holding boost cannot repeat the pulse, and simultaneous braking cancels boost
+  without producing the event.
+- All nine automated test executables pass. Simulation coverage includes boost at
+  rest without throttle, coasting from boosted speed, analog half-throttle boost,
+  one-shot activation events, and brake suppression.
+
+Needs interactive verification:
+
+- Confirm releasing A/South while the burst is active produces the intended
+  boosted-speed coast-down.
+- Confirm the Steam Controller pulse is noticeable but not harsh or too long.

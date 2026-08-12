@@ -96,9 +96,9 @@ void test_vehicle_pose_and_interpolation() {
     check(state.pose.position.x > 0.0F && state.pose.position.z > 0.0F,
           "turned vehicle moves along its local forward direction");
 
-    const hover::game::VehiclePose halfway = hover::game::interpolate(
-        hover::game::VehiclePose{},
-        hover::game::VehiclePose{{10.0F, 2.0F, 4.0F}, 1.0F, -0.2F}, 0.5F);
+    const hover::game::VehiclePose halfway =
+        hover::game::interpolate(hover::game::VehiclePose{},
+                                 hover::game::VehiclePose{{10.0F, 2.0F, 4.0F}, 1.0F, -0.2F}, 0.5F);
     check(nearly_equal(halfway.position.x, 5.0F) && nearly_equal(halfway.position.y, 1.0F) &&
               nearly_equal(halfway.position.z, 2.0F) && nearly_equal(halfway.yaw_radians, 0.5F) &&
               nearly_equal(halfway.turn_roll_radians, -0.1F),
@@ -109,8 +109,7 @@ void test_coasting_and_speed_scaled_turn_roll() {
     const hover::game::ShipDefinition& ship = hover::game::ships::prototype_01_definition();
     hover::game::VehicleState coasting{};
     coasting.forward_speed_metres_per_second = 100.0F;
-    hover::game::simulate_vehicle(
-        coasting, hover::game::VehicleTick{{}, ship, 1.0F});
+    hover::game::simulate_vehicle(coasting, hover::game::VehicleTick{{}, ship, 1.0F});
     check(nearly_equal(coasting.forward_speed_metres_per_second, 10.0F),
           "one second without propulsion applies the stronger coasting slowdown");
 
@@ -132,8 +131,8 @@ void test_coasting_and_speed_scaled_turn_roll() {
           "turn roll is stronger at high speed and follows steering direction");
 
     const float initial_roll = fast_turn.pose.turn_roll_radians;
-    hover::game::simulate_vehicle(
-        fast_turn, hover::game::VehicleTick{{.throttle = 1.0F}, ship, tick_seconds});
+    hover::game::simulate_vehicle(fast_turn,
+                                  hover::game::VehicleTick{{.throttle = 1.0F}, ship, tick_seconds});
     check(std::abs(fast_turn.pose.turn_roll_radians) < std::abs(initial_roll),
           "ship begins returning level when steering is released");
 }
@@ -172,21 +171,19 @@ void test_boost_press_activates_one_burst_then_returns_to_normal_speed() {
 
     for (int tick = 0; tick < 45; ++tick) {
         hover::game::simulate_vehicle(
-            state,
-            hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
+            state, hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
     }
     const float boosted_limit = ship.handling.base_maximum_forward_speed_metres_per_second *
                                 ship.handling.boost_maximum_speed_multiplier;
     check(state.boosting, "one boost-button press activates a timed fixed-step burst");
     check(state.forward_speed_metres_per_second >
-              ship.handling.base_maximum_forward_speed_metres_per_second &&
+                  ship.handling.base_maximum_forward_speed_metres_per_second &&
               state.forward_speed_metres_per_second <= boosted_limit,
           "boost carries the ship above its normal speed without exceeding its boost limit");
 
     for (int tick = 0; tick < 180; ++tick) {
         hover::game::simulate_vehicle(
-            state,
-            hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
+            state, hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
     }
     check(!state.boosting && state.boost_seconds_remaining == 0.0F,
           "holding the button does not retrigger a completed boost burst");
@@ -194,11 +191,10 @@ void test_boost_press_activates_one_burst_then_returns_to_normal_speed() {
                        ship.handling.base_maximum_forward_speed_metres_per_second),
           "completed boost returns to the normal maximum while throttle is held");
 
+    hover::game::simulate_vehicle(state,
+                                  hover::game::VehicleTick{{.throttle = 1.0F}, ship, tick_seconds});
     hover::game::simulate_vehicle(
-        state, hover::game::VehicleTick{{.throttle = 1.0F}, ship, tick_seconds});
-    hover::game::simulate_vehicle(
-        state,
-        hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
+        state, hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
     check(state.boosting && state.forward_speed_metres_per_second >
                                 ship.handling.base_maximum_forward_speed_metres_per_second,
           "releasing and pressing X starts another boost burst");
@@ -207,6 +203,55 @@ void test_boost_press_activates_one_burst_then_returns_to_normal_speed() {
         state, hover::game::VehicleTick{{.brake = 1.0F, .boost = true}, ship, tick_seconds});
     check(!state.boosting && state.boost_seconds_remaining == 0.0F,
           "braking cancels an active boost burst");
+}
+
+void test_boost_acceleration_requires_throttle_and_activation_is_one_event() {
+    const hover::game::ShipDefinition& ship = hover::game::ships::prototype_01_definition();
+    constexpr float tick_seconds = 1.0F / 90.0F;
+
+    hover::game::VehicleState stopped{};
+    const hover::game::VehicleTickEvents stopped_activation = hover::game::simulate_vehicle(
+        stopped, hover::game::VehicleTick{{.boost = true}, ship, tick_seconds});
+    check(stopped_activation.boost_activated && stopped.boosting,
+          "a rising boost press activates the timed state without throttle");
+    check(nearly_equal(stopped.forward_speed_metres_per_second, 0.0F),
+          "boost does not accelerate a stopped ship without throttle");
+    const hover::game::VehicleTickEvents held_boost = hover::game::simulate_vehicle(
+        stopped, hover::game::VehicleTick{{.boost = true}, ship, tick_seconds});
+    check(!held_boost.boost_activated,
+          "holding boost does not emit another activation event for rumble");
+
+    hover::game::VehicleState braking{};
+    const hover::game::VehicleTickEvents cancelled_activation = hover::game::simulate_vehicle(
+        braking, hover::game::VehicleTick{{.brake = 1.0F, .boost = true}, ship, tick_seconds});
+    check(!cancelled_activation.boost_activated && !braking.boosting,
+          "simultaneous braking cancels boost without emitting activation feedback");
+
+    hover::game::VehicleState moving{};
+    moving.forward_speed_metres_per_second =
+        ship.handling.base_maximum_forward_speed_metres_per_second * 1.20F;
+    const float speed_before_release = moving.forward_speed_metres_per_second;
+    hover::game::simulate_vehicle(moving,
+                                  hover::game::VehicleTick{{.boost = true}, ship, tick_seconds});
+    const float expected_speed =
+        speed_before_release -
+        ship.handling.coasting_deceleration_metres_per_second_squared * tick_seconds;
+    check(moving.boosting && nearly_equal(moving.forward_speed_metres_per_second, expected_speed),
+          "releasing throttle during boost coasts down from the boosted speed");
+
+    hover::game::VehicleState partial_throttle{};
+    partial_throttle.forward_speed_metres_per_second =
+        ship.handling.base_maximum_forward_speed_metres_per_second;
+    hover::game::simulate_vehicle(
+        partial_throttle,
+        hover::game::VehicleTick{{.throttle = 0.5F, .boost = true}, ship, tick_seconds});
+    const float expected_partial_acceleration =
+        0.5F * (ship.handling.forward_acceleration_metres_per_second_squared +
+                ship.handling.boost_acceleration_metres_per_second_squared);
+    check(nearly_equal(partial_throttle.forward_speed_metres_per_second,
+                       ship.handling.base_maximum_forward_speed_metres_per_second +
+                           expected_partial_acceleration * tick_seconds),
+          "analog throttle scales both normal and boost acceleration");
 }
 
 } // namespace
@@ -218,6 +263,7 @@ int main() {
     test_coasting_and_speed_scaled_turn_roll();
     test_low_speed_steering_authority_increases_without_changing_full_speed();
     test_boost_press_activates_one_burst_then_returns_to_normal_speed();
+    test_boost_acceleration_requires_throttle_and_activation_is_one_event();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " simulation test(s) failed\n";

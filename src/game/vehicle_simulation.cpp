@@ -6,7 +6,7 @@
 
 namespace hover::game {
 
-void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
+VehicleTickEvents simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
     assert(tick.tick_seconds > 0.0F);
     const HandlingProfile& handling = tick.definition.handling;
     const bool boost_just_pressed = tick.input.boost && !state.boost_input_was_down;
@@ -18,10 +18,11 @@ void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
         state.boost_seconds_remaining = 0.0F;
     }
     state.boosting = state.boost_seconds_remaining > 0.0F;
+    const VehicleTickEvents events{.boost_activated = boost_just_pressed && state.boosting};
     float acceleration =
         tick.input.throttle * handling.forward_acceleration_metres_per_second_squared -
         tick.input.brake * handling.braking_deceleration_metres_per_second_squared;
-    if (!state.boosting && tick.input.throttle <= 0.0F && tick.input.brake <= 0.0F &&
+    if (tick.input.throttle <= 0.0F && tick.input.brake <= 0.0F &&
         state.forward_speed_metres_per_second > 0.0F) {
         acceleration -= handling.coasting_deceleration_metres_per_second_squared;
     }
@@ -29,7 +30,7 @@ void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
         !state.boosting && state.forward_speed_metres_per_second >
                                handling.base_maximum_forward_speed_metres_per_second;
     if (state.boosting) {
-        acceleration += handling.boost_acceleration_metres_per_second_squared;
+        acceleration += tick.input.throttle * handling.boost_acceleration_metres_per_second_squared;
     } else if (returning_from_boost) {
         acceleration -= handling.boost_excess_speed_decay_metres_per_second_squared;
     }
@@ -37,10 +38,9 @@ void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
     const float boosted_speed_limit = handling.base_maximum_forward_speed_metres_per_second *
                                       handling.boost_maximum_speed_multiplier;
     const float active_speed_limit =
-        state.boosting
-            ? boosted_speed_limit
-            : std::max(handling.base_maximum_forward_speed_metres_per_second,
-                       state.forward_speed_metres_per_second);
+        state.boosting ? boosted_speed_limit
+                       : std::max(handling.base_maximum_forward_speed_metres_per_second,
+                                  state.forward_speed_metres_per_second);
     state.forward_speed_metres_per_second =
         std::clamp(state.forward_speed_metres_per_second + acceleration * tick.tick_seconds, 0.0F,
                    active_speed_limit);
@@ -50,21 +50,19 @@ void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
             handling.base_maximum_forward_speed_metres_per_second;
     }
 
-    const float speed_ratio =
-        std::clamp(state.forward_speed_metres_per_second /
-                       handling.base_maximum_forward_speed_metres_per_second,
-                   0.0F, 1.0F);
+    const float speed_ratio = std::clamp(state.forward_speed_metres_per_second /
+                                             handling.base_maximum_forward_speed_metres_per_second,
+                                         0.0F, 1.0F);
     const float steering_authority = 0.60F + 0.40F * std::sqrt(speed_ratio);
     state.pose.yaw_radians += tick.input.steering * handling.steering_rate_radians_per_second *
                               steering_authority * tick.tick_seconds;
 
     const ShipPresentationProfile& presentation = tick.definition.presentation;
-    const float target_roll = -tick.input.steering * presentation.maximum_turn_roll_radians *
-                              speed_ratio;
+    const float target_roll =
+        -tick.input.steering * presentation.maximum_turn_roll_radians * speed_ratio;
     const float roll_blend =
         1.0F - std::exp(-presentation.turn_roll_response_per_second * tick.tick_seconds);
-    state.pose.turn_roll_radians +=
-        (target_roll - state.pose.turn_roll_radians) * roll_blend;
+    state.pose.turn_roll_radians += (target_roll - state.pose.turn_roll_radians) * roll_blend;
 
     state.pose.position =
         state.pose.position +
@@ -78,6 +76,7 @@ void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
         }
         state.boosting = state.boost_seconds_remaining > 0.0F;
     }
+    return events;
 }
 
 VehiclePose interpolate(const VehiclePose& previous, const VehiclePose& current, float alpha) {

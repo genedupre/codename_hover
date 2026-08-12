@@ -69,11 +69,20 @@ The first boost is deliberately a button-activated, one-second burst with no
 energy or cooldown. A rising boost-action edge starts the timed fixed-step state;
 holding the button cannot retrigger it, so the player must release and press
 again. During the burst it adds acceleration up to a ship-defined boosted speed
-ceiling. After the burst, speed above the normal ceiling decays at a separate
-ship-defined rate and settles exactly at the normal ceiling before ordinary
-throttle/coasting rules resume. Braking cancels an active burst. This establishes
-deterministic mechanics and tuning boundaries without prematurely designing the
-final energy system.
+ceiling, with both normal and boost acceleration scaled by the analog throttle
+action. Releasing throttle therefore stops acceleration immediately and applies
+ordinary coasting deceleration from the current speed even while the boost timer,
+flare, and camera state remain active. After the burst, speed above the normal
+ceiling decays at a separate ship-defined rate and settles exactly at the normal
+ceiling before ordinary speed limiting resumes. Braking cancels an active burst.
+This establishes deterministic mechanics and tuning boundaries without
+prematurely designing the final energy system.
+
+A successful boost activation emits one semantic simulation event. The current
+single-player runtime maps that event to a 160 ms controller-rumble pulse. Holding
+the boost action emits no additional event, simultaneous braking suppresses it,
+and keyboard or mouse activation can rumble an attached controller because
+feedback follows the gameplay event rather than a particular physical button.
 
 Boost camera feedback is presentation-only and speed-gated. When an active burst
 reaches 65% of the ship's normal maximum speed, the response latches for the

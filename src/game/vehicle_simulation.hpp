@@ -26,7 +26,11 @@ struct VehicleTick {
     float tick_seconds;
 };
 
-void simulate_vehicle(VehicleState& state, const VehicleTick& tick);
+struct VehicleTickEvents {
+    bool boost_activated = false;
+};
+
+VehicleTickEvents simulate_vehicle(VehicleState& state, const VehicleTick& tick);
 [[nodiscard]] VehiclePose interpolate(const VehiclePose& previous, const VehiclePose& current,
                                       float alpha);
 [[nodiscard]] math::Vec3 forward_direction(const VehiclePose& pose);

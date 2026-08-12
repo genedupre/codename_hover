@@ -700,6 +700,11 @@ int run(hover::core::DevelopmentScenario scenario) {
     double engine_pulse_elapsed_seconds = 0.0;
     float engine_pulse_intensity = 0.0F;
     hover::render::BoostCameraFeedbackState boost_camera_feedback{};
+    constexpr hover::platform::SdlInput::RumbleEffect boost_activation_rumble{
+        .low_frequency = 0.35F,
+        .high_frequency = 0.80F,
+        .duration_ms = 160,
+    };
     bool running = true;
     while (running) {
         const double elapsed_seconds = frame_timer.elapsed_seconds();
@@ -718,12 +723,17 @@ int run(hover::core::DevelopmentScenario scenario) {
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                             "Simulation catch-up limit reached; excess accumulated time dropped.");
             }
+            bool boost_activated_this_frame = false;
             for (std::uint32_t tick = 0; tick < step_plan.tick_count; ++tick) {
                 previous_vehicle_state = current_vehicle_state;
-                hover::game::simulate_vehicle(
+                const hover::game::VehicleTickEvents events = hover::game::simulate_vehicle(
                     current_vehicle_state,
                     hover::game::VehicleTick{player_input, ship_definition,
                                              static_cast<float>(simulation_tick_seconds)});
+                boost_activated_this_frame = boost_activated_this_frame || events.boost_activated;
+            }
+            if (boost_activated_this_frame) {
+                input_system.rumble_all(boost_activation_rumble);
             }
             const hover::game::VehiclePose render_pose =
                 hover::game::interpolate(previous_vehicle_state.pose, current_vehicle_state.pose,

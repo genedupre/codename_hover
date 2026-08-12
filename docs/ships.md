@@ -135,7 +135,12 @@ Prototype 01's provisional 260 m/s base ceiling to at most 332.8 m/s. Holding X
 does not retrigger it; X must be released before another press. When the burst
 ends, excess speed returns smoothly to the normal ceiling instead of snapping the
 ship down. Braking cancels a burst. This initial mechanic has no energy cost or
-cooldown and is intended for handling validation, not final balance.
+cooldown and is intended for handling validation, not final balance. Its 145 m/s²
+boost acceleration is the full-throttle value and scales with analog throttle.
+Releasing throttle during a burst applies the existing 90 m/s² coasting
+deceleration from whatever boosted speed the ship has reached; it does not cancel
+the remaining burst presentation or force the ship immediately back to its base
+ceiling.
 
 The prototype camera adds a speed-gated response shared by the current scenario
 camera rather than storing camera numbers in `ShipDefinition`. It activates at

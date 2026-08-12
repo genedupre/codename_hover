@@ -56,7 +56,11 @@ vary on Nintendo-style and other layouts.
 Drift remains represented but does not yet alter the provisional runway
 simulation. Boost uses the rising edge of its merged digital action to start a
 timed fixed-step burst; holding a source does not continuously boost or retrigger
-the action. See `game_design.md` and `rendering.md`.
+the action. A successful activation produces one semantic event and submits a
+short rumble pulse to every rumble-capable controller currently assigned to the
+prototype player. This also happens when boost is activated by keyboard or mouse;
+simultaneous braking cancels boost and suppresses the pulse. See `game_design.md`
+and `rendering.md`.
 
 ## Device lifecycle and capabilities
 
@@ -66,6 +70,8 @@ the action. See `game_design.md` and `rendering.md`.
 - Log the SDL name, standardized type, Steam handle, and rumble capability.
 - Submit rumble only when SDL reports support; failed rumble is a warning, never a
   startup or gameplay failure.
+- Keep gameplay rumble driven by semantic events rather than physical SDL button
+  events so remapping and simultaneous input retain identical feedback.
 - Never encode essential information only as vibration.
 
 The wired Steam Controller lifecycle was interactively verified on the Linux
