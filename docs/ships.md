@@ -122,7 +122,7 @@ collider or handling automatically merely because the authored mesh changed.
 
 ## Current provisional simulation
 
-Prototype 01 consumes semantic input at a fixed 90 Hz in two movement modes. The
+Prototype 01 consumes semantic input at a fixed 120 Hz in two movement modes. The
 `runway` keeps its planar free-driving simulation. `oval` and `speedway` share an
 attached simulation that advances path distance, uses speed-scaled lateral
 heading and grip for steering, keeps the provisional box footprint inside the

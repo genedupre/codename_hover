@@ -709,9 +709,8 @@ int run(hover::core::DevelopmentScenario scenario) {
             gpu_driver != nullptr ? gpu_driver : "unknown",
             gpu_debug_mode ? "enabled" : "disabled");
 
-    constexpr double simulation_tick_seconds = 1.0 / 90.0;
     hover::core::FixedStepAccumulator simulation_clock{hover::core::FixedStepConfig{
-        simulation_tick_seconds,
+        hover::core::simulation_tick_seconds,
         0.25,
         8,
     }};
@@ -766,14 +765,15 @@ int run(hover::core::DevelopmentScenario scenario) {
                             ship_definition,
                             hover::game::ResolvedTrackPath{primary_path_id,
                                                            *scenario_setup.driving_track},
-                            static_cast<float>(simulation_tick_seconds),
+                            static_cast<float>(hover::core::simulation_tick_seconds),
                         });
                     current_vehicle_state = track_vehicle_state->vehicle;
                 } else {
                     events = hover::game::simulate_vehicle(
                         current_vehicle_state,
-                        hover::game::VehicleTick{player_input, ship_definition,
-                                                 static_cast<float>(simulation_tick_seconds)});
+                        hover::game::VehicleTick{
+                            player_input, ship_definition,
+                            static_cast<float>(hover::core::simulation_tick_seconds)});
                 }
                 boost_activated_this_frame = boost_activated_this_frame || events.boost_activated;
             }

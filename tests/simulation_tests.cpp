@@ -15,6 +15,12 @@ namespace {
 constexpr float tolerance = 0.001F;
 int failure_count = 0;
 
+constexpr float simulation_tick_seconds = static_cast<float>(hover::core::simulation_tick_seconds);
+
+constexpr int ticks_for_seconds(float seconds) {
+    return static_cast<int>(seconds / simulation_tick_seconds + 0.5F);
+}
+
 void check(bool condition, std::string_view description) {
     if (!condition) {
         std::cerr << "FAILED: " << description << '\n';
@@ -30,7 +36,7 @@ struct RenderSchedule {
 };
 
 hover::game::VehicleState simulate_with_render_schedule(RenderSchedule schedule) {
-    constexpr double tick_seconds = 1.0 / 90.0;
+    constexpr double tick_seconds = hover::core::simulation_tick_seconds;
     hover::core::FixedStepAccumulator accumulator{
         hover::core::FixedStepConfig{tick_seconds, 0.25, 30}};
     hover::game::VehicleState state{};
@@ -73,7 +79,7 @@ void test_render_rate_independence() {
 
 void test_catch_up_limit() {
     hover::core::FixedStepAccumulator accumulator{
-        hover::core::FixedStepConfig{1.0 / 90.0, 0.25, 8}};
+        hover::core::FixedStepConfig{hover::core::simulation_tick_seconds, 0.25, 8}};
     const hover::core::FixedStepPlan plan = accumulator.advance(2.0);
 
     check(plan.tick_count == 8U, "long frames obey the maximum tick count");
@@ -87,7 +93,7 @@ void test_vehicle_pose_and_interpolation() {
     const hover::input::PlayerInput input{.steering = 1.0F, .throttle = 1.0F};
     hover::game::simulate_vehicle(
         state, hover::game::VehicleTick{input, hover::game::ships::prototype_01_definition(),
-                                        1.0F / 90.0F});
+                                        static_cast<float>(hover::core::simulation_tick_seconds)});
 
     check(state.forward_speed_metres_per_second > 0.0F, "throttle accelerates the vehicle");
     check(state.pose.forward.x > 0.0F, "positive steering turns the vehicle right");
@@ -126,7 +132,7 @@ void test_coasting_and_speed_scaled_turn_roll() {
     fast_turn.forward_speed_metres_per_second =
         ship.handling.base_maximum_forward_speed_metres_per_second;
     const hover::input::PlayerInput right_turn{.steering = 1.0F, .throttle = 1.0F};
-    constexpr float tick_seconds = 1.0F / 90.0F;
+    constexpr float tick_seconds = static_cast<float>(hover::core::simulation_tick_seconds);
     hover::game::simulate_vehicle(slow_turn,
                                   hover::game::VehicleTick{right_turn, ship, tick_seconds});
     hover::game::simulate_vehicle(fast_turn,
@@ -145,7 +151,7 @@ void test_coasting_and_speed_scaled_turn_roll() {
 
 void test_low_speed_steering_authority_increases_without_changing_full_speed() {
     const hover::game::ShipDefinition& ship = hover::game::ships::prototype_01_definition();
-    constexpr float tick_seconds = 1.0F / 90.0F;
+    constexpr float tick_seconds = static_cast<float>(hover::core::simulation_tick_seconds);
     const hover::input::PlayerInput right_turn{.steering = 1.0F};
 
     hover::game::VehicleState stopped{};
@@ -170,12 +176,12 @@ void test_low_speed_steering_authority_increases_without_changing_full_speed() {
 
 void test_boost_press_activates_one_burst_then_returns_to_normal_speed() {
     const hover::game::ShipDefinition& ship = hover::game::ships::prototype_01_definition();
-    constexpr float tick_seconds = 1.0F / 90.0F;
+    constexpr float tick_seconds = static_cast<float>(hover::core::simulation_tick_seconds);
     hover::game::VehicleState state{};
     state.forward_speed_metres_per_second =
         ship.handling.base_maximum_forward_speed_metres_per_second;
 
-    for (int tick = 0; tick < 45; ++tick) {
+    for (int tick = 0; tick < ticks_for_seconds(0.5F); ++tick) {
         hover::game::simulate_vehicle(
             state, hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
     }
@@ -187,7 +193,7 @@ void test_boost_press_activates_one_burst_then_returns_to_normal_speed() {
               state.forward_speed_metres_per_second <= boosted_limit,
           "boost carries the ship above its normal speed without exceeding its boost limit");
 
-    for (int tick = 0; tick < 180; ++tick) {
+    for (int tick = 0; tick < ticks_for_seconds(2.0F); ++tick) {
         hover::game::simulate_vehicle(
             state, hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
     }
@@ -213,7 +219,7 @@ void test_boost_press_activates_one_burst_then_returns_to_normal_speed() {
 
 void test_boost_acceleration_requires_throttle_and_activation_is_one_event() {
     const hover::game::ShipDefinition& ship = hover::game::ships::prototype_01_definition();
-    constexpr float tick_seconds = 1.0F / 90.0F;
+    constexpr float tick_seconds = static_cast<float>(hover::core::simulation_tick_seconds);
 
     hover::game::VehicleState no_throttle{};
     const hover::game::VehicleTickEvents rejected_activation = hover::game::simulate_vehicle(
@@ -248,7 +254,7 @@ void test_boost_acceleration_requires_throttle_and_activation_is_one_event() {
               moving.boost_seconds_remaining > 0.0F,
           "releasing throttle shortens the active boost to its brief release tail");
 
-    for (int tick = 0; tick < 20; ++tick) {
+    for (int tick = 0; tick < ticks_for_seconds(0.25F); ++tick) {
         hover::game::simulate_vehicle(moving, hover::game::VehicleTick{{}, ship, tick_seconds});
     }
     check(!moving.boosting && moving.boost_seconds_remaining == 0.0F,

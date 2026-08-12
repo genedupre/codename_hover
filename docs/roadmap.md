@@ -77,7 +77,10 @@ simulation, seam wrapping, speed-scaled lateral steering, collider-aware road
 limits, persistent heading, required horizontal-corner steering, selected-lane
 distance scaling, and full banked world-pose/camera derivation are now implemented
 for both track scenarios. Deterministic tests cover these behaviors across tested
-24–360 Hz render schedules. Interactive attached handling on the laptop is next.
+24–360 Hz render schedules. Direct F-Zero X decompilation research then showed
+that scalar path distance should not remain the movement authority. A bounded,
+hint-aware world-point projection primitive is implemented and tested; staged
+world position/velocity/basis migration is now the active handling work.
 
 Scope:
 

@@ -149,6 +149,73 @@ void test_frame_quality_and_offsets() {
           "track offsets apply lateral movement to the right and height along the normal");
 }
 
+void test_world_point_projection() {
+    const hover::game::SampledTrack track = make_test_track();
+    constexpr float target_distance = 18.0F;
+    const hover::game::TrackFrame target = hover::game::sample_track(track, target_distance);
+    const hover::math::Vec3 point = hover::game::point_on_track_frame(
+        target, hover::game::TrackOffset{.lateral_metres = 4.5F, .height_metres = 1.25F});
+
+    const hover::game::TrackProjection projection =
+        hover::game::project_point_onto_track(track, point, 12.0F, 12.0F);
+    check(nearly_equal(projection.frame.distance_metres, target_distance, sampled_tolerance),
+          "projection recovers distance from a nearby world point");
+    check(nearly_equal(projection.offset.lateral_metres, 4.5F, sampled_tolerance) &&
+              nearly_equal(projection.offset.height_metres, 1.25F, sampled_tolerance),
+          "projection recovers signed track-right and surface-normal offsets");
+    check(nearly_equal(projection.signed_distance_from_hint_metres, 6.0F, sampled_tolerance),
+          "projection reports signed progress from its path hint");
+    check(nearly_equal(projection.centerline_distance_metres,
+                       std::sqrt(4.5F * 4.5F + 1.25F * 1.25F), sampled_tolerance),
+          "projection reports three-dimensional distance from the centerline");
+
+    const hover::game::TrackProjection bounded =
+        hover::game::project_point_onto_track(track, point, 12.0F, 3.0F);
+    check(nearly_equal(bounded.frame.distance_metres, 15.0F, sampled_tolerance) &&
+              nearly_equal(bounded.signed_distance_from_hint_metres, 3.0F, sampled_tolerance),
+          "projection cannot silently escape its bounded along-path search window");
+}
+
+void test_world_point_projection_across_seam() {
+    const hover::game::SampledTrack track = make_test_track();
+    const float target_distance = track.length_metres - 1.0F;
+    const hover::game::TrackFrame target = hover::game::sample_track(track, target_distance);
+    const hover::math::Vec3 point = hover::game::point_on_track_frame(
+        target, hover::game::TrackOffset{.lateral_metres = -2.0F, .height_metres = 0.75F});
+
+    const hover::game::TrackProjection projection =
+        hover::game::project_point_onto_track(track, point, 1.0F, 5.0F);
+    check(nearly_equal(projection.frame.distance_metres, target_distance, sampled_tolerance),
+          "hinted projection searches backward across the closed seam");
+    check(nearly_equal(projection.signed_distance_from_hint_metres, -2.0F, sampled_tolerance),
+          "seam projection reports the short signed path displacement");
+}
+
+void test_world_point_projection_on_banked_surface() {
+    const hover::game::tracks::OvalTrackDefinition oval = test_definition();
+    const hover::game::SampledTrack track =
+        hover::game::tracks::make_sampled_speedway(hover::game::tracks::SpeedwayTrackBuild{
+            .definition =
+                hover::game::tracks::SpeedwayTrackDefinition{
+                    .oval = oval,
+                    .maximum_bank_radians = 0.4886921906F,
+                    .bank_transition_metres = 20.0F,
+                },
+            .sample_count = 512U,
+        });
+    const float target_distance =
+        oval.straight_length_metres + oval.turn_radius_metres * std::numbers::pi_v<float> * 0.5F;
+    const hover::game::TrackFrame target = hover::game::sample_track(track, target_distance);
+    const hover::math::Vec3 point = hover::game::point_on_track_frame(
+        target, hover::game::TrackOffset{.lateral_metres = 3.0F, .height_metres = 2.0F});
+
+    const hover::game::TrackProjection projection =
+        hover::game::project_point_onto_track(track, point, target_distance + 1.0F, 4.0F);
+    check(nearly_equal(projection.offset.lateral_metres, 3.0F, sampled_tolerance) &&
+              nearly_equal(projection.offset.height_metres, 2.0F, sampled_tolerance),
+          "projection measures offsets in the banked frame instead of world axes");
+}
+
 void test_generated_surface_mesh() {
     const hover::game::SampledTrack track = make_test_track();
     const hover::render::MeshData mesh = hover::assets::generated::make_track_surface_mesh(track);
@@ -227,6 +294,9 @@ int main() {
     test_sampled_track_and_landmarks();
     test_wrapping_and_closed_seam();
     test_frame_quality_and_offsets();
+    test_world_point_projection();
+    test_world_point_projection_across_seam();
+    test_world_point_projection_on_banked_surface();
     test_generated_surface_mesh();
     test_banked_speedway();
 

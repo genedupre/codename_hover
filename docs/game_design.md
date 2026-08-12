@@ -9,13 +9,13 @@ drift, boost, collision response, recovery, and camera behavior are tuned.
 
 ## Vehicle model
 
-Use specialized arcade vehicle logic rather than asking a general rigid-body
-engine to simulate the normal driving state. Most of the time a vehicle is related
-to a known track surface. It may become genuinely airborne for jumps, crashes, or
-loss of contact, then reacquire an appropriate track surface. A jump may land on
-a different path, such as a shortcut that later rejoins the main route.
+Use specialized arcade vehicle logic rather than a general rigid-body engine.
+The racer nevertheless owns authoritative world position, velocity, and physical
+orientation. A nearby track provides surface/contact information and derived race
+progress; scalar track distance must not directly move the final vehicle model.
+The full simulation contract and reference evidence live in `physics.md`.
 
-The first concrete track-bound vehicle state includes:
+The current track-bound prototype state includes:
 
 - an opaque current path identity and distance along it;
 - lateral offset and lateral velocity in the path frame;
@@ -24,10 +24,10 @@ The first concrete track-bound vehicle state includes:
 
 Energy-backed boost limits, damage, lap, checkpoint, recovery, and airborne state
 remain later additions. Local normal motion is intentionally not called
-world-vertical motion:
-the ship may be banked, vertical, or upside down on loops. A true jump that leaves
-the track will later transition to world-space airborne state and may reacquire a
-different eligible path, including a shortcut or branch.
+world-vertical motion: the ship may be banked, vertical, or upside down on loops.
+A true jump changes contact and force policy while retaining the same world-space
+state. It may later land on a different eligible path, including a shortcut or
+branch.
 
 Longer-term vehicle state still needs:
 
@@ -64,7 +64,8 @@ sqrt(speed ratio)`. This preserves its configured full-speed steering rate while
 providing substantially more yaw authority near rest and through middle speeds.
 Treat this as playtest tuning, not the final track-relative steering model.
 
-The first attached steering model deliberately remains small. The ship owns a
+The first attached steering model deliberately remains small and is migration
+scaffolding. The ship owns a
 persistent signed heading relative to the path tangent. Steering rotates that
 heading even without throttle; releasing steering does not snap it back to the
 tangent. Forward speed is resolved into along-track and sideways components.
@@ -88,10 +89,10 @@ wall impacts, open edges, falling, and recovery have explicit mechanics.
 This does not make the course spline an AI-only rail. Human and AI controllers
 both supply the same semantic throttle, brake, steering, drift, and boost values.
 Course-level logic will later resolve a path ID and perform explicit transitions
-at splits or joins. Jump takeoff transitions out of attached state into
-world-space airborne motion; landing selects an eligible path and reconstructs
-path-local state. Track zones and traps remain course/surface data consumed by the
-shared simulation, not special cases embedded in an AI controller.
+at splits or joins. Jump takeoff retains world motion while support is lost;
+landing selects an eligible path and refreshes the derived course reference.
+Track zones and traps remain course/surface data consumed by the shared
+simulation, not special cases embedded in an AI controller.
 
 The first boost is deliberately a button-activated, one-second burst with no
 energy or cooldown. A rising boost-action edge starts the timed fixed-step state
@@ -177,11 +178,16 @@ Game state advances at a fixed tick rate and is independent of rendered frame
 rate. Rendering interpolates between simulation states. Input may be sampled per
 rendered frame but must be consumed deterministically by simulation ticks.
 
-A 90 Hz simulation is the initial implementation, not a permanent promise and not
+A 120 Hz simulation is the initial implementation, not a permanent promise and not
 the render rate. Benchmark and feel-test it against 120 Hz or higher when input
 latency and full race CPU costs can be measured. Rendering at 24, 30, 60, 90, 120,
 144, 165, 240, 360, or other rates must not change vehicle acceleration, grip, lap
 times, or AI behavior.
+
+F-Zero X's NTSC handling was tuned around a 60 Hz update (50 Hz for PAL). Any
+qualitatively useful per-frame behavior from that reference must be converted to
+per-second or time-correct coefficients and independently tuned; numeric constants
+must not be copied directly into the 120 Hz prototype.
 
 ## Race systems
 

@@ -9,8 +9,9 @@ code should consume this representation rather than special-case the oval's
 formula.
 
 The `oval` and `speedway` development scenarios render surfaces generated from
-this generic representation and spawn the ship at distance zero. Neither yet
-constrains the ship; the named `runway` scenario remains unchanged.
+this generic representation, spawn the ship at distance zero, and currently use
+the provisional scalar-distance traversal. The named `runway` scenario remains
+unchanged.
 
 ## Track frame
 
@@ -50,6 +51,26 @@ Validation checks finite values, increasing distances, positive dimensions, unit
 axes, orthogonality, the track-right convention, and compatible adjacent axes.
 That final check includes the seam and rejects individually valid frames that flip
 too far to interpolate safely.
+
+## World-point projection
+
+`project_point_onto_track` is the inverse query needed by world-space vehicle
+physics. Given a world point, previous path-distance hint, and bounded along-path
+search radius, it returns the nearest point on the piecewise-sampled centerline,
+the interpolated frame, signed lateral/height offsets, and signed progress from
+the hint. It searches through the closed seam and measures offsets in the local
+banked frame rather than world axes.
+
+The bounded hint is part of correctness, not only an optimization. A global
+nearest-point query can choose the wrong layer of a loop, side of a crossing, or
+future branch. Course-level code will select eligible paths and search windows;
+the path primitive does not decide route changes. The current implementation
+checks sampled chords and is intentionally simple enough to validate before any
+spatial index is justified by profiling.
+
+Projection will make path distance, lateral offset, and surface height derived
+measurements after world velocity integration. The existing scalar-driven
+traversal has not yet been switched over.
 
 ## First oval generator
 
@@ -154,7 +175,9 @@ Focused tests cover:
 - automatic sampled-surface pitch through a deterministic vertical-loop fixture
   without introducing horizontal steering;
 - banked vehicle/model orientation without a world-up assumption;
-- identical attached results under tested 24–360 Hz render schedules.
+- identical attached results under tested 24–360 Hz render schedules;
+- world-point projection of distance and signed offsets on flat and banked track;
+- bounded backward projection through the closed seam.
 
 The generated prototype surface consumes only `SampledTrack`. It joins three
 bands between each adjacent pair of frames and includes the implicit
@@ -167,17 +190,19 @@ are respected independently at both ends of every segment.
 The generated surface and highlighted seam were visually validated in
 `--scenario oval` on the laptop on 2026-08-11. The owner visually accepted the
 standalone banked `--scenario speedway` surface on 2026-08-12. Both scenarios now
-run the attached simulation described above; its automated coverage passes but
-interactive vehicle and camera behavior remains unverified. Preserve `--scenario
-runway` as the free-driving regression sandbox.
+run the attached simulation described above; that implementation remains a
+playable regression while world-space physics replaces its movement authority in
+staged changes. Preserve `--scenario runway` as the free-driving regression
+sandbox.
 
-Next, playtest acceleration, lateral response, banking, road-edge behavior,
-camera roll, and repeated seam crossing on `speedway`. Tune only from recorded
-observations. A later course graph can transition `TrackPathId` and canonical
-distance at splits and joins, but branch metadata and policy should arrive with
-the first observable split-track experiment rather than being guessed now.
+Next, initialize a physical world velocity/basis beside the current spawn state,
+then use the projection primitive to derive progress without allowing both models
+to move the same axis. Playtest the replacement on `speedway` before deleting the
+scalar regression. A later course graph can transition `TrackPathId` at splits
+and joins, but branch metadata and policy should arrive with the first observable
+split-track experiment rather than being guessed now.
 
 Loops, banks, corkscrews, and other continuously attached shapes are represented
-by the sampled frame orientation. True airborne jumps should use separate
-world-space motion until the ship reacquires an eligible path; do not force an
-airborne ship to remain attached to one path's normal.
+by the sampled frame orientation. True airborne jumps retain authoritative world
+motion, change contact/force policy, and may refresh their course reference from
+an eligible landing path; do not force an airborne ship onto one path's normal.

@@ -25,17 +25,21 @@ two turns that smoothly bank to 28 degrees. All spawn at a level seam. The oval
 surface and closed seam were visually verified on the laptop on 2026-08-11;
 the owner visually accepted the standalone `speedway` surface on 2026-08-12.
 `runway` remains free and planar. `oval` and `speedway` now use deterministic
-track-attached movement. The ship owns a persistent heading in the local surface
-plane; steering rotates that heading, grip changes lateral velocity toward its
-direction, and centerline curvature is not automatic steering. An unsteered ship
+track-attached prototype movement. The ship owns a persistent heading in the
+local surface plane; steering rotates that heading, grip changes lateral velocity
+toward its direction, and centerline curvature is not automatic steering. An unsteered ship
 therefore reaches the outside edge of a horizontal corner. Sampled surface
 orientation still supplies pitch and roll for banks and future loops. The
 ship/camera follow the resulting 3D pose, and the ship's collider-sized footprint
 is provisionally clamped inside the road width. This revised behavior still needs
 interactive verification. A resolved opaque path
-ID leaves future course ownership free to transition racers at splits and joins;
-true jumps will use a separate world-space airborne state and may reacquire a
-different path. Do not jump ahead to race systems.
+ID leaves future course ownership free to transition racers at splits and joins.
+The accepted physics direction keeps authoritative world position, velocity, and
+physical orientation in all contact modes, then projects the predicted position
+onto eligible nearby paths. The current scalar-distance traversal is scaffolding,
+not the final movement foundation. True jumps change contact/force policy and may
+land on a different path without changing position representation. See
+`docs/physics.md`; do not jump ahead to race systems.
 
 Prototype 01's acceleration exhaust uses a strongly speed-responsive light-blue
 core and 50%-transparent outer shell. A presentation-only release envelope
@@ -103,6 +107,8 @@ deferred. Retain the remaining input, exit, suspend/resume, and display criteria
   implemented ship definitions.
 - [Track system](docs/tracks.md) — sampled frames, distance wrapping, coordinate
   conventions, and generated track sources.
+- [Vehicle physics](docs/physics.md) — verified F-Zero X behavioral reference,
+  authoritative world state, forces, contact policies, and migration order.
 - [Input](docs/input.md) — semantic actions, simultaneous-device merging,
   current bindings, hotplugging, and rumble policy.
 - [Technical architecture](docs/architecture.md) — stack, system boundaries, and
@@ -158,7 +164,8 @@ then read the smallest applicable set:
 | Task | Read |
 | --- | --- |
 | Product direction, scope, or originality | `docs/project_brief.md` |
-| Handling, track geometry, racing, AI, or camera feel | `docs/game_design.md` |
+| Handling intent, racing, AI, or camera feel | `docs/game_design.md` |
+| Vehicle movement, grip, drift, hover, jumping, contact, or physics migration | `docs/physics.md` |
 | Ship definitions, colliders, visual sources, or adding a ship | `docs/ships.md` |
 | Pilot concepts, personalities, fiction, or roster ideas | `docs/pilot_ideas.md` |
 | Dynamic pilot portraits, expressions, portrait effects, or leader portraits | `docs/pilot_portraits.md` |

@@ -28,6 +28,8 @@ math::Vec3 interpolate(math::Vec3 start, math::Vec3 end, float alpha) {
     return start * (1.0F - alpha) + end * alpha;
 }
 
+float length(math::Vec3 value) { return std::sqrt(math::dot(value, value)); }
+
 TrackFrame interpolate_frame(const TrackFrame& start, const TrackFrame& end, float alpha,
                              float distance_metres) {
     const math::Vec3 tangent = math::normalized(interpolate(start.tangent, end.tangent, alpha));
@@ -123,6 +125,85 @@ TrackFrame sample_track(const SampledTrack& track, float distance_metres) {
 math::Vec3 point_on_track_frame(const TrackFrame& frame, TrackOffset offset) {
     return frame.center + frame.binormal * offset.lateral_metres +
            frame.normal * offset.height_metres;
+}
+
+TrackProjection project_point_onto_track(const SampledTrack& track, math::Vec3 world_point,
+                                         float hint_distance_metres, float search_radius_metres) {
+    assert(is_valid(track));
+    assert(is_finite(world_point));
+    assert(std::isfinite(hint_distance_metres));
+    assert(search_radius_metres >= 0.0F);
+
+    const float hint = wrap_track_distance(track, hint_distance_metres);
+    const float radius = std::isfinite(search_radius_metres)
+                             ? std::min(search_radius_metres, track.length_metres * 0.5F)
+                             : track.length_metres * 0.5F;
+    const float window_start = hint - radius;
+    const float window_end = hint + radius;
+
+    float best_distance_squared = std::numeric_limits<float>::infinity();
+    float best_hint_delta = 0.0F;
+    float best_unwrapped_distance = hint;
+
+    for (std::size_t index = 0; index < track.frames.size(); ++index) {
+        const TrackFrame& start = track.frames[index];
+        const TrackFrame& end = track.frames[(index + 1U) % track.frames.size()];
+        const float segment_start = start.distance_metres;
+        const float segment_end =
+            index + 1U < track.frames.size() ? end.distance_metres : track.length_metres;
+        const float segment_distance = segment_end - segment_start;
+        const math::Vec3 chord = end.center - start.center;
+        const float chord_length_squared = math::dot(chord, chord);
+
+        for (const float loop_offset : {-track.length_metres, 0.0F, track.length_metres}) {
+            const float unwrapped_start = segment_start + loop_offset;
+            const float unwrapped_end = segment_end + loop_offset;
+            const float allowed_start = std::max(unwrapped_start, window_start);
+            const float allowed_end = std::min(unwrapped_end, window_end);
+            if (allowed_start > allowed_end) {
+                continue;
+            }
+
+            const float minimum_alpha = (allowed_start - unwrapped_start) / segment_distance;
+            const float maximum_alpha = (allowed_end - unwrapped_start) / segment_distance;
+            float alpha = minimum_alpha;
+            if (chord_length_squared > 0.000001F) {
+                alpha =
+                    std::clamp(math::dot(world_point - start.center, chord) / chord_length_squared,
+                               minimum_alpha, maximum_alpha);
+            }
+
+            const math::Vec3 candidate_center = start.center + chord * alpha;
+            const math::Vec3 displacement = world_point - candidate_center;
+            const float distance_squared = math::dot(displacement, displacement);
+            const float unwrapped_distance = unwrapped_start + segment_distance * alpha;
+            const float hint_delta = unwrapped_distance - hint;
+            constexpr float tie_tolerance = 0.000001F;
+            const bool closer = distance_squared < best_distance_squared - tie_tolerance;
+            const bool nearer_hint =
+                std::abs(distance_squared - best_distance_squared) <= tie_tolerance &&
+                std::abs(hint_delta) < std::abs(best_hint_delta);
+            if (closer || nearer_hint) {
+                best_distance_squared = distance_squared;
+                best_hint_delta = hint_delta;
+                best_unwrapped_distance = unwrapped_distance;
+            }
+        }
+    }
+
+    assert(std::isfinite(best_distance_squared));
+    const TrackFrame frame = sample_track(track, best_unwrapped_distance);
+    const math::Vec3 displacement = world_point - frame.center;
+    return TrackProjection{
+        .frame = frame,
+        .offset =
+            TrackOffset{
+                .lateral_metres = math::dot(displacement, frame.binormal),
+                .height_metres = math::dot(displacement, frame.normal),
+            },
+        .signed_distance_from_hint_metres = best_hint_delta,
+        .centerline_distance_metres = length(displacement),
+    };
 }
 
 } // namespace hover::game

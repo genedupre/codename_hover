@@ -18,9 +18,13 @@
 namespace {
 
 constexpr float tolerance = 0.002F;
-constexpr float tick_seconds = 1.0F / 90.0F;
+constexpr float tick_seconds = static_cast<float>(hover::core::simulation_tick_seconds);
 constexpr hover::game::TrackPathId primary_path{1U};
 int failure_count = 0;
+
+constexpr int ticks_for_seconds(float seconds) {
+    return static_cast<int>(seconds / tick_seconds + 0.5F);
+}
 
 bool nearly_equal(float left, float right, float allowed = tolerance) {
     return std::abs(left - right) <= allowed;
@@ -122,7 +126,7 @@ void test_steering_moves_laterally_and_respects_road_width() {
         ship.handling.base_maximum_forward_speed_metres_per_second;
     const hover::input::PlayerInput steer_right{.steering = 1.0F, .throttle = 1.0F};
 
-    for (int tick = 0; tick < 20; ++tick) {
+    for (int tick = 0; tick < ticks_for_seconds(0.25F); ++tick) {
         hover::game::simulate_track_vehicle(
             state, hover::game::TrackVehicleTick{steer_right, ship, path, tick_seconds});
     }
@@ -130,7 +134,7 @@ void test_steering_moves_laterally_and_respects_road_width() {
               state.lateral_velocity_metres_per_second > 0.0F,
           "semantic right steering produces rightward track-space motion");
 
-    for (int tick = 0; tick < 360; ++tick) {
+    for (int tick = 0; tick < ticks_for_seconds(4.0F); ++tick) {
         hover::game::simulate_track_vehicle(
             state, hover::game::TrackVehicleTick{steer_right, ship, path, tick_seconds});
     }
@@ -179,7 +183,7 @@ void test_heading_persists_without_speed_or_steering() {
         state, hover::game::TrackVehicleTick{{.steering = 1.0F}, ship, path, tick_seconds});
     const float rotated_heading = state.heading_offset_radians;
     const hover::math::Vec3 rotated_forward = state.vehicle.pose.forward;
-    for (int tick = 0; tick < 30; ++tick) {
+    for (int tick = 0; tick < ticks_for_seconds(0.35F); ++tick) {
         hover::game::simulate_track_vehicle(
             state, hover::game::TrackVehicleTick{{}, ship, path, tick_seconds});
     }
@@ -201,7 +205,7 @@ void test_horizontal_corner_requires_steering() {
     unsteered.vehicle.forward_speed_metres_per_second = 60.0F;
     steering_left.vehicle.forward_speed_metres_per_second = 60.0F;
 
-    for (int tick = 0; tick < 120; ++tick) {
+    for (int tick = 0; tick < ticks_for_seconds(1.35F); ++tick) {
         hover::game::simulate_track_vehicle(
             unsteered, hover::game::TrackVehicleTick{{}, ship, path, tick_seconds});
         hover::game::simulate_track_vehicle(
@@ -254,7 +258,7 @@ void test_vertical_loop_pitch_does_not_require_horizontal_steering() {
     hover::game::TrackVehicleState state = hover::game::make_track_vehicle_state({}, ship, path);
     state.vehicle.forward_speed_metres_per_second = 60.0F;
 
-    for (int tick = 0; tick < 90; ++tick) {
+    for (int tick = 0; tick < ticks_for_seconds(1.0F); ++tick) {
         hover::game::simulate_track_vehicle(
             state, hover::game::TrackVehicleTick{{}, ship, path, tick_seconds});
     }
@@ -317,7 +321,7 @@ hover::game::TrackVehicleState simulate_with_render_rate(const hover::game::Samp
     const hover::game::ResolvedTrackPath path{primary_path, track};
     hover::game::TrackVehicleState state = hover::game::make_track_vehicle_state({}, ship, path);
     hover::core::FixedStepAccumulator accumulator{
-        hover::core::FixedStepConfig{1.0 / 90.0, 0.25, 8}};
+        hover::core::FixedStepConfig{hover::core::simulation_tick_seconds, 0.25, 8}};
     constexpr double duration_seconds = 1.0;
     const double frame_seconds = 1.0 / frames_per_second;
     double submitted_seconds = 0.0;

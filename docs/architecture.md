@@ -164,7 +164,7 @@ with center, tangent, normal, track-right binormal, and width. The initial analy
 oval is a source of those frames, not a special runtime track type that vehicle or
 renderer code should depend upon. See `tracks.md`.
 
-While a ship is attached to a driving surface, `TrackVehicleState` stores an
+The current attached prototype uses `TrackVehicleState`, which stores an
 opaque path ID, shared vehicle dynamics, and scalar values in that path's local
 frame. It does not own or point at track geometry. Scenario/course ownership
 resolves the ID to a `ResolvedTrackPath` for one tick, which permits a future
@@ -172,7 +172,7 @@ graph to switch paths at splits and joins. Banks, vertical sections, and loops
 derive the rendered pose and camera up direction from the frame's tangent,
 normal, and binormal rather than world-up.
 
-The attached step shares propulsion, braking, boost state, events, and visual
+That provisional step shares propulsion, braking, boost state, events, and visual
 steering response with free-planar movement. It owns a persistent signed heading
 within the local surface plane. Semantic steering rotates that heading; lateral
 grip approaches its sideways velocity component. Path progress uses the forward
@@ -182,9 +182,14 @@ so horizontal curvature must be actively steered while surface pitch and roll
 remain automatic. The step then applies a provisional collider-aware road-width
 constraint and derives a full 3D pose.
 
-Truly airborne motion will be a separate mutually exclusive state that can later
-reacquire any eligible path; the graph, branch-selection policy, surface zones,
-and airborne transition are not implemented yet.
+The accepted replacement keeps one authoritative world position, velocity, and
+physical basis in supported, airborne, and falling modes. It predicts world
+movement first, then uses a bounded, hint-aware course projection to derive path
+progress, lateral offset, height, and contact response. A separate visual basis
+may lag or embellish the physical basis without affecting collision. The current
+scalar traversal remains only until this replacement is proven in small slices.
+See `physics.md`; graph path eligibility, surface zones, and contact transitions
+are not implemented yet.
 
 A ship's gameplay `ShipDefinition` is separate from its visual mesh. It contains a
 stable identity and visual-mesh key plus handling, presentation, and collision

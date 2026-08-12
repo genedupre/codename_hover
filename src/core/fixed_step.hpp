@@ -4,6 +4,9 @@
 
 namespace hover::core {
 
+inline constexpr double simulation_ticks_per_second = 120.0;
+inline constexpr double simulation_tick_seconds = 1.0 / simulation_ticks_per_second;
+
 struct FixedStepConfig {
     double tick_seconds;
     double maximum_frame_seconds;

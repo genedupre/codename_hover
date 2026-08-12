@@ -42,9 +42,9 @@ portability.
 Status: accepted.
 
 Gameplay must not depend on rendered frame rate. The prototype simulation runs at
-90 Hz and interpolates rendering, including when rendering is slower or faster
-than simulation. Treat 90 Hz as a provisional tuning choice, not the Steam Deck's
-refresh rate and not a rendering limit.
+120 Hz and interpolates rendering, including when rendering is slower or faster
+than simulation. Treat 120 Hz as a provisional tuning choice, not the Steam Deck's
+refresh rate and not a rendering limit. Keep the rate in one shared code constant.
 
 Render correctly at common low and high rates. Presentation and limiter policy is
 recorded separately in D-015.
@@ -167,7 +167,7 @@ VSync is the portable fallback; mailbox and immediate are latency/tearing choice
 not universally available upgrades. Treat frames in flight, limiter pacing, frame-
 time variance, power draw, and end-to-end input latency as measured concerns.
 
-The bootstrap remains VSync-presented with no custom frame limiter. The 90 Hz
+The bootstrap remains VSync-presented with no custom frame limiter. The 120 Hz
 fixed simulation remains independent and provisional; compare higher simulation
 rates later using game feel, latency, deterministic behavior, and representative
 full-race CPU cost. Do not increase simulation frequency merely to match a monitor.
@@ -284,6 +284,38 @@ layer. A genuine jump will transition to a separate world-space airborne state
 and may reacquire a different eligible path. Do not encode branch choice into
 `SampledTrack`, force airborne ships onto a surface normal, or build the graph and
 zone system before their first playable track experiment.
+
+### D-022: Make world motion authoritative and course position derived
+
+Status: accepted on 2026-08-12 after direct inspection of the F-Zero X matching
+decompilation and comparison with the first attached playtest.
+
+Retain the sampled track, stable path identity, semantic input, fixed-step loop,
+and shared propulsion/boost boundary from D-018 through D-021. Supersede D-021's
+scalar-driven attached movement as the final handling architecture: it remains
+temporary scaffolding only.
+
+The racer will own world position, world velocity, accumulated acceleration, and
+an orthonormal physical basis in every contact mode. Each tick predicts world
+motion, then projects the candidate point onto eligible nearby course paths to
+derive distance, lateral offset, height, track basis, race progress, and contact
+response. Projection must be bounded by a previous path/distance hint and future
+route eligibility; globally snapping to the nearest geometry is invalid for
+loops, crossings, stacked paths, splits, and jump landings.
+
+Keep course basis, physical vehicle basis, and visual model basis distinct.
+Steering rotates the physical vehicle orientation while velocity retains inertia.
+Grip removes lateral velocity; drift applies an explicit lateral force and may
+modify steering, traction, and forward acceleration. The ship's configured ride
+height is a spring/damping target under gravity rather than an assigned offset.
+Supported, airborne, and falling behavior change forces and contact policies but
+do not switch to unrelated position representations. Walls and open edges require
+different explicit responses.
+
+F-Zero X is a qualitative behavioral reference only. Do not copy decompiled code,
+Nintendo content, internal units, or 60/50 Hz per-tick constants. Codename Hover's
+implementation, SI-scale tuning, 120 Hz fixed step, route graph, and content remain original. The
+staged migration and verified reference links are recorded in `physics.md`.
 
 ## Deferred decisions
 
