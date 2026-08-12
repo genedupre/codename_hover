@@ -16,6 +16,21 @@ slips further at boosted maximum speed. Qualitative handling remains pending
 another owner playtest; the temporary edge clamp still prevents the final wall
 impact or fall-off consequence.
 
+Follow-up source inspection found that lowering grip alone omitted several
+coupled behaviors from F-Zero X's racer update. Its shoulder side force fades as
+same-direction slide builds, shoulder input selects lower traction, and both
+steering direction-change and drift force reduce engine acceleration. The
+Codename Hover translation now:
+
+- fades directional force by 32 m/s same-direction lateral speed;
+- suppresses positive propulsion by steering and current drift-force strength;
+- applies 60 m/s² forward drift loss;
+- converts sustained slip beyond 8 m/s into proportional forward loss.
+
+Deterministic coverage verifies force fade, drift slowdown under full throttle,
+and accumulated maximum-speed cornering loss. Interactive feel is pending owner
+playtest.
+
 ### 2026-08-12 — first world-space Speedway physics checkpoint
 
 Build/revision: pending changes after `15ad089`.

@@ -85,6 +85,13 @@ slipping near its normal maximum, and lose still more directional authority in
 the boost-speed envelope. Proper wall impacts and open-edge consequences are
 still required before that loss of control has its final gameplay cost.
 
+Directional drift must not be a constant sideways thruster. Its force fades as
+same-direction lateral speed builds, while its reduced grip lets momentum keep
+lagging behind the ship. Steering direction-change and drift force also suppress
+positive propulsion, and sustained lateral slip dissipates forward speed. This
+combination is intended to create controllable instability and slowdown without
+adding random steering noise.
+
 As the path advances, its change in horizontal direction is removed from the
 ship's relative heading. Consequently, entering a horizontal corner without
 steering causes the road to turn underneath the ship and carries it toward the

@@ -157,29 +157,40 @@ VehicleTickEvents simulate_world_track_vehicle(WorldTrackVehicleState& state,
         state.physical.basis.forward, state.physical.basis.up, steering_radians));
 
     const math::Vec3 vehicle_right = right_direction(state.physical.basis);
+    const float lateral_speed_before_forces = math::dot(state.physical.velocity, vehicle_right);
+    const float same_direction_drift_speed = std::max(0.0F, drift * lateral_speed_before_forces);
+    const float drift_force_fraction =
+        drift_active
+            ? 1.0F - std::clamp(same_direction_drift_speed /
+                                    handling.world_drift_force_fade_lateral_speed_metres_per_second,
+                                0.0F, 1.0F)
+            : 0.0F;
     const float previous_forward_speed =
         std::max(0.0F, math::dot(state.physical.velocity, state.physical.basis.forward));
     state.vehicle.forward_speed_metres_per_second = previous_forward_speed;
     const VehicleTickEvents events = simulate_vehicle_dynamics(
         state.vehicle, VehicleTick{tick.input, tick.definition, tick.tick_seconds});
-    const float forward_speed_change =
+    float forward_speed_change =
         state.vehicle.forward_speed_metres_per_second - previous_forward_speed;
+    if (forward_speed_change > 0.0F) {
+        const float steering_loss =
+            std::abs(tick.input.steering) * handling.world_steering_propulsion_loss_fraction;
+        const float drift_loss =
+            drift_force_fraction * handling.world_drift_propulsion_loss_fraction;
+        const float propulsion_fraction = 1.0F - std::clamp(steering_loss + drift_loss, 0.0F, 1.0F);
+        forward_speed_change *= propulsion_fraction;
+        state.vehicle.forward_speed_metres_per_second =
+            previous_forward_speed + forward_speed_change;
+    }
     state.physical.velocity =
         state.physical.velocity + state.physical.basis.forward * forward_speed_change;
 
     if (drift_active) {
         state.physical.velocity =
             state.physical.velocity +
-            vehicle_right *
-                (drift * handling.world_drift_lateral_acceleration_metres_per_second_squared *
-                 tick.tick_seconds);
-        const float forward_speed =
-            std::max(0.0F, math::dot(state.physical.velocity, state.physical.basis.forward));
-        const float drift_deceleration = std::min(
-            forward_speed, handling.world_drift_forward_deceleration_metres_per_second_squared *
-                               tick.tick_seconds);
-        state.physical.velocity =
-            state.physical.velocity - state.physical.basis.forward * drift_deceleration;
+            vehicle_right * (drift * drift_force_fraction *
+                             handling.world_drift_lateral_acceleration_metres_per_second_squared *
+                             tick.tick_seconds);
     }
 
     const float lateral_speed = math::dot(state.physical.velocity, vehicle_right);
@@ -189,6 +200,20 @@ VehicleTickEvents simulate_world_track_vehicle(WorldTrackVehicleState& state,
     const float gripped_lateral_speed = move_toward_zero(lateral_speed, grip * tick.tick_seconds);
     state.physical.velocity =
         state.physical.velocity + vehicle_right * (gripped_lateral_speed - lateral_speed);
+
+    const float slip_speed =
+        std::max(0.0F, std::abs(gripped_lateral_speed) -
+                           handling.world_slip_speed_threshold_metres_per_second);
+    const float slip_deceleration =
+        slip_speed * handling.world_slip_forward_deceleration_per_lateral_speed;
+    const float drift_deceleration =
+        drift_active ? handling.world_drift_forward_deceleration_metres_per_second_squared : 0.0F;
+    const float forward_speed_after_grip =
+        std::max(0.0F, math::dot(state.physical.velocity, state.physical.basis.forward));
+    const float handling_deceleration = std::min(
+        forward_speed_after_grip, (slip_deceleration + drift_deceleration) * tick.tick_seconds);
+    state.physical.velocity =
+        state.physical.velocity - state.physical.basis.forward * handling_deceleration;
 
     const math::Vec3 candidate_position =
         state.physical.position + state.physical.velocity * tick.tick_seconds;

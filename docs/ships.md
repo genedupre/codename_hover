@@ -87,8 +87,13 @@ Its provisional definition currently specifies:
 | World-space normal lateral grip | 300 m/s² |
 | World-space drift lateral grip | 55 m/s² |
 | Directional drift acceleration | 105 m/s² |
+| Directional drift force fade speed | 32 m/s |
 | Drift steering multiplier | 1.15× |
-| Drift forward deceleration | 20 m/s² |
+| Full-steer propulsion loss | 35% |
+| Full-force drift propulsion loss | 85% |
+| Drift forward deceleration | 60 m/s² |
+| Lateral slip threshold | 8 m/s |
+| Slip forward loss | 4 m/s² per excess lateral m/s |
 | Track ride height | 0.62 m |
 | Boost speed multiplier | 1.28× (332.8 m/s ceiling) |
 | Boost acceleration | 145 m/s² |
@@ -146,8 +151,12 @@ while base-maximum and boosted turning produce progressively more slip. This
 value was reduced from 420 m/s² after boosted cornering proved too forgiving in
 the first owner playtest and remains provisional.
 LB/L1 or Q and RB/R1 or E apply opposite 105 m/s² lateral forces, use the lower
-55 m/s² drift grip, multiply steering by 1.15, and apply 20 m/s² forward loss.
-These values are playable starting points, not accepted final balance.
+55 m/s² drift grip, and multiply steering by 1.15. The side force fades as the
+ship approaches 32 m/s of lateral motion in the requested direction instead of
+accelerating sideways forever. Steering and active drift suppress positive
+propulsion, drift applies 60 m/s² forward loss, and sustained lateral slip above
+8 m/s adds proportional forward loss. These values are playable starting points,
+not accepted final balance.
 
 Pressing boost currently starts a one-second burst that accelerates above
 Prototype 01's provisional 260 m/s base ceiling to at most 332.8 m/s. Holding X

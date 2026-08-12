@@ -42,11 +42,17 @@ void test_first_ship_definition() {
     check(ship.handling.world_lateral_grip_deceleration_metres_per_second_squared >
                   ship.handling.world_drift_grip_deceleration_metres_per_second_squared &&
               ship.handling.world_drift_lateral_acceleration_metres_per_second_squared > 0.0F &&
+              ship.handling.world_drift_force_fade_lateral_speed_metres_per_second > 0.0F &&
               ship.handling.world_drift_steering_multiplier > 1.0F &&
+              ship.handling.world_steering_propulsion_loss_fraction > 0.0F &&
+              ship.handling.world_drift_propulsion_loss_fraction > 0.0F &&
               ship.handling.world_drift_forward_deceleration_metres_per_second_squared > 0.0F,
           "Prototype 01 defines world-space grip and directional drift explicitly");
     check(ship.handling.world_lateral_grip_deceleration_metres_per_second_squared == 300.0F,
           "Prototype 01 retains less normal grip at maximum and boosted speeds");
+    check(ship.handling.world_slip_speed_threshold_metres_per_second > 0.0F &&
+              ship.handling.world_slip_forward_deceleration_per_lateral_speed > 0.0F,
+          "Prototype 01 turns sustained lateral slip into forward speed loss");
     check(ship.presentation.maximum_turn_roll_radians > 0.0F &&
               ship.presentation.turn_roll_response_per_second > 0.0F,
           "Prototype 01 defines its visual turn-roll behavior explicitly");

@@ -236,9 +236,15 @@ The current directional drift tune is:
 - LB/L1 or Q: left force; RB/R1 or E: right force;
 - both held: no drift force and normal grip;
 - 105 m/s² lateral drift acceleration;
+- lateral drift force fades to zero by 32 m/s of same-direction slide;
 - 55 m/s² maximum lateral-speed removal while drifting;
 - 300 m/s² maximum lateral-speed removal normally;
-- 1.15× steering response and 20 m/s² forward loss while drifting.
+- 1.15× steering response;
+- steering can remove up to 35% of positive propulsion and full-strength drift
+  can remove another 85%; combined loss is capped at 100%;
+- 60 m/s² forward drift deceleration;
+- lateral slip above 8 m/s adds 4 m/s² of forward deceleration for every
+  additional 1 m/s of sideways speed.
 
 Normal grip is deliberately a fixed maximum amount of sideways velocity removed
 per second, rather than a speed-proportional interpolation. A low-speed steering
@@ -247,6 +253,24 @@ created by the same steering rate at base or boost maximum speed exceeds the
 available grip and leaves progressively more lateral slip. The 300 m/s² value was
 lowered from 420 m/s² after the first owner playtest found boosted cornering too
 safe. This is an initial tune, not an accepted final value.
+
+The second tune follows relationships visible in the matching F-Zero X
+decompilation's [`Racer_UpdateFromControls`](https://github.com/inspectredc/fzerox/blob/main/src/game/racer.c#L3345):
+the original rotates the machine basis without rotating momentum, damps velocity
+in local axes, uses a much lower lateral-velocity removal cap while either
+shoulder is held, fades shoulder side force as same-direction lateral speed
+builds, and subtracts both steering direction-change and drift force from engine
+acceleration. Codename Hover expresses these as units-per-second parameters at
+120 Hz; it does not copy opaque N64 per-frame constants or claim exact emulation.
+
+The slip threshold and proportional forward loss are our explicit, tunable
+translation of the original's sustained-side-slip state into the current runtime.
+They make ordinary maximum-speed steering and boost-speed steering lose energy
+after momentum diverges far enough from heading. Shoulder drift additionally
+suppresses propulsion and applies constant forward loss, so holding throttle no
+longer cancels the slowdown every following tick. No random yaw is injected:
+the instability comes from heading, momentum, lower grip, and fading side-force
+authority disagreeing with each other.
 
 The exact ride height and collider-aware edge remain intentional temporary
 constraints. They remove velocity into the constrained direction rather than

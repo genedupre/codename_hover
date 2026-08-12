@@ -21,8 +21,15 @@ bool is_valid(const ShipDefinition& definition) {
            handling.world_lateral_grip_deceleration_metres_per_second_squared >= 0.0F &&
            handling.world_drift_grip_deceleration_metres_per_second_squared >= 0.0F &&
            handling.world_drift_lateral_acceleration_metres_per_second_squared >= 0.0F &&
+           handling.world_drift_force_fade_lateral_speed_metres_per_second > 0.0F &&
            handling.world_drift_steering_multiplier > 0.0F &&
+           handling.world_steering_propulsion_loss_fraction >= 0.0F &&
+           handling.world_steering_propulsion_loss_fraction <= 1.0F &&
+           handling.world_drift_propulsion_loss_fraction >= 0.0F &&
+           handling.world_drift_propulsion_loss_fraction <= 1.0F &&
            handling.world_drift_forward_deceleration_metres_per_second_squared >= 0.0F &&
+           handling.world_slip_speed_threshold_metres_per_second >= 0.0F &&
+           handling.world_slip_forward_deceleration_per_lateral_speed >= 0.0F &&
            handling.track_ride_height_metres > 0.0F &&
            handling.boost_maximum_speed_multiplier > 1.0F &&
            handling.boost_acceleration_metres_per_second_squared > 0.0F &&

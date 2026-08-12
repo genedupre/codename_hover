@@ -184,6 +184,92 @@ void test_directional_drift_and_both_held_policy() {
           "holding both drift directions cancels force and uses normal grip");
 }
 
+void test_drift_force_fades_as_same_direction_slide_builds() {
+    const hover::game::SampledTrack track = make_flat_track();
+    hover::game::ShipDefinition ship = test_ship();
+    ship.handling.world_drift_grip_deceleration_metres_per_second_squared = 0.0F;
+    ship.handling.world_drift_forward_deceleration_metres_per_second_squared = 0.0F;
+    ship.handling.world_slip_forward_deceleration_per_lateral_speed = 0.0F;
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState fresh =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    hover::game::WorldTrackVehicleState saturated = fresh;
+    saturated.physical.velocity =
+        hover::math::cross(saturated.physical.basis.up, saturated.physical.basis.forward) *
+        ship.handling.world_drift_force_fade_lateral_speed_metres_per_second;
+
+    hover::game::simulate_world_track_vehicle(
+        fresh, hover::game::WorldTrackVehicleTick{{.drift_right = true}, ship, path, tick_seconds});
+    hover::game::simulate_world_track_vehicle(
+        saturated,
+        hover::game::WorldTrackVehicleTick{{.drift_right = true}, ship, path, tick_seconds});
+
+    check(fresh.physical.velocity.x > 0.5F &&
+              nearly_equal(saturated.physical.velocity.x,
+                           ship.handling.world_drift_force_fade_lateral_speed_metres_per_second),
+          "drift adds its full side force from rest and fades it at the configured slide speed");
+}
+
+void test_drift_suppresses_propulsion_and_loses_forward_speed() {
+    const hover::game::SampledTrack track = make_flat_track();
+    const hover::game::ShipDefinition ship = test_ship();
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState planted =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    planted.physical.velocity =
+        planted.physical.basis.forward * ship.handling.base_maximum_forward_speed_metres_per_second;
+    planted.vehicle.forward_speed_metres_per_second =
+        ship.handling.base_maximum_forward_speed_metres_per_second;
+    hover::game::WorldTrackVehicleState drifting = planted;
+
+    hover::game::simulate_world_track_vehicle(
+        planted, hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+    hover::game::simulate_world_track_vehicle(
+        drifting, hover::game::WorldTrackVehicleTick{
+                      {.throttle = 1.0F, .drift_right = true}, ship, path, tick_seconds});
+
+    check(drifting.vehicle.forward_speed_metres_per_second <
+              planted.vehicle.forward_speed_metres_per_second - 0.4F,
+          "holding a drift at maximum speed suppresses propulsion and slows the ship");
+}
+
+void test_sustained_high_speed_steering_turns_slip_into_speed_loss() {
+    hover::game::tracks::OvalTrackDefinition definition = oval_definition();
+    definition.straight_length_metres = 2'000.0F;
+    definition.turn_radius_metres = 250.0F;
+    definition.half_width_metres = 200.0F;
+    const hover::game::SampledTrack track =
+        hover::game::tracks::make_sampled_oval({definition, 2'048U});
+    const hover::game::ShipDefinition ship = test_ship();
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState straight =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    straight.physical.velocity = straight.physical.basis.forward *
+                                 ship.handling.base_maximum_forward_speed_metres_per_second;
+    straight.vehicle.forward_speed_metres_per_second =
+        ship.handling.base_maximum_forward_speed_metres_per_second;
+    hover::game::WorldTrackVehicleState turning = straight;
+
+    for (int tick = 0; tick < 60; ++tick) {
+        hover::game::simulate_world_track_vehicle(
+            straight,
+            hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+        hover::game::simulate_world_track_vehicle(
+            turning, hover::game::WorldTrackVehicleTick{
+                         {.steering = 1.0F, .throttle = 1.0F}, ship, path, tick_seconds});
+    }
+
+    check(turning.vehicle.forward_speed_metres_per_second <
+              straight.vehicle.forward_speed_metres_per_second - 1.0F,
+          "sustained maximum-speed steering converts accumulated lateral slip into speed loss");
+    if (!(turning.vehicle.forward_speed_metres_per_second <
+          straight.vehicle.forward_speed_metres_per_second - 1.0F)) {
+        std::cerr << "  straight speed=" << straight.vehicle.forward_speed_metres_per_second
+                  << ", turning speed=" << turning.vehicle.forward_speed_metres_per_second
+                  << ", turning velocity x=" << turning.physical.velocity.x << '\n';
+    }
+}
+
 void test_world_integration_derives_progress_and_wraps_seam() {
     const hover::game::SampledTrack track = make_flat_track();
     const hover::game::ShipDefinition ship = test_ship();
@@ -339,6 +425,9 @@ int main() {
     test_grip_removes_lateral_velocity_by_a_bounded_amount();
     test_fixed_grip_loses_directional_authority_as_speed_rises();
     test_directional_drift_and_both_held_policy();
+    test_drift_force_fades_as_same_direction_slide_builds();
+    test_drift_suppresses_propulsion_and_loses_forward_speed();
+    test_sustained_high_speed_steering_turns_slip_into_speed_loss();
     test_world_integration_derives_progress_and_wraps_seam();
     test_banked_basis_and_temporary_edge_constraint();
     test_boost_and_brake_update_world_forward_velocity();
