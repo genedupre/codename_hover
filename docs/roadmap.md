@@ -70,7 +70,8 @@ The runway is retained as the named `runway` development scenario. The closed
 `SampledTrack` boundary, deterministic flat oval generator, generic surface mesh,
 and separate `oval` scenario are implemented and tested. The surface and closed
 seam were visually verified on the laptop on 2026-08-11; track-relative vehicle
-state is next.
+state now has a validated path-local data boundary. Centerline simulation and
+world-pose derivation are next; lateral steering follows after that is verified.
 
 Scope:
 

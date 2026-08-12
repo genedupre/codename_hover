@@ -52,11 +52,13 @@ target_link_libraries(hover_input PUBLIC SDL3::SDL3)
 hover_enable_warnings(hover_input)
 
 add_library(hover_render STATIC src/render/gpu_mesh.cpp)
+target_sources(hover_render PRIVATE src/render/engine_pulse.cpp)
 target_include_directories(hover_render PUBLIC src)
 target_link_libraries(hover_render PUBLIC SDL3::SDL3 hover_math)
 hover_enable_warnings(hover_render)
 
 add_library(hover_assets STATIC
+    src/assets/generated/engine_pulse_mesh.cpp
     src/assets/generated/mesh_builder.cpp
     src/assets/generated/presentation_pad.cpp
     src/assets/generated/prototype_01_mesh.cpp
@@ -68,6 +70,7 @@ hover_enable_warnings(hover_assets)
 
 add_library(hover_game STATIC
     src/game/track.cpp
+    src/game/track_vehicle_state.cpp
     src/game/ship_definition.cpp
     src/game/ships/prototype_01.cpp
     src/game/tracks/oval_track.cpp
@@ -120,6 +123,16 @@ if(BUILD_TESTING)
     target_link_libraries(hover_track_tests PRIVATE hover_assets hover_game)
     hover_enable_warnings(hover_track_tests)
     add_test(NAME hover_track_tests COMMAND hover_track_tests)
+
+    add_executable(hover_track_vehicle_state_tests tests/track_vehicle_state_tests.cpp)
+    target_link_libraries(hover_track_vehicle_state_tests PRIVATE hover_game)
+    hover_enable_warnings(hover_track_vehicle_state_tests)
+    add_test(NAME hover_track_vehicle_state_tests COMMAND hover_track_vehicle_state_tests)
+
+    add_executable(hover_engine_pulse_tests tests/engine_pulse_tests.cpp)
+    target_link_libraries(hover_engine_pulse_tests PRIVATE hover_render)
+    hover_enable_warnings(hover_engine_pulse_tests)
+    add_test(NAME hover_engine_pulse_tests COMMAND hover_engine_pulse_tests)
 endif()
 
 include(cmake/HoverShaders.cmake)

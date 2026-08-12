@@ -34,6 +34,19 @@ The early renderer needs only:
 Instancing, texture management, additional materials, and effects arrive when a
 visible milestone needs them.
 
+## Engine pulse presentation
+
+Prototype 01 has a separate tiny low-poly plume mesh drawn at each rear engine
+socket. Positive propulsion input makes it visible; idle, coasting, and net
+braking hide it. Two elapsed-time frequencies modulate uniform scale so the pulse
+has irregular life without feeding variable frame time into deterministic
+simulation. Propulsion strength changes the base scale.
+
+The plume currently reuses the simple opaque vertex-color pipeline. Engine socket
+positions live beside the Prototype 01 draw until another ship or authored asset
+proves a reusable attachment boundary is needed. Boost will later use a visibly
+different, more extreme presentation rather than merely increasing this pulse.
+
 ## Display behavior
 
 The long-term PC settings should support:

@@ -654,3 +654,80 @@ Next experiment:
 
 - Deploy the updated executable to the Deck and confirm B/East braking during the
   existing free-planar scenario.
+
+### 2026-08-12 — track-relative vehicle state boundary
+
+Build/revision: `985d6e4` plus the track-vehicle-state change.
+
+Hardware and OS: Deterministic host tests on the HP ZBook Studio 16 G11, Ubuntu
+24.04.4 LTS.
+
+Input device: Not applicable; this checkpoint introduces state and validation but
+does not change interactive movement.
+
+Track/scenario and settings: No scenario behavior changed. `runway` and `oval`
+still use the provisional free-planar vehicle simulation.
+
+Good:
+
+- `TrackVehicleState` separates path-local position and velocity from the existing
+  runway's world-space pose.
+- A nonzero opaque `TrackPathId` leaves future splits, shortcuts, and joins able
+  to transition between paths without embedding geometry ownership in the ship.
+- Lateral values are relative to track-right and normal values are relative to
+  the sampled surface, avoiding a world-up assumption on banks, loops, and
+  inverted segments.
+- Validation rejects unassigned paths, negative canonical distance/speed/normal
+  offset, and non-finite values while retaining signed lateral and normal motion.
+- All seven test executables pass and focused clang-tidy is clean.
+
+Needs work:
+
+- The state is not yet advanced by simulation or converted to a rendered world
+  pose.
+- A path graph, branch selection, authored 3D frame transport, airborne state,
+  and path reacquisition remain deliberately unimplemented.
+
+Next experiment:
+
+- Advance a `TrackVehicleState` along the oval centerline using throttle, brake,
+  and seam wrapping, then derive the rendered pose from its sampled frame. Keep
+  steering disabled for that first integration and preserve `runway` unchanged.
+
+### 2026-08-12 — acceleration engine pulse
+
+Build/revision: `985d6e4` plus the track-state and engine-pulse changes.
+
+Hardware and OS: Automated tests and graphical launch on the HP ZBook Studio 16
+G11, Ubuntu 24.04.4 LTS, Wayland and Vulkan.
+
+Input device: Wired Steam Controller detected; no specific interactive pulse
+feedback was recorded before accepting this checkpoint.
+
+Track/scenario and settings: `--scenario runway`; Prototype 01's existing
+free-planar simulation and follow camera.
+
+Good:
+
+- A separate 12-triangle plume is drawn at each rear engine during positive net
+  propulsion input and hidden while idle, coasting, or net braking.
+- Throttle strength controls the base scale while two presentation-time
+  frequencies add a slightly irregular pulse.
+- Variable presentation time never feeds back into fixed-step simulation.
+- Boost is explicitly reserved for a different, more extreme presentation rather
+  than only scaling this effect up.
+- Eight test executables pass and focused clang-tidy is clean.
+
+Needs work:
+
+- Pulse silhouette, size, colors, and rhythm have not received explicit owner
+  visual feedback and remain provisional.
+- Engine sockets are Prototype 01-specific draw constants until a second ship or
+  Blender-authored asset demonstrates the reusable data boundary.
+- The current opaque pipeline cannot provide additive glow, transparency, or
+  bloom; those are not required for this checkpoint.
+
+Next experiment:
+
+- Continue with oval centerline simulation. Revisit pulse art direction when
+  visual feedback or boost behavior provides a concrete reason.

@@ -1,3 +1,4 @@
+#include "assets/generated/engine_pulse_mesh.hpp"
 #include "assets/generated/prototype_01_mesh.hpp"
 #include "game/ship_definition.hpp"
 #include "game/ships/prototype_01.hpp"
@@ -62,11 +63,28 @@ void test_first_ship_mesh() {
           "Prototype 01 visual geometry fits inside its local collision box");
 }
 
+void test_engine_pulse_mesh() {
+    const hover::render::MeshData mesh = hover::assets::generated::make_engine_pulse_mesh();
+    check(hover::render::is_valid(mesh), "engine pulse produces valid indexed triangles");
+    check(mesh.vertices.size() == 36U && mesh.indices.size() == 36U,
+          "engine pulse remains a deliberately tiny low-poly plume");
+
+    bool begins_at_socket_and_extends_rearward = true;
+    for (const hover::render::Vertex& vertex : mesh.vertices) {
+        begins_at_socket_and_extends_rearward = begins_at_socket_and_extends_rearward &&
+                                                vertex.position.z <= 0.0F &&
+                                                vertex.position.z >= -1.35F;
+    }
+    check(begins_at_socket_and_extends_rearward,
+          "engine pulse is authored behind its local engine socket");
+}
+
 } // namespace
 
 int main() {
     test_first_ship_definition();
     test_first_ship_mesh();
+    test_engine_pulse_mesh();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " ship test(s) failed\n";

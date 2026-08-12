@@ -62,6 +62,15 @@ Mat4 translation(Vec3 offset) {
     return result;
 }
 
+Mat4 scaling(float uniform_scale) {
+    Mat4 result{};
+    result.at(0, 0) = uniform_scale;
+    result.at(1, 1) = uniform_scale;
+    result.at(2, 2) = uniform_scale;
+    result.at(3, 3) = 1.0F;
+    return result;
+}
+
 Mat4 rotation_y(float radians) {
     const float cosine = std::cos(radians);
     const float sine = std::sin(radians);

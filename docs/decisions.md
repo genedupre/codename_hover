@@ -219,6 +219,24 @@ re-orthonormalizes them. This validates distance, seam, and lateral-offset behav
 without prematurely choosing the general spline or 3D frame-transport algorithm
 needed for loops and corkscrews.
 
+### D-019: Keep track-bound state path-local and path-identifiable
+
+Status: accepted on 2026-08-12.
+
+Represent an attached ship with `TrackVehicleState`: an opaque nonzero path ID,
+distance along that path, lateral offset and velocity, forward speed, and local
+surface-normal offset and velocity. Scenario or course data owns geometry and
+resolves the ID; vehicle state does not store a `SampledTrack` pointer or depend on
+the oval generator.
+
+This keeps continuous banks, vertical sections, loops, and corkscrews in the
+sampled coordinate frame rather than assuming world Y is up. It also leaves a
+future track graph free to transition path identity and distance at splits,
+shortcuts, and joins. A genuine airborne jump will later use world-space motion
+and reacquire an eligible path instead of remaining artificially constrained to
+one path. Do not build the graph, branching policy, or airborne state until an
+observable track checkpoint requires them.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.

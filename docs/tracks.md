@@ -94,6 +94,18 @@ are respected independently at both ends of every segment.
 ## Next boundary
 
 The generated surface and highlighted seam were visually validated in
-`--scenario oval` on the laptop on 2026-08-11. Next, move vehicle state from free
-planar position/yaw to track distance and lateral offset while preserving
-`--scenario runway` as the free-driving regression sandbox.
+`--scenario oval` on the laptop on 2026-08-11. `TrackVehicleState` now provides a
+validated path-local state boundary, but no simulation uses it yet. Its opaque
+`TrackPathId` identifies the currently followed path without storing an owning
+pointer or assuming that a future course has only one route. A later track graph
+can transition the ID and distance at splits and joins.
+
+Next, advance this state along the oval centerline, wrap its distance at the seam,
+and derive a world pose from the sampled frame. Preserve `--scenario runway` as
+the free-driving regression sandbox. Steering and branch choice follow only after
+centerline movement is verified.
+
+Loops, banks, corkscrews, and other continuously attached shapes are represented
+by the sampled frame orientation. True airborne jumps should use separate
+world-space motion until the ship reacquires an eligible path; do not force an
+airborne ship to remain attached to one path's normal.

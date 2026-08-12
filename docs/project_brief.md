@@ -18,6 +18,10 @@ The owner's SRE background is a strength: favor reproducible builds, automation,
 logs, profiling, small interfaces, CI, and incremental delivery. Do not assume
 prior professional game-development or Blender experience.
 
+The planned company/studio name is **Speeding Dog**. This records the owner's
+intended identity; legal formation, name availability, trademark checks, domains,
+and store-account details remain separate future work.
+
 ## Experience goals
 
 - Immediate sensation of speed.

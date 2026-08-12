@@ -15,12 +15,21 @@ to a known track surface. It may become genuinely airborne for jumps, crashes, o
 loss of contact, then reacquire an appropriate track surface.
 when there are jumps, there could be a possability to jump to another track (a short shortcut) which at a later point joins the main track again.
 
-Candidate vehicle state includes:
+The first concrete track-bound vehicle state includes:
 
-- distance along the current track path;
-- lateral offset and velocity;
-- hover height and vertical velocity;
-- forward speed and acceleration;
+- an opaque current path identity and distance along it;
+- lateral offset and lateral velocity in the path frame;
+- normal offset and normal velocity relative to the local surface;
+- forward speed.
+
+Energy, boost, damage, lap, checkpoint, recovery, and airborne state remain later
+additions. Local normal motion is intentionally not called world-vertical motion:
+the ship may be banked, vertical, or upside down on loops. A true jump that leaves
+the track will later transition to world-space airborne state and may reacquire a
+different eligible path, including a shortcut or branch.
+
+Longer-term vehicle state also needs:
+
 - orientation relative to the local track frame;
 - energy, boost, and damage state;
 - current lap, checkpoint, and recovery state.
@@ -101,6 +110,12 @@ state, rather than world-space proximity to the finish line.
 AI operates primarily in track coordinates. A controller can choose target speed,
 target lateral position, preferred gaps, overtaking side, and aggression, then use
 the same vehicle-control interface as the player where practical.
+
+CPU racers must understand the same future path graph and attached/airborne state
+transitions as the player. Their planning needs to choose branches and shortcuts,
+prepare for takeoff, target a valid landing path, recover from missed jumps, and
+continue after paths rejoin. Keep route/behavior decisions above the shared
+per-tick vehicle controls rather than inventing AI-only movement physics.
 
 Build AI incrementally: one opponent, then five, ten, and roughly thirty. Add
 behavior in layers: follow a racing line, react to track features, identify slower

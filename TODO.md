@@ -35,3 +35,27 @@ no intentional low-resolution internal renderer yet.
   contributes 100%.
 - [ ] Define conflict handling, reset-to-default behavior, controller-position
   labels/glyphs, hotplug behavior, and safe fallback for malformed settings.
+
+## CPU opponents and complex tracks
+
+- [ ] Make CPU racers produce the same semantic vehicle actions and use the same
+  track-relative/airborne simulation rules as the player. Avoid a separate
+  simplified movement implementation that cannot survive later track features.
+- [ ] Give AI path planning access to the future track graph so it can select
+  branches, shortcuts, and rejoining paths rather than assuming one closed line.
+- [ ] Represent jump intent, takeoff requirements, airborne control, landing
+  targets, missed landings, and path reacquisition in AI planning.
+- [ ] Separate lower-frequency route/behavior decisions from per-tick vehicle
+  control so roughly thirty opponents remain measurable and manageable.
+- [ ] Add deterministic scenario tests for splits, joins, jumps, recovery, and
+  route choice before scaling the field from one to five, ten, and roughly thirty
+  opponents.
+
+## Engine presentation
+
+- [ ] Give boost a deliberately different and more extreme engine presentation
+  than normal acceleration, potentially changing plume geometry, color, rhythm,
+  and supporting effects. Do not implement boost as only a larger normal pulse.
+- [ ] Move engine socket placement into ship visual data when a second ship or a
+  Blender-authored mesh needs the effect; do not build a general attachment system
+  before then.

@@ -22,9 +22,11 @@ Two named development scenarios now share that runtime: `runway` preserves the
 long free-driving/input sandbox, while `oval` renders a closed strip from the
 generic sampled-track representation and spawns the ship at its seam. The oval
 surface and closed seam were visually verified on the laptop on 2026-08-11. Its
-driving remains deliberately free and planar; the next gameplay implementation is
-the smallest track-relative vehicle state rather than jumping ahead to race
-systems.
+driving remains deliberately free and planar. A validated `TrackVehicleState` now
+holds an opaque path ID plus path-local distance, lateral motion, forward speed,
+and surface-normal motion. It is not wired into `oval` yet; the next gameplay
+implementation advances that state along the oval centerline without steering.
+Do not jump ahead to race systems.
 
 The cross-device bootstrap is not complete. A wired Steam Controller was detected
 and used on the laptop on 2026-08-11. The first laptop-built executable and

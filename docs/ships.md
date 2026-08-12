@@ -58,6 +58,12 @@ dark canopy, twin rear engine pods, and colored exhaust faces. Flat shading uses
 one duplicated normal per triangle. The current mesh is 96 triangles; this is
 small enough that duplication is intentional and harmless.
 
+A separate 12-triangle low-poly plume is drawn at each engine socket only during
+positive propulsion input. Its presentation-time scale combines two frequencies
+for a slightly irregular pulse and does not alter simulation. The sockets are
+Prototype 01-specific constants for now; make them ship visual data when another
+ship or Blender-authored mesh requires the same effect.
+
 Its provisional definition currently specifies:
 
 | Property | Value |

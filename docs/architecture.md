@@ -163,6 +163,14 @@ with center, tangent, normal, track-right binormal, and width. The initial analy
 oval is a source of those frames, not a special runtime track type that vehicle or
 renderer code should depend upon. See `tracks.md`.
 
+While a ship is attached to a driving surface, `TrackVehicleState` stores an
+opaque path ID and scalar values in that path's local frame. It does not own or
+point at track geometry. Scenario/course ownership resolves the ID to sampled
+geometry, which permits a future graph to switch paths at splits and joins. Banks,
+vertical sections, and loops use the frame's normal and binormal rather than
+world-up. Truly airborne motion will be a separate state that can later reacquire
+any eligible path; the graph and airborne transition are not implemented yet.
+
 A ship's gameplay `ShipDefinition` is separate from its visual mesh. It contains a
 stable identity and visual-mesh key plus handling and collision profiles. The
 collision profile owns local-space bounds, relative mass, energy, and collision

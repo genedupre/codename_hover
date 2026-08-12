@@ -78,6 +78,16 @@ void test_matrix_composition_order() {
     check(clip.w > 0.0F, "view-projection places the target in front of the camera");
 }
 
+void test_uniform_scaling() {
+    const hover::math::Vec4 transformed = hover::math::transform(
+        hover::math::translation({5.0F, 7.0F, 11.0F}) * hover::math::scaling(2.0F),
+        hover::math::Vec4{1.0F, 2.0F, 3.0F, 1.0F});
+
+    check(nearly_equal(transformed.x, 7.0F) && nearly_equal(transformed.y, 11.0F) &&
+              nearly_equal(transformed.z, 17.0F) && nearly_equal(transformed.w, 1.0F),
+          "uniform scaling happens around local origin before translation");
+}
+
 } // namespace
 
 int main() {
@@ -85,6 +95,7 @@ int main() {
     test_left_handed_view();
     test_zero_to_one_projection_depth();
     test_matrix_composition_order();
+    test_uniform_scaling();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " math test(s) failed\n";

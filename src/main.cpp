@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 
+#include "assets/generated/engine_pulse_mesh.hpp"
 #include "assets/generated/presentation_pad.hpp"
 #include "assets/generated/prototype_01_mesh.hpp"
 #include "assets/generated/track_surface_mesh.hpp"
@@ -11,8 +12,10 @@
 #include "hover_math.hpp"
 #include "input/player_input.hpp"
 #include "platform/sdl_input.hpp"
+#include "render/engine_pulse.hpp"
 #include "render/gpu_mesh.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -368,6 +371,7 @@ void draw_mesh(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_p
 
 struct SceneMeshes {
     const hover::render::GpuMesh& ship;
+    const hover::render::GpuMesh& engine_pulse;
     const hover::render::GpuMesh& world;
 };
 
@@ -416,7 +420,9 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
 
 RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
                           SDL_GPUGraphicsPipeline* pipeline, const SceneMeshes& meshes,
-                          const hover::game::VehiclePose& ship_pose, DepthTarget& depth_target) {
+                          const hover::game::VehiclePose& ship_pose,
+                          hover::render::EnginePulseSample engine_pulse,
+                          DepthTarget& depth_target) {
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     if (command_buffer == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not acquire a GPU command buffer: %s",
@@ -484,8 +490,21 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
     SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
     draw_mesh(command_buffer, render_pass, meshes.world,
               VertexUniforms{view_projection, hover::math::identity()});
+    const hover::math::Mat4 ship_model = hover::game::model_matrix(ship_pose);
+    if (engine_pulse.visible) {
+        constexpr std::array engine_sockets{
+            hover::math::Vec3{0.72F, -0.09F, -2.50F},
+            hover::math::Vec3{-0.72F, -0.09F, -2.50F},
+        };
+        for (const hover::math::Vec3 socket : engine_sockets) {
+            const hover::math::Mat4 pulse_model = ship_model * hover::math::translation(socket) *
+                                                  hover::math::scaling(engine_pulse.uniform_scale);
+            draw_mesh(command_buffer, render_pass, meshes.engine_pulse,
+                      VertexUniforms{view_projection, pulse_model});
+        }
+    }
     draw_mesh(command_buffer, render_pass, meshes.ship,
-              VertexUniforms{view_projection, hover::game::model_matrix(ship_pose)});
+              VertexUniforms{view_projection, ship_model});
     SDL_EndGPURenderPass(render_pass);
 
     if (!SDL_SubmitGPUCommandBuffer(command_buffer)) {
@@ -539,12 +558,18 @@ int run(hover::core::DevelopmentScenario scenario) {
         return EXIT_FAILURE;
     }
 
+    hover::render::GpuMesh engine_pulse_mesh{gpu_device.get()};
+    if (!engine_pulse_mesh.upload(hover::assets::generated::make_engine_pulse_mesh(),
+                                  "generated/prototype_01_engine_pulse")) {
+        return EXIT_FAILURE;
+    }
+
     const ScenarioSetup scenario_setup = make_scenario_setup(scenario);
     hover::render::GpuMesh world_mesh{gpu_device.get()};
     if (!world_mesh.upload(scenario_setup.world_mesh, scenario_setup.world_mesh_id)) {
         return EXIT_FAILURE;
     }
-    const SceneMeshes scene_meshes{ship_mesh, world_mesh};
+    const SceneMeshes scene_meshes{ship_mesh, engine_pulse_mesh, world_mesh};
     DepthTarget depth_target{gpu_device.get()};
 
     const std::string_view active_scenario = hover::core::scenario_name(scenario);
@@ -581,6 +606,7 @@ int run(hover::core::DevelopmentScenario scenario) {
     FrameStatistics frame_statistics{window.get()};
     hover::game::VehicleState previous_vehicle_state = scenario_setup.initial_vehicle_state;
     hover::game::VehicleState current_vehicle_state = scenario_setup.initial_vehicle_state;
+    double engine_pulse_elapsed_seconds = 0.0;
     bool running = true;
     while (running) {
         const double elapsed_seconds = frame_timer.elapsed_seconds();
@@ -593,6 +619,7 @@ int run(hover::core::DevelopmentScenario scenario) {
 
         if (running) {
             const hover::input::PlayerInput player_input = input_system.sample_player_one();
+            engine_pulse_elapsed_seconds += elapsed_seconds;
             const hover::core::FixedStepPlan step_plan = simulation_clock.advance(elapsed_seconds);
             if (step_plan.dropped_time) {
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
@@ -608,10 +635,20 @@ int run(hover::core::DevelopmentScenario scenario) {
             const hover::game::VehiclePose render_pose =
                 hover::game::interpolate(previous_vehicle_state.pose, current_vehicle_state.pose,
                                          step_plan.interpolation_alpha);
+            const hover::game::HandlingProfile& handling = ship_definition.handling;
+            const float propulsion_acceleration =
+                player_input.throttle * handling.forward_acceleration_metres_per_second_squared -
+                player_input.brake * handling.braking_deceleration_metres_per_second_squared;
+            const float propulsion_intensity = std::clamp(
+                propulsion_acceleration / handling.forward_acceleration_metres_per_second_squared,
+                0.0F, 1.0F);
+            const hover::render::EnginePulseSample engine_pulse =
+                hover::render::sample_engine_pulse(engine_pulse_elapsed_seconds,
+                                                   propulsion_intensity);
 
             const RenderResult render_result =
                 render_frame(gpu_device.get(), window.get(), vehicle_pipeline.get(), scene_meshes,
-                             render_pose, depth_target);
+                             render_pose, engine_pulse, depth_target);
             if (render_result == RenderResult::failed) {
                 return EXIT_FAILURE;
             }
