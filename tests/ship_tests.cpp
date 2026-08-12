@@ -45,14 +45,20 @@ void test_first_ship_definition() {
               ship.handling.world_drift_force_fade_lateral_speed_metres_per_second > 0.0F &&
               ship.handling.world_drift_steering_multiplier > 1.0F &&
               ship.handling.world_steering_propulsion_loss_fraction > 0.0F &&
-              ship.handling.world_drift_propulsion_loss_fraction > 0.0F &&
-              ship.handling.world_drift_forward_deceleration_metres_per_second_squared > 0.0F,
+              ship.handling.world_drift_propulsion_loss_fraction > 0.0F,
           "Prototype 01 defines world-space grip and directional drift explicitly");
     check(ship.handling.world_lateral_grip_deceleration_metres_per_second_squared == 300.0F,
           "Prototype 01 retains less normal grip at maximum and boosted speeds");
+    check(ship.handling.world_forward_damping_per_second > 0.0F &&
+              ship.handling.world_lateral_damping_per_second > 0.0F &&
+              ship.handling.world_normal_damping_per_second > 0.0F &&
+              ship.handling.world_propulsion_high_speed_multiplier < 1.0F,
+          "Prototype 01 defines local-axis damping and speed-shaped propulsion");
     check(ship.handling.world_slip_speed_threshold_metres_per_second > 0.0F &&
-              ship.handling.world_slip_forward_deceleration_per_lateral_speed > 0.0F,
-          "Prototype 01 turns sustained lateral slip into forward speed loss");
+              ship.handling.world_sustained_slip_buildup_seconds > 0.0F &&
+              ship.handling.world_sustained_slip_release_seconds > 0.0F &&
+              ship.handling.world_sustained_slip_full_propulsion_multiplier < 1.0F,
+          "Prototype 01 turns sustained lateral slip into a persistent propulsion response");
     check(ship.presentation.maximum_turn_roll_radians > 0.0F &&
               ship.presentation.turn_roll_response_per_second > 0.0F,
           "Prototype 01 defines its visual turn-roll behavior explicitly");

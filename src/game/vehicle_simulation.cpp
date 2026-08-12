@@ -25,7 +25,7 @@ math::Vec3 rotate_planar_forward(math::Vec3 forward, float radians) {
 
 } // namespace
 
-VehicleTickEvents simulate_vehicle_dynamics(VehicleState& state, const VehicleTick& tick) {
+VehicleBoostTickResult advance_vehicle_boost_state(VehicleState& state, const VehicleTick& tick) {
     assert(tick.tick_seconds > 0.0F);
     const HandlingProfile& handling = tick.definition.handling;
     const bool boost_just_pressed = tick.input.boost && !state.boost_input_was_down;
@@ -43,39 +43,24 @@ VehicleTickEvents simulate_vehicle_dynamics(VehicleState& state, const VehicleTi
         state.boost_seconds_remaining =
             std::min(state.boost_seconds_remaining, handling.boost_throttle_release_tail_seconds);
     }
-    state.boosting = state.boost_seconds_remaining > 0.0F;
+    const bool active_for_tick = state.boost_seconds_remaining > 0.0F;
+    state.boosting = active_for_tick;
     const VehicleTickEvents events{.boost_activated = boost_just_pressed && can_activate_boost};
-    float acceleration =
-        tick.input.throttle * handling.forward_acceleration_metres_per_second_squared -
-        tick.input.brake * handling.braking_deceleration_metres_per_second_squared;
-    if (tick.input.throttle <= 0.0F && tick.input.brake <= 0.0F &&
-        state.forward_speed_metres_per_second > 0.0F) {
-        acceleration -= handling.coasting_deceleration_metres_per_second_squared;
-    }
-    const bool returning_from_boost =
-        !state.boosting && state.forward_speed_metres_per_second >
-                               handling.base_maximum_forward_speed_metres_per_second;
-    if (state.boosting) {
-        acceleration += tick.input.throttle * handling.boost_acceleration_metres_per_second_squared;
-    } else if (returning_from_boost) {
-        acceleration -= handling.boost_excess_speed_decay_metres_per_second_squared;
-    }
 
-    const float boosted_speed_limit = handling.base_maximum_forward_speed_metres_per_second *
-                                      handling.boost_maximum_speed_multiplier;
-    const float active_speed_limit =
-        state.boosting ? boosted_speed_limit
-                       : std::max(handling.base_maximum_forward_speed_metres_per_second,
-                                  state.forward_speed_metres_per_second);
-    state.forward_speed_metres_per_second =
-        std::clamp(state.forward_speed_metres_per_second + acceleration * tick.tick_seconds, 0.0F,
-                   active_speed_limit);
-    if (returning_from_boost && state.forward_speed_metres_per_second <
-                                    handling.base_maximum_forward_speed_metres_per_second) {
-        state.forward_speed_metres_per_second =
-            handling.base_maximum_forward_speed_metres_per_second;
+    if (active_for_tick) {
+        state.boost_seconds_remaining =
+            std::max(0.0F, state.boost_seconds_remaining - tick.tick_seconds);
+        if (state.boost_seconds_remaining < 0.0001F) {
+            state.boost_seconds_remaining = 0.0F;
+        }
+        state.boosting = state.boost_seconds_remaining > 0.0F;
     }
+    return VehicleBoostTickResult{events, active_for_tick};
+}
 
+void update_vehicle_turn_roll(VehicleState& state, const VehicleTick& tick) {
+    assert(tick.tick_seconds > 0.0F);
+    const HandlingProfile& handling = tick.definition.handling;
     const float speed_ratio = std::clamp(state.forward_speed_metres_per_second /
                                              handling.base_maximum_forward_speed_metres_per_second,
                                          0.0F, 1.0F);
@@ -85,16 +70,45 @@ VehicleTickEvents simulate_vehicle_dynamics(VehicleState& state, const VehicleTi
     const float roll_blend =
         1.0F - std::exp(-presentation.turn_roll_response_per_second * tick.tick_seconds);
     state.pose.turn_roll_radians += (target_roll - state.pose.turn_roll_radians) * roll_blend;
+}
 
-    if (state.boosting) {
-        state.boost_seconds_remaining =
-            std::max(0.0F, state.boost_seconds_remaining - tick.tick_seconds);
-        if (state.boost_seconds_remaining < 0.0001F) {
-            state.boost_seconds_remaining = 0.0F;
-        }
-        state.boosting = state.boost_seconds_remaining > 0.0F;
+VehicleTickEvents simulate_vehicle_dynamics(VehicleState& state, const VehicleTick& tick) {
+    assert(tick.tick_seconds > 0.0F);
+    const HandlingProfile& handling = tick.definition.handling;
+    const VehicleBoostTickResult boost = advance_vehicle_boost_state(state, tick);
+    float acceleration =
+        tick.input.throttle * handling.forward_acceleration_metres_per_second_squared -
+        tick.input.brake * handling.braking_deceleration_metres_per_second_squared;
+    if (tick.input.throttle <= 0.0F && tick.input.brake <= 0.0F &&
+        state.forward_speed_metres_per_second > 0.0F) {
+        acceleration -= handling.coasting_deceleration_metres_per_second_squared;
     }
-    return events;
+    const bool returning_from_boost =
+        !boost.active_for_tick && state.forward_speed_metres_per_second >
+                                      handling.base_maximum_forward_speed_metres_per_second;
+    if (boost.active_for_tick) {
+        acceleration += tick.input.throttle * handling.boost_acceleration_metres_per_second_squared;
+    } else if (returning_from_boost) {
+        acceleration -= handling.boost_excess_speed_decay_metres_per_second_squared;
+    }
+
+    const float boosted_speed_limit = handling.base_maximum_forward_speed_metres_per_second *
+                                      handling.boost_maximum_speed_multiplier;
+    const float active_speed_limit =
+        boost.active_for_tick ? boosted_speed_limit
+                              : std::max(handling.base_maximum_forward_speed_metres_per_second,
+                                         state.forward_speed_metres_per_second);
+    state.forward_speed_metres_per_second =
+        std::clamp(state.forward_speed_metres_per_second + acceleration * tick.tick_seconds, 0.0F,
+                   active_speed_limit);
+    if (returning_from_boost && state.forward_speed_metres_per_second <
+                                    handling.base_maximum_forward_speed_metres_per_second) {
+        state.forward_speed_metres_per_second =
+            handling.base_maximum_forward_speed_metres_per_second;
+    }
+
+    update_vehicle_turn_roll(state, tick);
+    return boost.events;
 }
 
 VehicleTickEvents simulate_vehicle(VehicleState& state, const VehicleTick& tick) {

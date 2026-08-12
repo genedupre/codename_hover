@@ -12,6 +12,7 @@ enum class DevelopmentScenario : std::uint8_t {
     oval,
     speedway,
     speedway_physics,
+    handling_lab,
 };
 
 struct LaunchOptions {

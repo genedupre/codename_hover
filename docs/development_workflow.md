@@ -77,6 +77,10 @@ Current scenarios:
   straights, smoothly banked turns, and the scalar track-attached regression.
 - `speedway_physics`: the same map and spawn using authoritative world momentum,
   projection-derived progress, velocity-based grip, and directional drifting.
+- `handling_lab`: the world-space simulation on a deliberately wide, flat surface.
+  Its one-second frame log also reports lateral speed, slip angle, steering
+  direction change, drift-force fraction, sustained-slip intensity, and applied
+  propulsion.
 
 Running without `--scenario` currently defaults to `runway`. The eventual normal
 game/menu boot may replace that default without removing explicit development

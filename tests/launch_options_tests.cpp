@@ -19,9 +19,11 @@ void check(bool condition, std::string_view description) {
 void test_default_and_named_runway() {
     const std::span<const hover::core::DevelopmentScenarioInfo> scenarios =
         hover::core::development_scenarios();
-    check(scenarios.size() == 4 && scenarios[0].name == "runway" && scenarios[1].name == "oval" &&
+    check(scenarios.size() == 5 && scenarios[0].name == "runway" && scenarios[1].name == "oval" &&
               scenarios[2].name == "speedway" && scenarios[3].name == "speedway_physics",
           "the scenario registry exposes the regressions and world-physics comparison");
+    check(scenarios[4].name == "handling_lab",
+          "the scenario registry exposes the clean handling measurement surface");
 
     const hover::core::LaunchOptionsParseResult defaults = hover::core::parse_launch_options({});
     check(defaults.succeeded(), "empty arguments parse successfully");
@@ -75,6 +77,18 @@ void test_named_speedway_physics() {
           "speedway_physics has a stable display name");
 }
 
+void test_named_handling_lab() {
+    constexpr std::array arguments{std::string_view{"--scenario=handling_lab"}};
+    const hover::core::LaunchOptionsParseResult result =
+        hover::core::parse_launch_options(arguments);
+    check(result.succeeded() &&
+              result.options.scenario == hover::core::DevelopmentScenario::handling_lab,
+          "handling_lab can be selected by name");
+    check(hover::core::scenario_name(hover::core::DevelopmentScenario::handling_lab) ==
+              "handling_lab",
+          "handling_lab has a stable display name");
+}
+
 void test_information_actions() {
     constexpr std::array arguments{std::string_view{"--help"},
                                    std::string_view{"--list-scenarios"}};
@@ -112,6 +126,7 @@ int main() {
     test_named_oval();
     test_named_speedway();
     test_named_speedway_physics();
+    test_named_handling_lab();
     test_information_actions();
     test_invalid_arguments();
 

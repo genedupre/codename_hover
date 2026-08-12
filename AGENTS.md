@@ -18,15 +18,17 @@ reconnect, and simultaneous keyboard input are verified. Select/Back/View maps t
 the prototype Escape action; Start/Menu remains free, B/East and the analog left
 trigger apply braking, and X/West activates the boost burst.
 
-Four named development scenarios now share that runtime: `runway` preserves the
+Five named development scenarios now share that runtime: `runway` preserves the
 long free-driving/input sandbox; `oval` preserves the flat closed sampled-track
 reference; and `speedway` is the first map prototype, with level straights and
 two turns that smoothly bank to 28 degrees. `speedway_physics` reuses that map and
 spawn with authoritative world momentum, projection-derived progress,
-velocity-based grip, and directional drift. All track scenarios spawn at a level
-seam. The oval surface and closed seam were visually verified on the laptop on
-2026-08-11; the owner visually accepted the standalone `speedway` surface on
-2026-08-12.
+velocity-based grip, and directional drift. `handling_lab` uses the same world
+simulation on a deliberately wide, flat surface and adds live handling telemetry
+to the normal frame log. All track scenarios spawn at a level seam. The oval
+surface and closed seam were visually verified on the laptop on 2026-08-11; the
+owner visually accepted the standalone `speedway` surface on 2026-08-12. The
+handling lab has automated coverage but still needs an interactive smoke test.
 `runway` remains free and planar. `oval` and `speedway` now use deterministic
 track-attached prototype movement. The ship owns a persistent heading in the
 local surface plane; steering rotates that heading, grip changes lateral velocity
@@ -49,7 +51,20 @@ The first world-physics tune binds Q/LB/L1 to left drift and E/RB/R1 to right
 drift. A single shoulder applies lateral force even with neutral steering; both
 held cancel and use normal grip. `speedway_physics` retains exact ride height and
 the collider-aware edge safety constraint pending hover and contact work. Its
-automated behavior passes, but its handling and camera still need owner playtest.
+automated behavior passes. The owner says the current result looks good but still
+permits repeated boosts and cornering without enough fear of washing or drifting
+out; the tune is not accepted as the target feel.
+
+World physics now decomposes velocity into the physical ship axes and applies
+time-correct exponential damping. Positive propulsion follows a speed-shaped,
+smoothed response; measured direction change and drift force reduce it. Lateral
+slip above 8 m/s builds a persistent response that can halve propulsion and then
+releases after grip recovers. This replaces the former constant drift slowdown
+and proportional slip drag. Scalar scenarios retain their existing 90 m/s²
+coasting model; world scenarios coast through forward damping. The new baseline
+passes deterministic traces and equal-duration 60/120 Hz comparison but still
+needs further boost-speed loss-of-control work in `handling_lab` and
+`speedway_physics`.
 
 Prototype 01's acceleration exhaust uses a strongly speed-responsive light-blue
 core and 50%-transparent outer shell. A presentation-only release envelope
@@ -119,6 +134,11 @@ deferred. Retain the remaining input, exit, suspend/resume, and display criteria
   conventions, and generated track sources.
 - [Vehicle physics](docs/physics.md) — verified F-Zero X behavioral reference,
   authoritative world state, forces, contact policies, and migration order.
+- [Handling implementation plan](docs/handling_implementation_plan.md) — accepted
+  source-to-project reconstruction stages, verification gates, and immediate
+  grounded-dynamics checkpoint.
+- [Grounded handling reference](docs/handling_reference.md) — inferred names,
+  source evidence, unit caveats, project mappings, and confidence levels.
 - [Input](docs/input.md) — semantic actions, simultaneous-device merging,
   current bindings, hotplugging, and rumble policy.
 - [Technical architecture](docs/architecture.md) — stack, system boundaries, and
@@ -176,6 +196,8 @@ then read the smallest applicable set:
 | Product direction, scope, or originality | `docs/project_brief.md` |
 | Handling intent, racing, AI, or camera feel | `docs/game_design.md` |
 | Vehicle movement, grip, drift, hover, jumping, contact, or physics migration | `docs/physics.md` |
+| Selecting or sequencing a major handling milestone | `docs/handling_implementation_plan.md` and `docs/physics.md` |
+| Interpreting F-Zero X racer fields, formulas, or update order | `docs/handling_reference.md` |
 | Ship definitions, colliders, visual sources, or adding a ship | `docs/ships.md` |
 | Pilot concepts, personalities, fiction, or roster ideas | `docs/pilot_ideas.md` |
 | Dynamic pilot portraits, expressions, portrait effects, or leader portraits | `docs/pilot_portraits.md` |

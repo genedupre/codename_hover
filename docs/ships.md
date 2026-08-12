@@ -79,7 +79,7 @@ Its provisional definition currently specifies:
 | Base maximum forward speed | 260 m/s (provisional) |
 | Forward acceleration | 78 m/s² |
 | Braking deceleration | 180 m/s² |
-| Coasting deceleration | 90 m/s² |
+| Scalar-scenario coasting deceleration | 90 m/s² |
 | Steering rate | 1.90 rad/s |
 | Maximum attached lateral speed | 42 m/s |
 | Normal lateral grip | 7.0/s |
@@ -91,13 +91,17 @@ Its provisional definition currently specifies:
 | Drift steering multiplier | 1.15× |
 | Full-steer propulsion loss | 35% |
 | Full-force drift propulsion loss | 85% |
-| Drift forward deceleration | 60 m/s² |
+| World forward/lateral/normal damping | 0.240481/s, 0.180271/s, 3.71252/s |
+| World propulsion curve knee | 45% of base speed |
+| World propulsion multiplier at base speed | 0.81× |
+| World propulsion response | 12/s at rest to 60/s at base speed |
 | Lateral slip threshold | 8 m/s |
-| Slip forward loss | 4 m/s² per excess lateral m/s |
+| Sustained-slip buildup/release | 1.6667 s / 0.75 s |
+| Full sustained-slip propulsion multiplier | 0.50× |
 | Track ride height | 0.62 m |
 | Boost speed multiplier | 1.28× (332.8 m/s ceiling) |
 | Boost acceleration | 145 m/s² |
-| Excess boost-speed decay | 170 m/s² |
+| Scalar/world excess boost-speed decay | 170 m/s² / 90 m/s² |
 | Boost burst duration | 1.0 s |
 | Boost throttle-release tail | 0.20 s |
 | Maximum visual turn roll | 0.18 rad (~10.3°) |
@@ -154,9 +158,14 @@ LB/L1 or Q and RB/R1 or E apply opposite 105 m/s² lateral forces, use the lower
 55 m/s² drift grip, and multiply steering by 1.15. The side force fades as the
 ship approaches 32 m/s of lateral motion in the requested direction instead of
 accelerating sideways forever. Steering and active drift suppress positive
-propulsion, drift applies 60 m/s² forward loss, and sustained lateral slip above
-8 m/s adds proportional forward loss. These values are playable starting points,
-not accepted final balance.
+propulsion. World velocity is damped exponentially in the ship's local axes;
+ordinary coasting therefore emerges from forward damping rather than the scalar
+90 m/s² term. Positive propulsion weakens near base maximum speed and rises
+through a speed-dependent response envelope. Lateral slip above 8 m/s builds a
+persistent intensity over 1.6667 seconds, halves available propulsion at full
+response, and releases over 0.75 seconds after grip recovers. There is no separate
+constant drift slowdown or proportional slip drag. These values are playable
+starting points, not accepted final balance.
 
 Pressing boost currently starts a one-second burst that accelerates above
 Prototype 01's provisional 260 m/s base ceiling to at most 332.8 m/s. Holding X
@@ -165,12 +174,12 @@ ends, excess speed returns smoothly to the normal ceiling instead of snapping th
 ship down. Braking cancels a burst. This initial mechanic has no energy cost or
 cooldown and is intended for handling validation, not final balance. Its 145 m/s²
 boost acceleration is the full-throttle value and scales with analog throttle.
-Activation requires positive throttle and no brake. Releasing throttle during a
-burst applies the existing 90 m/s² coasting deceleration from whatever boosted
-speed the ship has reached and shortens the remaining burst to at most 0.20
-seconds. The short presentation tail remains, but reapplying throttle does not
-restore the discarded burst time or force the ship immediately back to its base
-ceiling.
+Activation requires positive throttle and no brake. Releasing throttle shortens
+the remaining burst to at most 0.20 seconds. Scalar movement applies its existing
+90 m/s² coasting term; world physics clears positive propulsion and continues its
+local forward damping. The short presentation tail remains, but reapplying
+throttle does not restore the discarded burst time or force the ship immediately
+back to its base ceiling.
 
 The prototype camera adds a speed-gated response shared by the current scenario
 camera rather than storing camera numbers in `ShipDefinition`. It activates at

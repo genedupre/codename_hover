@@ -31,9 +31,19 @@ struct VehicleTickEvents {
     bool boost_activated = false;
 };
 
+// Shared boost lifecycle result for movement models that own their own
+// longitudinal forces. `active_for_tick` remains true for the final boost tick
+// even when the stored timer reaches zero at the end of that tick.
+struct VehicleBoostTickResult {
+    VehicleTickEvents events;
+    bool active_for_tick = false;
+};
+
 // Advances shared propulsion, boost, and visual steering response without
 // choosing how the vehicle moves through the world. Free-planar and
 // track-attached movement both build on this deterministic step.
+VehicleBoostTickResult advance_vehicle_boost_state(VehicleState& state, const VehicleTick& tick);
+void update_vehicle_turn_roll(VehicleState& state, const VehicleTick& tick);
 VehicleTickEvents simulate_vehicle_dynamics(VehicleState& state, const VehicleTick& tick);
 VehicleTickEvents simulate_vehicle(VehicleState& state, const VehicleTick& tick);
 [[nodiscard]] bool is_valid(const VehiclePose& pose);

@@ -88,7 +88,9 @@ still required before that loss of control has its final gameplay cost.
 Directional drift must not be a constant sideways thruster. Its force fades as
 same-direction lateral speed builds, while its reduced grip lets momentum keep
 lagging behind the ship. Steering direction-change and drift force also suppress
-positive propulsion, and sustained lateral slip dissipates forward speed. This
+positive propulsion. Sustained lateral slip builds a persistent response that
+further weakens propulsion until grip recovers; local-axis damping then turns the
+missing propulsion into speed loss without an unrelated direct-slip drag. This
 combination is intended to create controllable instability and slowdown without
 adding random steering noise.
 
@@ -123,15 +125,15 @@ conditions become valid. During the burst it adds acceleration up to a
 ship-defined boosted speed ceiling, with both normal and boost acceleration scaled
 by the analog throttle action.
 
-Releasing throttle stops acceleration immediately, applies ordinary coasting
-deceleration from the current speed, and irreversibly caps that burst to its
-ship-defined release tail. Prototype 01's tail is 0.20 seconds, after which speed
-above the normal ceiling uses the stronger boost-excess decay. Reapplying throttle
-during the tail does not restore discarded burst time. The flare and any latched
-camera feedback remain active for the short tail and then use their normal release
-envelopes. Braking cancels an active burst immediately. This establishes
-deterministic mechanics and tuning boundaries without prematurely designing the
-final energy system.
+Releasing throttle stops acceleration immediately and irreversibly caps that
+burst to its ship-defined release tail. Scalar movement applies its configured
+coasting term; world physics coasts through local forward damping. Prototype 01's
+tail is 0.20 seconds, after which speed above the normal ceiling uses the movement
+model's boost-excess return. Reapplying throttle during the tail does not restore
+discarded burst time. The flare and any latched camera feedback remain active for
+the short tail and then use their normal release envelopes. Braking cancels an
+active burst immediately. This establishes deterministic mechanics and tuning
+boundaries without prematurely designing the final energy system.
 
 A successful boost activation emits one semantic simulation event. The current
 single-player runtime maps that event to a 160 ms controller-rumble pulse. A press

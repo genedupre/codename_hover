@@ -242,9 +242,16 @@ The current directional drift tune is:
 - 1.15× steering response;
 - steering can remove up to 35% of positive propulsion and full-strength drift
   can remove another 85%; combined loss is capped at 100%;
-- 60 m/s² forward drift deceleration;
-- lateral slip above 8 m/s adds 4 m/s² of forward deceleration for every
-  additional 1 m/s of sideways speed.
+- exponential local-axis damping at 0.240481/s forward, 0.180271/s lateral, and
+  3.71252/s normal;
+- propulsion remains full below 45% of base speed and smoothly reaches 0.81× at
+  base maximum speed;
+- rising propulsion responds from 12/s at rest to 60/s at base maximum, while
+  reductions apply immediately;
+- lateral slip above 8 m/s builds a normalized response over 1.6667 seconds,
+  reaches a 0.50× propulsion multiplier, and releases over 0.75 seconds;
+- ordinary world coasting uses forward damping; post-boost excess speed adds a
+  90 m/s² return term.
 
 Normal grip is deliberately a fixed maximum amount of sideways velocity removed
 per second, rather than a speed-proportional interpolation. A low-speed steering
@@ -263,17 +270,45 @@ builds, and subtracts both steering direction-change and drift force from engine
 acceleration. Codename Hover expresses these as units-per-second parameters at
 120 Hz; it does not copy opaque N64 per-frame constants or claim exact emulation.
 
-The slip threshold and proportional forward loss are our explicit, tunable
-translation of the original's sustained-side-slip state into the current runtime.
-They make ordinary maximum-speed steering and boost-speed steering lose energy
-after momentum diverges far enough from heading. Shoulder drift additionally
-suppresses propulsion and applies constant forward loss, so holding throttle no
-longer cancels the slowdown every following tick. No random yaw is injected:
-the instability comes from heading, momentum, lower grip, and fading side-force
-authority disagreeing with each other.
+World velocity is decomposed into physical forward, lateral, and normal axes,
+damped with `component × exp(-rate × dt)`, and recomposed before drift and bounded
+grip. Measured physical direction change, rather than raw stick magnitude, drives
+the steering propulsion penalty. A speed-shaped requested acceleration rises
+through a stored response value; reduced targets and braking take effect
+immediately.
+
+The earlier proportional slip drag and constant drift deceleration are removed.
+Remaining lateral speed now builds named sustained-slip duration and intensity.
+That intensity persists after drift release, weakens requested propulsion, and
+decays only after lateral velocity returns below the threshold. Damping turns the
+lost propulsion into organic speed loss, so holding throttle cannot erase a
+slide. No random yaw is injected: instability comes from heading, momentum,
+lower grip, fading side-force authority, and delayed propulsion recovery
+disagreeing with each other.
 
 The exact ride height and collider-aware edge remain intentional temporary
 constraints. They remove velocity into the constrained direction rather than
 allowing hidden penetration to accumulate. Gravity, spring/damping hover, contact
 modes, wall/open-edge policies, jumps, and visual-basis smoothing remain later
 steps. Keep the scalar `speedway` scenario until the owner accepts this model.
+
+The fixed tick is internally divided into boost lifecycle, steering, local
+damping, drift/grip, sustained-slip, propulsion, and supported-contact stages.
+Every completed world-space tick returns a read-only telemetry snapshot containing
+world and local velocity, signed slip angle, measured steering direction change,
+axis damping, drift direction/force, selected grip, propulsion curve and response,
+sustained-slip state, post-boost return, and temporary edge-clamp activation.
+Telemetry is observational and never feeds back into physics.
+
+`--scenario handling_lab` runs this same authoritative simulation on a generated
+6 km straight/1 km turn-radius/800 m half-width flat surface. It prints the most
+useful handling values with the existing one-second frame log, avoiding bank,
+tight curvature, and ordinary edge correction during controlled tests. Automated
+script traces cover straight acceleration, full-speed steering, boost-turn,
+drift entry/sustain/release, throttle release, and braking during boosted drift.
+Each trace is replayed twice and compared tick by tick.
+
+The accepted full source-to-project sequence, conversion rules, stage exit
+criteria, and immediate grounded-dynamics checkpoint are maintained separately in
+`handling_implementation_plan.md`. Keep this file focused on current physics
+behavior and durable principles.

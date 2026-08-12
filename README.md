@@ -3,7 +3,9 @@
 Codename Hover is an early native-Linux prototype for a low-poly futuristic
 anti-gravity arcade racer. The current executable provides `runway`, `oval`, and
 banked `speedway` regression scenarios plus `speedway_physics`, the first playable
-world-space momentum, grip, and directional-drift experiment.
+world-space momentum, grip, and directional-drift experiment. `handling_lab`
+provides a wide flat surface and additional live telemetry for controlled handling
+experiments.
 
 ## Build on the development laptop
 
@@ -23,6 +25,11 @@ cmake --build --preset development
 ```
 
 Use `--list-scenarios` to see every available development scenario.
+For measured handling work, run:
+
+```bash
+./build/development/codename_hover --scenario handling_lab
+```
 
 ## Deploy to Steam Deck
 

@@ -27,9 +27,22 @@ bool is_valid(const ShipDefinition& definition) {
            handling.world_steering_propulsion_loss_fraction <= 1.0F &&
            handling.world_drift_propulsion_loss_fraction >= 0.0F &&
            handling.world_drift_propulsion_loss_fraction <= 1.0F &&
-           handling.world_drift_forward_deceleration_metres_per_second_squared >= 0.0F &&
+           handling.world_forward_damping_per_second >= 0.0F &&
+           handling.world_lateral_damping_per_second >= 0.0F &&
+           handling.world_normal_damping_per_second >= 0.0F &&
+           handling.world_propulsion_curve_knee_speed_fraction >= 0.0F &&
+           handling.world_propulsion_curve_knee_speed_fraction < 1.0F &&
+           handling.world_propulsion_high_speed_multiplier > 0.0F &&
+           handling.world_propulsion_high_speed_multiplier <= 1.0F &&
+           handling.world_propulsion_response_rate_at_rest_per_second > 0.0F &&
+           handling.world_propulsion_response_rate_at_base_speed_per_second >=
+               handling.world_propulsion_response_rate_at_rest_per_second &&
            handling.world_slip_speed_threshold_metres_per_second >= 0.0F &&
-           handling.world_slip_forward_deceleration_per_lateral_speed >= 0.0F &&
+           handling.world_sustained_slip_buildup_seconds > 0.0F &&
+           handling.world_sustained_slip_release_seconds > 0.0F &&
+           handling.world_sustained_slip_full_propulsion_multiplier >= 0.0F &&
+           handling.world_sustained_slip_full_propulsion_multiplier <= 1.0F &&
+           handling.world_boost_excess_speed_decay_metres_per_second_squared > 0.0F &&
            handling.track_ride_height_metres > 0.0F &&
            handling.boost_maximum_speed_multiplier > 1.0F &&
            handling.boost_acceleration_metres_per_second_squared > 0.0F &&

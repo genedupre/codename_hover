@@ -3,6 +3,104 @@
 Use this file for dated build and playtest observations. Keep durable product and
 architecture decisions in `docs/decisions.md` and the relevant topical document.
 
+### 2026-08-12 — source-shaped grounded propulsion and sustained slip
+
+Build/revision: pending changes after `73a2788`, building on the handling
+measurement foundation below.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS; native Wayland,
+Vulkan SDL_GPU backend, debug validation enabled. Compilation, automated
+verification, and a technical interactive smoke test completed locally;
+the owner subsequently playtested both handling scenarios.
+
+Track/scenario and settings: `handling_lab` and `speedway_physics`; 120 Hz
+production simulation. Scalar scenarios retain their previous longitudinal model.
+
+Good:
+
+- World velocity is decomposed and exponentially damped in physical forward,
+  lateral, and normal axes using elapsed-time coefficients.
+- Positive propulsion now follows a speed curve and stored response. Measured
+  direction change, drift-force fraction, and persistent slip intensity reduce
+  its target.
+- Lateral slip above 8 m/s builds over 1.6667 seconds and releases over 0.75
+  seconds after grip recovers. Full response halves available propulsion.
+- The previous constant drift deceleration and proportional slip drag were
+  removed; ordinary world coasting now comes from forward damping.
+- Boost lifecycle/events and turn roll remain shared with scalar movement, while
+  world braking and excess-speed return remain explicitly owned by world physics.
+- Deterministic scripts pass, including equal-duration 60/120 Hz damping and
+  propulsion comparison. All 11 test executables pass.
+- The graphical handling lab opened with the wired Steam Controller, accepted
+  throttle, steering, shoulder drift, brake, and repeated boost input, emitted
+  live telemetry, and shut down cleanly. Sustained-slip intensity visibly built
+  and recovered in the log.
+- The owner described the result as looking good overall.
+
+Needs work:
+
+- It still does not feel sufficiently like the intended F-Zero X reference. The
+  owner can boost repeatedly and take corners without fearing a consequential
+  washout or drift-out. Boost-speed corner entry, loss of directional authority,
+  and recovery consequences therefore remain the next handling problem; current
+  values are not accepted final tuning.
+- Exact ride height and the wide safety edge remain temporary; hover and real
+  wall/open-edge behavior have not started.
+
+Measurements:
+
+- After startup/capture stalls, ordinary one-second debug-validation samples were
+  generally about 124–135 FPS at the current 1280×720 window. This is a smoke
+  observation, not a shipping performance claim.
+
+Next experiment:
+
+- Use the recorded traces to identify why boost-speed cornering regains grip too
+  safely, then change one relationship at a time before another A/B playtest.
+
+### 2026-08-12 — handling measurement foundation
+
+Build/revision: pending changes after `73a2788`.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS. Compilation and all
+automated tests completed locally; the new graphical scenario is not yet
+interactively verified.
+
+Track/scenario and settings: new `--scenario handling_lab`; generated flat oval
+with 6 km straights, 1 km turn radius, 800 m half-width, and the authoritative
+120 Hz world-space simulation.
+
+Good:
+
+- Added a source-to-project ledger with evidence, inferred responsibilities,
+  confidence, unit caveats, and the intended owner for each grounded-handling
+  concept.
+- Split the existing fixed tick into named steering, drift, propulsion,
+  grounded-force, and supported-contact stages without intentionally changing
+  its equations.
+- Each completed tick exposes observational telemetry for local velocity, slip,
+  steering direction change, drift/traction, requested/applied propulsion,
+  handling loss, and temporary edge correction.
+- The handling lab adds selected values to the existing one-second diagnostics.
+- Deterministic scripts cover straight acceleration, full-speed steering,
+  boost-turn, drift entry/sustain/release, coasting while sliding, and braking
+  during boosted drift. Repeated executions compare equal tick by tick.
+- All 11 test executables pass.
+
+Needs work:
+
+- The lab surface and its live log still need an interactive laptop smoke test.
+- Local-axis damping, speed-dependent propulsion, sustained-slip state, and a
+  60/120 Hz reconstructed reference comparison remain the next physics work.
+- The current proportional slip-loss heuristic, exact ride height, and wide edge
+  clamp remain temporary and must not be mistaken for final behavior.
+
+Next experiment:
+
+- Run `./build/development/codename_hover --scenario handling_lab`, build speed,
+  then compare full-speed steering, boost-turn, drift entry, and drift release
+  while observing lateral speed and slip angle in the one-second log.
+
 ### 2026-08-12 — boosted cornering grip follow-up
 
 Owner feedback: Prototype 01 could boost and corner without enough visible drift

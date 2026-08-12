@@ -83,8 +83,18 @@ hint-aware world-point projection primitive is implemented and tested; staged
 world position/velocity/basis migration is now playable as `speedway_physics`.
 That scenario adds projection-derived progress, momentum-preserving steering,
 velocity-based grip, and directional LB/RB drift while retaining exact ride height
-and edge constraints. Automated coverage passes; interactive laptop feel and
-camera verification are next.
+and edge constraints. Two owner playtests confirmed visible improvement but found
+the model still less unstable and less speed-sensitive than its behavioral
+reference. Source-informed side-force attenuation, propulsion suppression, and
+slip loss are now implemented and tested. The accepted staged reconstruction is
+recorded in `handling_implementation_plan.md`. Its grounded-update reference
+ledger, telemetry vocabulary, named tick stages, wide flat `handling_lab`, and
+repeatable scripted traces are now implemented. Local-axis exponential damping,
+speed-dependent smoothed propulsion, measured direction-change loss, and named
+sustained-slip buildup/release now replace the provisional direct slip drag and
+constant drift slowdown. Automated equal-duration 60/120 Hz comparisons pass.
+The next checkpoint is owner A/B playtesting in `handling_lab` and
+`speedway_physics`; hover and wall work remain later.
 
 Scope:
 
@@ -104,6 +114,8 @@ Deck, with behavior unchanged by render frame rate.
 Tune and validate acceleration, steering, grip, drift, banking, hover response,
 boost, collisions, falling, recovery, and camera behavior. Add track features
 needed to test banked curves, a loop, pipe-like surfaces, a corkscrew, and a jump.
+Follow the staged gates in `handling_implementation_plan.md`; do not skip the
+measurable grounded model to reach visually exciting track forms early.
 
 Exit criterion: repeated owner playtests describe the prototype as enjoyable and
 the remaining problems are specific tuning issues rather than a failed vehicle

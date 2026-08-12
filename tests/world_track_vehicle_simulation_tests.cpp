@@ -5,12 +5,15 @@
 #include "game/world_track_vehicle_simulation.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <numbers>
+#include <span>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -67,6 +70,131 @@ hover::game::ShipDefinition test_ship() {
     return ship;
 }
 
+hover::game::SampledTrack make_handling_lab_track() {
+    return hover::game::tracks::make_sampled_oval({
+        hover::game::tracks::OvalTrackDefinition{
+            .straight_length_metres = 6'000.0F,
+            .turn_radius_metres = 1'000.0F,
+            .half_width_metres = 800.0F,
+            .elevation_metres = 0.0F,
+        },
+        2'048U,
+    });
+}
+
+struct ScriptStep {
+    std::uint32_t tick_count;
+    hover::input::PlayerInput input;
+};
+
+struct TraceSample {
+    hover::game::WorldTrackVehicleState state;
+    hover::game::WorldTrackVehicleTickResult result;
+};
+
+std::vector<TraceSample> run_script(const hover::game::SampledTrack& track,
+                                    const hover::game::ShipDefinition& ship,
+                                    std::span<const ScriptStep> steps, float initial_speed = 0.0F) {
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState state =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    state.physical.velocity = state.physical.basis.forward * initial_speed;
+    state.vehicle.forward_speed_metres_per_second = initial_speed;
+
+    std::vector<TraceSample> trace;
+    for (const ScriptStep& step : steps) {
+        for (std::uint32_t tick = 0; tick < step.tick_count; ++tick) {
+            const hover::game::WorldTrackVehicleTickResult result =
+                hover::game::simulate_world_track_vehicle(
+                    state,
+                    hover::game::WorldTrackVehicleTick{step.input, ship, path, tick_seconds});
+            trace.push_back(TraceSample{state, result});
+        }
+    }
+    return trace;
+}
+
+bool nearly_equal(const hover::game::WorldTrackVehicleTelemetry& left,
+                  const hover::game::WorldTrackVehicleTelemetry& right) {
+    return nearly_equal(left.world_speed_metres_per_second, right.world_speed_metres_per_second) &&
+           nearly_equal(left.local_forward_speed_metres_per_second,
+                        right.local_forward_speed_metres_per_second) &&
+           nearly_equal(left.local_lateral_speed_metres_per_second,
+                        right.local_lateral_speed_metres_per_second) &&
+           nearly_equal(left.local_normal_speed_metres_per_second,
+                        right.local_normal_speed_metres_per_second) &&
+           nearly_equal(left.signed_slip_angle_radians, right.signed_slip_angle_radians) &&
+           nearly_equal(left.steering_direction_change_radians,
+                        right.steering_direction_change_radians) &&
+           nearly_equal(left.steering_direction_change_ratio,
+                        right.steering_direction_change_ratio) &&
+           nearly_equal(left.drift_direction, right.drift_direction) &&
+           nearly_equal(left.drift_force_fraction, right.drift_force_fraction) &&
+           nearly_equal(left.selected_grip_deceleration_metres_per_second_squared,
+                        right.selected_grip_deceleration_metres_per_second_squared) &&
+           nearly_equal(left.forward_damping_deceleration_metres_per_second_squared,
+                        right.forward_damping_deceleration_metres_per_second_squared) &&
+           nearly_equal(left.lateral_damping_deceleration_metres_per_second_squared,
+                        right.lateral_damping_deceleration_metres_per_second_squared) &&
+           nearly_equal(left.normal_damping_deceleration_metres_per_second_squared,
+                        right.normal_damping_deceleration_metres_per_second_squared) &&
+           nearly_equal(left.propulsion_curve_multiplier, right.propulsion_curve_multiplier) &&
+           nearly_equal(left.sustained_slip_seconds, right.sustained_slip_seconds) &&
+           nearly_equal(left.sustained_slip_intensity, right.sustained_slip_intensity) &&
+           nearly_equal(left.requested_propulsion_acceleration_metres_per_second_squared,
+                        right.requested_propulsion_acceleration_metres_per_second_squared) &&
+           nearly_equal(left.applied_propulsion_acceleration_metres_per_second_squared,
+                        right.applied_propulsion_acceleration_metres_per_second_squared) &&
+           nearly_equal(left.propulsion_fraction, right.propulsion_fraction) &&
+           nearly_equal(left.post_boost_return_deceleration_metres_per_second_squared,
+                        right.post_boost_return_deceleration_metres_per_second_squared) &&
+           left.edge_constraint_activated == right.edge_constraint_activated;
+}
+
+bool nearly_equal(const TraceSample& left, const TraceSample& right) {
+    return nearly_equal(left.state.physical.position, right.state.physical.position) &&
+           nearly_equal(left.state.physical.velocity, right.state.physical.velocity) &&
+           nearly_equal(left.state.physical.basis.forward, right.state.physical.basis.forward) &&
+           nearly_equal(left.state.physical.basis.up, right.state.physical.basis.up) &&
+           nearly_equal(left.state.course.location.distance_along_path_metres,
+                        right.state.course.location.distance_along_path_metres) &&
+           nearly_equal(left.state.course.location.lateral_offset_metres,
+                        right.state.course.location.lateral_offset_metres) &&
+           nearly_equal(left.state.vehicle.forward_speed_metres_per_second,
+                        right.state.vehicle.forward_speed_metres_per_second) &&
+           nearly_equal(left.state.handling.sustained_slip_seconds,
+                        right.state.handling.sustained_slip_seconds) &&
+           nearly_equal(left.state.handling.sustained_slip_intensity,
+                        right.state.handling.sustained_slip_intensity) &&
+           nearly_equal(
+               left.state.handling.applied_propulsion_acceleration_metres_per_second_squared,
+               right.state.handling.applied_propulsion_acceleration_metres_per_second_squared) &&
+           nearly_equal(left.state.vehicle.boost_seconds_remaining,
+                        right.state.vehicle.boost_seconds_remaining) &&
+           left.state.vehicle.boosting == right.state.vehicle.boosting &&
+           left.state.vehicle.boost_input_was_down == right.state.vehicle.boost_input_was_down &&
+           left.result.events.boost_activated == right.result.events.boost_activated &&
+           nearly_equal(left.result.telemetry, right.result.telemetry);
+}
+
+void check_trace_is_valid_and_repeatable(const hover::game::SampledTrack& track,
+                                         const hover::game::ShipDefinition& ship,
+                                         std::span<const ScriptStep> script, float initial_speed,
+                                         std::string_view description) {
+    const std::vector<TraceSample> first = run_script(track, ship, script, initial_speed);
+    const std::vector<TraceSample> second = run_script(track, ship, script, initial_speed);
+    const bool valid = std::ranges::all_of(first, [](const TraceSample& sample) {
+        return hover::game::is_valid(sample.state) &&
+               hover::game::is_valid(sample.result.telemetry);
+    });
+    const bool repeatable =
+        first.size() == second.size() &&
+        std::ranges::equal(first, second, [](const TraceSample& left, const TraceSample& right) {
+            return nearly_equal(left, right);
+        });
+    check(!first.empty() && valid && repeatable, description);
+}
+
 void test_spawn_initializes_world_state_from_course() {
     const hover::game::SampledTrack track = make_flat_track();
     const hover::game::ShipDefinition ship = test_ship();
@@ -93,6 +221,9 @@ void test_steering_rotates_orientation_without_rotating_momentum() {
     const hover::game::SampledTrack track = make_flat_track();
     hover::game::ShipDefinition ship = test_ship();
     ship.handling.world_lateral_grip_deceleration_metres_per_second_squared = 0.0F;
+    ship.handling.world_forward_damping_per_second = 0.0F;
+    ship.handling.world_lateral_damping_per_second = 0.0F;
+    ship.handling.world_normal_damping_per_second = 0.0F;
     const hover::game::ResolvedTrackPath path{primary_path, track};
     hover::game::WorldTrackVehicleState state =
         hover::game::make_world_track_vehicle_state({}, ship, path);
@@ -111,7 +242,8 @@ void test_steering_rotates_orientation_without_rotating_momentum() {
 
 void test_grip_removes_lateral_velocity_by_a_bounded_amount() {
     const hover::game::SampledTrack track = make_flat_track();
-    const hover::game::ShipDefinition ship = test_ship();
+    hover::game::ShipDefinition ship = test_ship();
+    ship.handling.world_lateral_damping_per_second = 0.0F;
     const hover::game::ResolvedTrackPath path{primary_path, track};
     hover::game::WorldTrackVehicleState state =
         hover::game::make_world_track_vehicle_state({}, ship, path);
@@ -169,10 +301,14 @@ void test_directional_drift_and_both_held_policy() {
     hover::game::WorldTrackVehicleState right = left;
     hover::game::WorldTrackVehicleState both = left;
 
-    hover::game::simulate_world_track_vehicle(
-        left, hover::game::WorldTrackVehicleTick{{.drift_left = true}, ship, path, tick_seconds});
-    hover::game::simulate_world_track_vehicle(
-        right, hover::game::WorldTrackVehicleTick{{.drift_right = true}, ship, path, tick_seconds});
+    const hover::game::WorldTrackVehicleTickResult left_result =
+        hover::game::simulate_world_track_vehicle(
+            left,
+            hover::game::WorldTrackVehicleTick{{.drift_left = true}, ship, path, tick_seconds});
+    const hover::game::WorldTrackVehicleTickResult right_result =
+        hover::game::simulate_world_track_vehicle(
+            right,
+            hover::game::WorldTrackVehicleTick{{.drift_right = true}, ship, path, tick_seconds});
     hover::game::simulate_world_track_vehicle(
         both, hover::game::WorldTrackVehicleTick{
                   {.drift_left = true, .drift_right = true}, ship, path, tick_seconds});
@@ -180,6 +316,11 @@ void test_directional_drift_and_both_held_policy() {
     check(left.physical.velocity.x < 0.0F && right.physical.velocity.x > 0.0F &&
               nearly_equal(left.physical.velocity.x, -right.physical.velocity.x),
           "LB/L1 and RB/R1 produce equal opposite lateral drift with neutral steering");
+    check(left_result.telemetry.signed_slip_angle_radians < 0.0F &&
+              right_result.telemetry.signed_slip_angle_radians > 0.0F &&
+              nearly_equal(left_result.telemetry.signed_slip_angle_radians,
+                           -right_result.telemetry.signed_slip_angle_radians),
+          "signed slip telemetry mirrors equal opposite left and right drift");
     check(nearly_equal(both.physical.velocity, {0.0F, 0.0F, 0.0F}),
           "holding both drift directions cancels force and uses normal grip");
 }
@@ -188,8 +329,7 @@ void test_drift_force_fades_as_same_direction_slide_builds() {
     const hover::game::SampledTrack track = make_flat_track();
     hover::game::ShipDefinition ship = test_ship();
     ship.handling.world_drift_grip_deceleration_metres_per_second_squared = 0.0F;
-    ship.handling.world_drift_forward_deceleration_metres_per_second_squared = 0.0F;
-    ship.handling.world_slip_forward_deceleration_per_lateral_speed = 0.0F;
+    ship.handling.world_lateral_damping_per_second = 0.0F;
     const hover::game::ResolvedTrackPath path{primary_path, track};
     hover::game::WorldTrackVehicleState fresh =
         hover::game::make_world_track_vehicle_state({}, ship, path);
@@ -222,11 +362,14 @@ void test_drift_suppresses_propulsion_and_loses_forward_speed() {
         ship.handling.base_maximum_forward_speed_metres_per_second;
     hover::game::WorldTrackVehicleState drifting = planted;
 
-    hover::game::simulate_world_track_vehicle(
-        planted, hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
-    hover::game::simulate_world_track_vehicle(
-        drifting, hover::game::WorldTrackVehicleTick{
-                      {.throttle = 1.0F, .drift_right = true}, ship, path, tick_seconds});
+    for (int tick = 0; tick < 60; ++tick) {
+        hover::game::simulate_world_track_vehicle(
+            planted,
+            hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+        hover::game::simulate_world_track_vehicle(
+            drifting, hover::game::WorldTrackVehicleTick{
+                          {.throttle = 1.0F, .drift_right = true}, ship, path, tick_seconds});
+    }
 
     check(drifting.vehicle.forward_speed_metres_per_second <
               planted.vehicle.forward_speed_metres_per_second - 0.4F,
@@ -314,11 +457,297 @@ void test_banked_basis_and_temporary_edge_constraint() {
     hover::game::WorldTrackVehicleState edge = hover::game::make_world_track_vehicle_state(
         {.lateral_offset_metres = maximum_lateral - 0.01F}, ship, flat_path);
     edge.physical.velocity = {50.0F, 0.0F, 0.0F};
-    hover::game::simulate_world_track_vehicle(
-        edge, hover::game::WorldTrackVehicleTick{{}, ship, flat_path, tick_seconds});
+    const hover::game::WorldTrackVehicleTickResult edge_result =
+        hover::game::simulate_world_track_vehicle(
+            edge, hover::game::WorldTrackVehicleTick{{}, ship, flat_path, tick_seconds});
     check(edge.course.location.lateral_offset_metres <= maximum_lateral + tolerance &&
-              hover::math::dot(edge.physical.velocity, edge.course.frame.binormal) <= tolerance,
+              hover::math::dot(edge.physical.velocity, edge.course.frame.binormal) <= tolerance &&
+              edge_result.telemetry.edge_constraint_activated,
           "temporary edge safety constraint removes only outward lateral velocity");
+}
+
+void test_telemetry_reconstructs_authoritative_velocity() {
+    const hover::game::SampledTrack track = make_handling_lab_track();
+    const hover::game::ShipDefinition ship = test_ship();
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState state =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    state.physical.velocity = state.physical.basis.forward * 180.0F;
+    state.vehicle.forward_speed_metres_per_second = 180.0F;
+
+    const hover::game::WorldTrackVehicleTickResult result =
+        hover::game::simulate_world_track_vehicle(
+            state, hover::game::WorldTrackVehicleTick{
+                       {.steering = 0.75F, .throttle = 1.0F, .drift_right = true},
+                       ship,
+                       path,
+                       tick_seconds});
+    const hover::math::Vec3 right = hover::math::normalized(
+        hover::math::cross(state.physical.basis.up, state.physical.basis.forward));
+    const hover::math::Vec3 reconstructed =
+        state.physical.basis.forward * result.telemetry.local_forward_speed_metres_per_second +
+        right * result.telemetry.local_lateral_speed_metres_per_second +
+        state.physical.basis.up * result.telemetry.local_normal_speed_metres_per_second;
+
+    check(hover::game::is_valid(result.telemetry) &&
+              nearly_equal(reconstructed, state.physical.velocity, 0.01F) &&
+              nearly_equal(
+                  result.telemetry.world_speed_metres_per_second,
+                  std::sqrt(hover::math::dot(state.physical.velocity, state.physical.velocity)),
+                  0.01F),
+          "telemetry local components reconstruct the completed tick's world velocity");
+}
+
+void test_local_axis_damping_uses_time_correct_exponential_rates() {
+    const hover::game::SampledTrack track = make_handling_lab_track();
+    hover::game::ShipDefinition ship = test_ship();
+    ship.handling.world_lateral_grip_deceleration_metres_per_second_squared = 0.0F;
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState state =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    const hover::math::Vec3 right = hover::math::normalized(
+        hover::math::cross(state.physical.basis.up, state.physical.basis.forward));
+    state.physical.velocity =
+        state.physical.basis.forward * 100.0F + right * 20.0F + state.physical.basis.up * 10.0F;
+    state.vehicle.forward_speed_metres_per_second = 100.0F;
+
+    const hover::game::WorldTrackVehicleTickResult result =
+        hover::game::simulate_world_track_vehicle(
+            state, hover::game::WorldTrackVehicleTick{{}, ship, path, tick_seconds});
+    const float expected_forward =
+        100.0F * std::exp(-ship.handling.world_forward_damping_per_second * tick_seconds);
+    const float expected_lateral =
+        20.0F * std::exp(-ship.handling.world_lateral_damping_per_second * tick_seconds);
+    const float expected_normal_deceleration =
+        (10.0F - 10.0F * std::exp(-ship.handling.world_normal_damping_per_second * tick_seconds)) /
+        tick_seconds;
+
+    check(nearly_equal(result.telemetry.local_forward_speed_metres_per_second, expected_forward,
+                       0.01F) &&
+              nearly_equal(result.telemetry.local_lateral_speed_metres_per_second, expected_lateral,
+                           0.01F) &&
+              nearly_equal(result.telemetry.normal_damping_deceleration_metres_per_second_squared,
+                           expected_normal_deceleration, 0.01F),
+          "world velocity is damped in local axes with elapsed-time exponential rates");
+}
+
+void test_speed_curve_and_propulsion_response() {
+    const hover::game::SampledTrack track = make_handling_lab_track();
+    const hover::game::ShipDefinition ship = test_ship();
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState low =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    hover::game::WorldTrackVehicleState high = low;
+    const float base_speed = ship.handling.base_maximum_forward_speed_metres_per_second;
+    high.physical.velocity = high.physical.basis.forward * base_speed;
+    high.vehicle.forward_speed_metres_per_second = base_speed;
+
+    const hover::game::WorldTrackVehicleTickResult low_first =
+        hover::game::simulate_world_track_vehicle(
+            low, hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+    const hover::game::WorldTrackVehicleTickResult high_first =
+        hover::game::simulate_world_track_vehicle(
+            high, hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+    const float low_applied_first =
+        low_first.telemetry.applied_propulsion_acceleration_metres_per_second_squared;
+    const hover::game::WorldTrackVehicleTickResult low_second =
+        hover::game::simulate_world_track_vehicle(
+            low, hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+
+    check(
+        low_first.telemetry.requested_propulsion_acceleration_metres_per_second_squared >
+                high_first.telemetry.requested_propulsion_acceleration_metres_per_second_squared &&
+            nearly_equal(low_first.telemetry.propulsion_curve_multiplier, 1.0F) &&
+            high_first.telemetry.propulsion_curve_multiplier < 0.82F,
+        "speed-shaped propulsion requests less acceleration near base maximum speed");
+    check(low_applied_first > 0.0F &&
+              low_applied_first <
+                  low_first.telemetry.requested_propulsion_acceleration_metres_per_second_squared &&
+              low_second.telemetry.applied_propulsion_acceleration_metres_per_second_squared >
+                  low_applied_first,
+          "positive propulsion rises smoothly toward its requested target");
+
+    for (int tick = 0; tick < 20; ++tick) {
+        hover::game::simulate_world_track_vehicle(
+            low, hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+    }
+    const hover::game::WorldTrackVehicleTickResult reduced =
+        hover::game::simulate_world_track_vehicle(
+            low, hover::game::WorldTrackVehicleTick{{.throttle = 0.25F}, ship, path, tick_seconds});
+    const float reduced_target =
+        reduced.telemetry.requested_propulsion_acceleration_metres_per_second_squared *
+        reduced.telemetry.propulsion_fraction;
+    const hover::game::WorldTrackVehicleTickResult braking =
+        hover::game::simulate_world_track_vehicle(
+            low, hover::game::WorldTrackVehicleTick{{.brake = 1.0F}, ship, path, tick_seconds});
+    check(
+        nearly_equal(reduced.telemetry.applied_propulsion_acceleration_metres_per_second_squared,
+                     reduced_target) &&
+            nearly_equal(
+                braking.telemetry.applied_propulsion_acceleration_metres_per_second_squared, 0.0F),
+        "lower propulsion targets apply immediately and braking clears positive response");
+}
+
+void test_sustained_slip_builds_and_releases() {
+    const hover::game::SampledTrack track = make_handling_lab_track();
+    hover::game::ShipDefinition ship = test_ship();
+    ship.handling.world_lateral_damping_per_second = 0.0F;
+    ship.handling.world_lateral_grip_deceleration_metres_per_second_squared = 0.0F;
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState state =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    const hover::math::Vec3 right = hover::math::normalized(
+        hover::math::cross(state.physical.basis.up, state.physical.basis.forward));
+    state.physical.velocity =
+        state.physical.basis.forward * 100.0F +
+        right * (ship.handling.world_slip_speed_threshold_metres_per_second + 2.0F);
+    state.vehicle.forward_speed_metres_per_second = 100.0F;
+
+    const int buildup_ticks = static_cast<int>(
+        std::ceil(ship.handling.world_sustained_slip_buildup_seconds / tick_seconds));
+    for (int tick = 0; tick < buildup_ticks; ++tick) {
+        hover::game::simulate_world_track_vehicle(
+            state,
+            hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+    }
+    check(state.handling.sustained_slip_seconds >=
+                  ship.handling.world_sustained_slip_buildup_seconds - tick_seconds &&
+              nearly_equal(state.handling.sustained_slip_intensity, 1.0F, 0.01F),
+          "lateral speed above the threshold builds full sustained-slip response");
+
+    const float intensity_before_release = state.handling.sustained_slip_intensity;
+    state.physical.velocity = state.physical.basis.forward * 100.0F;
+    const hover::game::WorldTrackVehicleTickResult release =
+        hover::game::simulate_world_track_vehicle(
+            state,
+            hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+    check(nearly_equal(state.handling.sustained_slip_seconds, 0.0F) &&
+              release.telemetry.sustained_slip_intensity < intensity_before_release &&
+              release.telemetry.sustained_slip_intensity > 0.0F,
+          "dropping below the threshold resets buildup but releases intensity gradually");
+
+    const int release_ticks = static_cast<int>(
+        std::ceil(ship.handling.world_sustained_slip_release_seconds / tick_seconds));
+    for (int tick = 0; tick < release_ticks; ++tick) {
+        hover::game::simulate_world_track_vehicle(
+            state,
+            hover::game::WorldTrackVehicleTick{{.throttle = 1.0F}, ship, path, tick_seconds});
+    }
+    check(nearly_equal(state.handling.sustained_slip_intensity, 0.0F),
+          "sustained-slip intensity reaches zero after its configured release time");
+}
+
+struct FixedRateSchedule {
+    float tick_seconds;
+    int tick_count;
+};
+
+hover::game::WorldTrackVehicleState simulate_at_fixed_rate(const hover::game::SampledTrack& track,
+                                                           const hover::game::ShipDefinition& ship,
+                                                           FixedRateSchedule schedule) {
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    hover::game::WorldTrackVehicleState state =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    state.physical.velocity = state.physical.basis.forward * 120.0F;
+    state.vehicle.forward_speed_metres_per_second = 120.0F;
+    for (int tick = 0; tick < schedule.tick_count; ++tick) {
+        hover::game::simulate_world_track_vehicle(
+            state, hover::game::WorldTrackVehicleTick{
+                       {.throttle = 1.0F}, ship, path, schedule.tick_seconds});
+    }
+    return state;
+}
+
+void test_60_and_120_hz_grounded_responses_converge() {
+    const hover::game::SampledTrack track = make_handling_lab_track();
+    const hover::game::ShipDefinition ship = test_ship();
+    const hover::game::WorldTrackVehicleState at_60 =
+        simulate_at_fixed_rate(track, ship, {1.0F / 60.0F, 60});
+    const hover::game::WorldTrackVehicleState at_120 =
+        simulate_at_fixed_rate(track, ship, {1.0F / 120.0F, 120});
+
+    check(nearly_equal(at_60.vehicle.forward_speed_metres_per_second,
+                       at_120.vehicle.forward_speed_metres_per_second, 0.5F) &&
+              nearly_equal(at_60.physical.position, at_120.physical.position, 1.5F) &&
+              nearly_equal(
+                  at_60.handling.applied_propulsion_acceleration_metres_per_second_squared,
+                  at_120.handling.applied_propulsion_acceleration_metres_per_second_squared, 0.5F),
+          "60 and 120 Hz grounded damping and propulsion converge over equal elapsed time");
+}
+
+void test_scripted_handling_traces_are_deterministic() {
+    const hover::game::SampledTrack track = make_handling_lab_track();
+    const hover::game::ShipDefinition& ship = hover::game::ships::prototype_01_definition();
+    const float base_speed = ship.handling.base_maximum_forward_speed_metres_per_second;
+
+    const std::array straight_acceleration{
+        ScriptStep{120U, {.throttle = 1.0F}},
+    };
+    const std::array full_speed_steering{
+        ScriptStep{60U, {.steering = 1.0F, .throttle = 1.0F}},
+    };
+    const std::array boost_into_steering{
+        ScriptStep{1U, {.steering = 1.0F, .throttle = 1.0F, .boost = true}},
+        ScriptStep{59U, {.steering = 1.0F, .throttle = 1.0F}},
+    };
+    const std::array drift_entry_sustain_release{
+        ScriptStep{1U, {.throttle = 1.0F, .drift_right = true}},
+        ScriptStep{59U, {.throttle = 1.0F, .drift_right = true}},
+        ScriptStep{60U, {.steering = -0.35F, .throttle = 1.0F}},
+        ScriptStep{30U, {}},
+    };
+    const std::array brake_during_boost_and_drift{
+        ScriptStep{1U, {.throttle = 1.0F, .drift_left = true, .boost = true}},
+        ScriptStep{29U, {.throttle = 1.0F, .drift_left = true}},
+        ScriptStep{30U, {.brake = 1.0F, .drift_left = true}},
+    };
+
+    check_trace_is_valid_and_repeatable(track, ship, straight_acceleration, 0.0F,
+                                        "straight acceleration trace is valid and repeatable");
+    check_trace_is_valid_and_repeatable(track, ship, full_speed_steering, base_speed,
+                                        "full-speed steering trace is valid and repeatable");
+    check_trace_is_valid_and_repeatable(track, ship, boost_into_steering, base_speed,
+                                        "boost-turn trace is valid and repeatable");
+    check_trace_is_valid_and_repeatable(track, ship, drift_entry_sustain_release, base_speed,
+                                        "drift entry, release, and coast trace is repeatable");
+    check_trace_is_valid_and_repeatable(track, ship, brake_during_boost_and_drift, base_speed,
+                                        "boosted drift braking trace is valid and repeatable");
+
+    const std::vector<TraceSample> straight = run_script(track, ship, straight_acceleration, 0.0F);
+    const std::vector<TraceSample> steering =
+        run_script(track, ship, full_speed_steering, base_speed);
+    const std::vector<TraceSample> boosted =
+        run_script(track, ship, boost_into_steering, base_speed);
+    const std::vector<TraceSample> drift =
+        run_script(track, ship, drift_entry_sustain_release, base_speed);
+
+    check(std::abs(straight.back().result.telemetry.local_lateral_speed_metres_per_second) <=
+                  tolerance &&
+              std::abs(straight.back().result.telemetry.signed_slip_angle_radians) <= tolerance,
+          "straight trace remains free of lateral velocity and slip");
+    check(std::abs(steering.back().result.telemetry.local_lateral_speed_metres_per_second) > 1.0F &&
+              steering.back().result.telemetry.sustained_slip_intensity > 0.0F,
+          "full-speed steering trace develops measurable slip and sustained-slip response");
+    check(boosted.front().result.events.boost_activated &&
+              boosted.back().result.telemetry.world_speed_metres_per_second >
+                  steering.back().result.telemetry.world_speed_metres_per_second,
+          "boost-turn trace records activation and a distinct speed response");
+    check(
+        drift.front().result.telemetry.drift_force_fraction >
+                drift[59].result.telemetry.drift_force_fraction &&
+            drift[60].result.telemetry.drift_direction == 0.0F &&
+            std::abs(drift[60].result.telemetry.local_lateral_speed_metres_per_second) > 0.5F &&
+            nearly_equal(
+                drift.back()
+                    .result.telemetry.requested_propulsion_acceleration_metres_per_second_squared,
+                0.0F) &&
+            nearly_equal(
+                drift.back()
+                    .result.telemetry.applied_propulsion_acceleration_metres_per_second_squared,
+                0.0F) &&
+            drift.back().result.telemetry.forward_damping_deceleration_metres_per_second_squared >
+                0.0F,
+        "drift trace captures force fade, persistent release momentum, and throttle-release loss");
 }
 
 void test_boost_and_brake_update_world_forward_velocity() {
@@ -331,11 +760,12 @@ void test_boost_and_brake_update_world_forward_velocity() {
     state.physical.velocity = state.physical.basis.forward * base_speed;
     state.vehicle.forward_speed_metres_per_second = base_speed;
 
-    const hover::game::VehicleTickEvents activation = hover::game::simulate_world_track_vehicle(
-        state, hover::game::WorldTrackVehicleTick{
-                   {.throttle = 1.0F, .boost = true}, ship, path, tick_seconds});
+    const hover::game::WorldTrackVehicleTickResult activation =
+        hover::game::simulate_world_track_vehicle(
+            state, hover::game::WorldTrackVehicleTick{
+                       {.throttle = 1.0F, .boost = true}, ship, path, tick_seconds});
     const float boosted_speed = state.vehicle.forward_speed_metres_per_second;
-    check(activation.boost_activated && state.vehicle.boosting && boosted_speed > base_speed,
+    check(activation.events.boost_activated && state.vehicle.boosting && boosted_speed > base_speed,
           "boost activation increases authoritative world forward velocity");
 
     hover::game::simulate_world_track_vehicle(
@@ -430,6 +860,12 @@ int main() {
     test_sustained_high_speed_steering_turns_slip_into_speed_loss();
     test_world_integration_derives_progress_and_wraps_seam();
     test_banked_basis_and_temporary_edge_constraint();
+    test_telemetry_reconstructs_authoritative_velocity();
+    test_local_axis_damping_uses_time_correct_exponential_rates();
+    test_speed_curve_and_propulsion_response();
+    test_sustained_slip_builds_and_releases();
+    test_60_and_120_hz_grounded_responses_converge();
+    test_scripted_handling_traces_are_deterministic();
     test_boost_and_brake_update_world_forward_velocity();
     test_world_simulation_is_independent_from_render_schedule();
 

@@ -254,13 +254,14 @@ tuning data and may change freely.
 
 ### D-021: Separate shared vehicle dynamics from movement mode
 
-Status: accepted and implemented for first attached driving on 2026-08-12.
+Status: accepted and implemented for first attached driving on 2026-08-12;
+longitudinal-force ownership was refined by D-025.
 
-Propulsion, braking, coasting, boost state/events, and visual steering response
-are shared deterministic vehicle dynamics. Free-planar `runway` movement and
-track-attached movement build on that step, then independently choose how position
-and orientation advance. Do not fork boost or input mechanics per course or give
-AI vehicles separate movement physics.
+Boost lifecycle/events and visual steering response are shared deterministic
+vehicle dynamics. Free-planar `runway` movement and track-attached movement build
+on those shared controls, then independently choose how forces, position, and
+orientation advance. Do not fork boost or input mechanics per course or give AI
+vehicles separate movement physics.
 
 While attached, course ownership resolves the state's opaque path ID to sampled
 geometry for the tick. The ship owns a persistent heading in that path's local
@@ -338,6 +339,52 @@ renderer special cases.
 Do not remove the scalar scenario until the world-space model passes deterministic
 coverage and owner playtests. Do not tune hover, real edges, or jumps inside this
 comparison checkpoint.
+
+### D-024: Reconstruct handling relationships in measured stages
+
+Status: accepted on 2026-08-12 after two world-space handling playtests and deeper
+inspection of the matching F-Zero X racer and camera updates.
+
+Use the matching decompilation as a behavioral reference for state separation,
+fixed-update order, local velocity damping, bounded traction, drift-force
+attenuation, propulsion response, hover/contact modes, collision consequences,
+and camera dependencies. Do not copy anonymous per-frame constants or preserve
+the original monolithic structure. Translate understood relationships into named
+SI-scale parameters and explicit state at Codename Hover's 120 Hz fixed step.
+
+Before gravity, walls, track forms, attacks, or AI, complete a measured grounded
+handling checkpoint: maintain a source reference ledger, introduce a stable
+telemetry vocabulary, split the world tick into named internal stages without a
+generic physics engine, add a clean wall-free test surface and scripted input
+traces, then replace provisional slip compensation only when the reconstructed
+local-axis and propulsion model has comparative evidence.
+
+Keep physical, course, visual, and camera frames separate. Preserve route graphs,
+modern input, original content, and other project-specific extensions. Exact
+emulation is not claimed without legal reference telemetry. The complete sequence
+and exit gates live in `handling_implementation_plan.md`.
+
+### D-025: Give world physics a source-shaped longitudinal model
+
+Status: accepted and implemented provisionally on 2026-08-12.
+
+Use a new straight-line baseline in `handling_lab` and `speedway_physics` rather
+than compensating every new force to preserve the earlier scalar traces. Keep
+boost activation/timers/events and visual roll shared, but let world physics own
+local-axis damping, speed-shaped propulsion, propulsion response, braking,
+coasting, and excess-boost return. Scalar scenarios retain their established
+linear longitudinal model as regressions.
+
+Convert reference-like axis retention into continuous exponential damping at the
+120 Hz production step. Reduce positive propulsion using measured physical
+direction change, current drift-force fraction, and a named sustained-slip
+intensity. Slip intensity builds from remaining lateral velocity and releases
+after grip recovers. Remove the provisional constant drift deceleration and
+direct proportional slip drag rather than stacking both models.
+
+Prototype 01's initial values are tuning data, not reference constants. Require
+deterministic scripts, equal-duration 60/120 Hz comparisons, and owner playtests
+before treating the tune as accepted feel.
 
 ## Deferred decisions
 

@@ -28,6 +28,11 @@ constexpr std::array scenario_registry{
         "speedway_physics",
         "Banked speedway using world-space momentum, grip, and directional drift.",
     },
+    DevelopmentScenarioInfo{
+        DevelopmentScenario::handling_lab,
+        "handling_lab",
+        "Wide flat world-physics surface for uncontaminated handling measurements.",
+    },
 };
 
 std::optional<DevelopmentScenario> parse_scenario(std::string_view name) {
