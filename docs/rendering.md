@@ -54,6 +54,19 @@ Prototype 01 draw until another ship or authored asset proves a reusable
 attachment boundary is needed. Boost will later use a visibly different, more
 extreme presentation rather than merely increasing this pulse.
 
+The first boost presentation now combines faster plume rhythm, a substantially
+wider and longer core/shell response, and a separate translucent cyan diamond
+flare at each engine. The extra geometry is only drawn while fixed-step vehicle
+state reports active boost, making boost visually distinct from ordinary
+acceleration. A future camera response remains deferred.
+
+At 97% of normal maximum speed, a smooth presentation envelope begins applying a
+very small multi-frequency local-space offset to the complete ship transform. It
+reaches at most 12 mm laterally, 8 mm vertically, and 3 mm longitudinally, then
+saturates through boost speed. Because the vibration is composed after the
+interpolated yaw and visual turn roll, the hull, canopy, driver, and engines move
+together while steering lean remains intact; neither simulation nor camera moves.
+
 Prototype 01's canopy glass is a separate 50%-transparent, lit mesh. The opaque
 hull and low-poly driver silhouette draw first and write depth; the canopy then
 draws through the alpha-blended, non-depth-writing 3D pipeline. Keeping glass out

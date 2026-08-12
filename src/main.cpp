@@ -14,6 +14,7 @@
 #include "platform/sdl_input.hpp"
 #include "render/engine_pulse.hpp"
 #include "render/gpu_mesh.hpp"
+#include "render/vehicle_presentation.hpp"
 
 #include <algorithm>
 #include <array>
@@ -187,20 +188,20 @@ class FrameStatistics final {
         const double worst_frame_ms = sample_worst_frame_seconds_ * 1000.0;
 
         SDL_Log("Frame timing: %.1f FPS | %.3f ms average | %.3f ms worst | %.1f km/h | "
-                "steer %.2f throttle %.2f brake %.2f",
+                "steer %.2f throttle %.2f brake %.2f boost %s",
                 frames_per_second, average_frame_ms, worst_frame_ms,
                 static_cast<double>(speed_metres_per_second) * 3.6,
                 static_cast<double>(input.steering), static_cast<double>(input.throttle),
-                static_cast<double>(input.brake));
+                static_cast<double>(input.brake), input.boost ? "on" : "off");
 
         if (title_updates_enabled_) {
             char title[192]{};
             SDL_snprintf(title, sizeof(title),
-                         "Codename Hover | %.1f FPS | %.2f ms | %.0f km/h | S %.2f T %.2f B %.2f",
+                         "Codename Hover | %.1f FPS | %.2f ms | %.0f km/h | S %.2f T %.2f B %.2f%s",
                          frames_per_second, average_frame_ms,
                          static_cast<double>(speed_metres_per_second) * 3.6,
                          static_cast<double>(input.steering), static_cast<double>(input.throttle),
-                         static_cast<double>(input.brake));
+                         static_cast<double>(input.brake), input.boost ? " | BOOST" : "");
             if (!SDL_SetWindowTitle(window_, title)) {
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Could not update the window title: %s",
                             SDL_GetError());
@@ -398,6 +399,7 @@ struct SceneMeshes {
     const hover::render::GpuMesh& driver;
     const hover::render::GpuMesh& engine_pulse_outer;
     const hover::render::GpuMesh& engine_pulse_core;
+    const hover::render::GpuMesh& engine_boost_flare;
     const hover::render::GpuMesh& world;
 };
 
@@ -450,6 +452,7 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
                           SDL_GPUGraphicsPipeline* pulse_pipeline, const SceneMeshes& meshes,
                           const hover::game::VehiclePose& ship_pose,
                           hover::render::EnginePulseSample engine_pulse,
+                          hover::math::Vec3 vehicle_vibration,
                           DepthTarget& depth_target) {
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     if (command_buffer == nullptr) {
@@ -518,7 +521,8 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
     SDL_BindGPUGraphicsPipeline(render_pass, opaque_pipeline);
     draw_mesh(command_buffer, render_pass, meshes.world,
               VertexUniforms{view_projection, hover::math::identity()});
-    const hover::math::Mat4 ship_model = hover::game::model_matrix(ship_pose);
+    const hover::math::Mat4 ship_model =
+        hover::game::model_matrix(ship_pose) * hover::math::translation(vehicle_vibration);
     draw_mesh(command_buffer, render_pass, meshes.ship,
               VertexUniforms{view_projection, ship_model});
     draw_mesh(command_buffer, render_pass, meshes.driver,
@@ -533,6 +537,13 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
         };
         SDL_BindGPUGraphicsPipeline(render_pass, pulse_pipeline);
         for (const hover::math::Vec3 socket : engine_sockets) {
+            if (engine_pulse.boost_flare_visible) {
+                const hover::math::Mat4 boost_flare_model =
+                    ship_model * hover::math::translation(socket) *
+                    hover::math::scaling(engine_pulse.boost_flare_scale);
+                draw_mesh(command_buffer, render_pass, meshes.engine_boost_flare,
+                          VertexUniforms{view_projection, boost_flare_model});
+            }
             const hover::math::Mat4 pulse_model =
                 ship_model * hover::math::translation(socket) *
                 hover::math::scaling(hover::math::Vec3{engine_pulse.radial_scale,
@@ -631,6 +642,12 @@ int run(hover::core::DevelopmentScenario scenario) {
                                        "generated/prototype_01_engine_pulse_core")) {
         return EXIT_FAILURE;
     }
+    hover::render::GpuMesh engine_boost_flare_mesh{gpu_device.get()};
+    if (!engine_boost_flare_mesh.upload(
+            hover::assets::generated::make_engine_boost_flare_mesh(),
+            "generated/prototype_01_engine_boost_flare")) {
+        return EXIT_FAILURE;
+    }
 
     const ScenarioSetup scenario_setup = make_scenario_setup(scenario);
     hover::render::GpuMesh world_mesh{gpu_device.get()};
@@ -638,7 +655,7 @@ int run(hover::core::DevelopmentScenario scenario) {
         return EXIT_FAILURE;
     }
     const SceneMeshes scene_meshes{ship_mesh, canopy_mesh, driver_mesh, engine_pulse_outer_mesh,
-                                   engine_pulse_core_mesh, world_mesh};
+                                   engine_pulse_core_mesh, engine_boost_flare_mesh, world_mesh};
     DepthTarget depth_target{gpu_device.get()};
 
     const std::string_view active_scenario = hover::core::scenario_name(scenario);
@@ -653,7 +670,7 @@ int run(hover::core::DevelopmentScenario scenario) {
     SDL_Log("Loaded ship '%.*s': %.0f m/s top speed, %.0f energy, %.2f relative mass.",
             static_cast<int>(ship_definition.display_name.size()),
             ship_definition.display_name.data(),
-            ship_definition.handling.maximum_forward_speed_metres_per_second,
+            ship_definition.handling.base_maximum_forward_speed_metres_per_second,
             ship_definition.collision.maximum_energy, ship_definition.collision.relative_mass);
 
     const char* video_driver = SDL_GetCurrentVideoDriver();
@@ -712,18 +729,24 @@ int run(hover::core::DevelopmentScenario scenario) {
             const float propulsion_intensity = std::clamp(
                 propulsion_acceleration / handling.forward_acceleration_metres_per_second_squared,
                 0.0F, 1.0F);
+            const float requested_engine_intensity =
+                current_vehicle_state.boosting ? 1.0F : propulsion_intensity;
             engine_pulse_intensity = hover::render::advance_engine_pulse_intensity(
-                engine_pulse_intensity, propulsion_intensity, elapsed_seconds);
+                engine_pulse_intensity, requested_engine_intensity, elapsed_seconds);
             const float speed_ratio = current_vehicle_state.forward_speed_metres_per_second /
-                                      handling.maximum_forward_speed_metres_per_second;
+                                      handling.base_maximum_forward_speed_metres_per_second;
             const hover::render::EnginePulseSample engine_pulse =
                 hover::render::sample_engine_pulse(engine_pulse_elapsed_seconds,
-                                                   engine_pulse_intensity, speed_ratio);
+                                                   engine_pulse_intensity, speed_ratio,
+                                                   current_vehicle_state.boosting);
+            const hover::math::Vec3 vehicle_vibration =
+                hover::render::sample_full_speed_vibration(engine_pulse_elapsed_seconds,
+                                                            speed_ratio);
 
             const RenderResult render_result = render_frame(
                 gpu_device.get(), window.get(), vehicle_pipeline.get(),
                 transparent_vehicle_pipeline.get(), engine_pulse_pipeline.get(), scene_meshes,
-                render_pose, engine_pulse, depth_target);
+                render_pose, engine_pulse, vehicle_vibration, depth_target);
             if (render_result == RenderResult::failed) {
                 return EXIT_FAILURE;
             }

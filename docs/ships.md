@@ -76,13 +76,17 @@ Its provisional definition currently specifies:
 | Property | Value |
 | --- | ---: |
 | Visual mesh key | `generated/prototype_01` |
-| Maximum forward speed | 260 m/s |
+| Base maximum forward speed | 260 m/s (provisional) |
 | Forward acceleration | 78 m/s² |
-| Braking deceleration | 105 m/s² |
-| Coasting deceleration | 24 m/s² |
+| Braking deceleration | 180 m/s² |
+| Coasting deceleration | 90 m/s² |
 | Steering rate | 1.90 rad/s |
 | Normal lateral grip | 7.0/s |
 | Drift lateral grip | 2.4/s |
+| Boost speed multiplier | 1.28× (332.8 m/s ceiling) |
+| Boost acceleration | 145 m/s² |
+| Excess boost-speed decay | 170 m/s² |
+| Boost burst duration | 1.0 s |
 | Maximum visual turn roll | 0.18 rad (~10.3°) |
 | Visual turn-roll response | 8.0/s |
 | Relative collision mass | 1.0 |
@@ -118,11 +122,20 @@ collider or handling automatically merely because the authored mesh changed.
 Prototype 01 now has a planar runway simulation that consumes semantic input at a
 fixed 90 Hz. It accelerates up to its definition's maximum speed, brakes without
 reversing, coasts with stronger passive deceleration, rotates with speed-dependent
-steering authority, and moves along its local forward direction. Steering also
-drives a smoothed visual roll that grows with speed and returns to level after
-release. Rendering interpolates its previous/current pose and applies a per-object
-model matrix; the camera follows that interpolated pose without inheriting the
-ship's visual roll.
+steering authority, and moves along its local forward direction. Steering starts
+at 60% authority near rest and follows a square-root speed curve to the unchanged
+full-speed rate, giving low and middle speeds more rotation without sharpening
+maximum-speed turns. Steering also drives a smoothed visual roll that grows with
+speed and returns to level after release. Rendering interpolates its
+previous/current pose and applies a per-object model matrix; the camera follows
+that interpolated pose without inheriting the ship's visual roll.
+
+Pressing boost currently starts a one-second burst that accelerates above
+Prototype 01's provisional 260 m/s base ceiling to at most 332.8 m/s. Holding X
+does not retrigger it; X must be released before another press. When the burst
+ends, excess speed returns smoothly to the normal ceiling instead of snapping the
+ship down. Braking cancels a burst. This initial mechanic has no energy cost or
+cooldown and is intended for handling validation, not final balance.
 
 This exists to validate timing, input, transforms, and camera plumbing. It is not
 the intended track-relative hover physics and its feel is not final.
@@ -134,7 +147,8 @@ the intended track-relative hover physics and its feel is not final.
 - The current vertex format has position, normal, color, and opacity but no UV
   coordinates.
 - Colliders are validated as data but not simulated or drawn.
-- Damage, explosions, boost, hover behavior, and ship selection do not exist.
+- Damage, explosions, boost energy/cooldown, hover behavior, and ship selection do
+  not exist.
 - GLB loading and Blender export conventions remain future work.
 
 Introduce each missing piece when a playable checkpoint needs it. The next major

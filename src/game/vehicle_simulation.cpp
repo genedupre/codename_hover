@@ -9,21 +9,52 @@ namespace hover::game {
 void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
     assert(tick.tick_seconds > 0.0F);
     const HandlingProfile& handling = tick.definition.handling;
+    const bool boost_just_pressed = tick.input.boost && !state.boost_input_was_down;
+    state.boost_input_was_down = tick.input.boost;
+    if (boost_just_pressed) {
+        state.boost_seconds_remaining = handling.boost_duration_seconds;
+    }
+    if (tick.input.brake > 0.001F) {
+        state.boost_seconds_remaining = 0.0F;
+    }
+    state.boosting = state.boost_seconds_remaining > 0.0F;
     float acceleration =
         tick.input.throttle * handling.forward_acceleration_metres_per_second_squared -
         tick.input.brake * handling.braking_deceleration_metres_per_second_squared;
-    if (tick.input.throttle <= 0.0F && tick.input.brake <= 0.0F &&
+    if (!state.boosting && tick.input.throttle <= 0.0F && tick.input.brake <= 0.0F &&
         state.forward_speed_metres_per_second > 0.0F) {
         acceleration -= handling.coasting_deceleration_metres_per_second_squared;
     }
+    const bool returning_from_boost =
+        !state.boosting && state.forward_speed_metres_per_second >
+                               handling.base_maximum_forward_speed_metres_per_second;
+    if (state.boosting) {
+        acceleration += handling.boost_acceleration_metres_per_second_squared;
+    } else if (returning_from_boost) {
+        acceleration -= handling.boost_excess_speed_decay_metres_per_second_squared;
+    }
 
+    const float boosted_speed_limit = handling.base_maximum_forward_speed_metres_per_second *
+                                      handling.boost_maximum_speed_multiplier;
+    const float active_speed_limit =
+        state.boosting
+            ? boosted_speed_limit
+            : std::max(handling.base_maximum_forward_speed_metres_per_second,
+                       state.forward_speed_metres_per_second);
     state.forward_speed_metres_per_second =
         std::clamp(state.forward_speed_metres_per_second + acceleration * tick.tick_seconds, 0.0F,
-                   handling.maximum_forward_speed_metres_per_second);
+                   active_speed_limit);
+    if (returning_from_boost && state.forward_speed_metres_per_second <
+                                    handling.base_maximum_forward_speed_metres_per_second) {
+        state.forward_speed_metres_per_second =
+            handling.base_maximum_forward_speed_metres_per_second;
+    }
 
     const float speed_ratio =
-        state.forward_speed_metres_per_second / handling.maximum_forward_speed_metres_per_second;
-    const float steering_authority = 0.15F + 0.85F * speed_ratio;
+        std::clamp(state.forward_speed_metres_per_second /
+                       handling.base_maximum_forward_speed_metres_per_second,
+                   0.0F, 1.0F);
+    const float steering_authority = 0.60F + 0.40F * std::sqrt(speed_ratio);
     state.pose.yaw_radians += tick.input.steering * handling.steering_rate_radians_per_second *
                               steering_authority * tick.tick_seconds;
 
@@ -38,6 +69,15 @@ void simulate_vehicle(VehicleState& state, const VehicleTick& tick) {
     state.pose.position =
         state.pose.position +
         forward_direction(state.pose) * (state.forward_speed_metres_per_second * tick.tick_seconds);
+
+    if (state.boosting) {
+        state.boost_seconds_remaining =
+            std::max(0.0F, state.boost_seconds_remaining - tick.tick_seconds);
+        if (state.boost_seconds_remaining < 0.0001F) {
+            state.boost_seconds_remaining = 0.0F;
+        }
+        state.boosting = state.boost_seconds_remaining > 0.0F;
+    }
 }
 
 VehiclePose interpolate(const VehiclePose& previous, const VehiclePose& current, float alpha) {

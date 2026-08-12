@@ -20,7 +20,8 @@ input::PlayerInput sample_keyboard_and_mouse() {
     result.throttle = static_cast<float>(keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP]);
     result.brake = static_cast<float>(keys[SDL_SCANCODE_S] || keys[SDL_SCANCODE_DOWN]);
     result.drift = keys[SDL_SCANCODE_SPACE];
-    result.boost = keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT];
+    result.boost =
+        keys[SDL_SCANCODE_X] || keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT];
 
     const SDL_MouseButtonFlags mouse_buttons = SDL_GetMouseState(nullptr, nullptr);
     result.throttle =
@@ -39,15 +40,14 @@ input::PlayerInput sample_gamepad(SDL_Gamepad* gamepad) {
     analog.brake = input::normalize_trigger(input::AxisSample{
         SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER), trigger_dead_zone});
     analog.drift = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
-    analog.boost = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER);
 
     input::PlayerInput digital{};
     digital.steering =
         static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT)) -
         static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_LEFT));
     digital.throttle = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH) ? 1.0F : 0.0F;
-    digital.brake = static_cast<float>(SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST) ||
-                                       SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST));
+    digital.brake = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST) ? 1.0F : 0.0F;
+    digital.boost = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST);
     return input::merge(analog, digital);
 }
 

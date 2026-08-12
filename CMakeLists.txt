@@ -52,7 +52,7 @@ target_link_libraries(hover_input PUBLIC SDL3::SDL3)
 hover_enable_warnings(hover_input)
 
 add_library(hover_render STATIC src/render/gpu_mesh.cpp)
-target_sources(hover_render PRIVATE src/render/engine_pulse.cpp)
+target_sources(hover_render PRIVATE src/render/engine_pulse.cpp src/render/vehicle_presentation.cpp)
 target_include_directories(hover_render PUBLIC src)
 target_link_libraries(hover_render PUBLIC SDL3::SDL3 hover_math)
 hover_enable_warnings(hover_render)

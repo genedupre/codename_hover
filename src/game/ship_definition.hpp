@@ -12,13 +12,17 @@ struct LocalBoxCollider {
 };
 
 struct HandlingProfile {
-    float maximum_forward_speed_metres_per_second;
+    float base_maximum_forward_speed_metres_per_second;
     float forward_acceleration_metres_per_second_squared;
     float braking_deceleration_metres_per_second_squared;
     float coasting_deceleration_metres_per_second_squared;
     float steering_rate_radians_per_second;
     float normal_lateral_grip_per_second;
     float drift_lateral_grip_per_second;
+    float boost_maximum_speed_multiplier;
+    float boost_acceleration_metres_per_second_squared;
+    float boost_excess_speed_decay_metres_per_second_squared;
+    float boost_duration_seconds;
 };
 
 struct CollisionProfile {

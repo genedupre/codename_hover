@@ -15,6 +15,9 @@ struct VehiclePose {
 struct VehicleState {
     VehiclePose pose;
     float forward_speed_metres_per_second = 0.0F;
+    float boost_seconds_remaining = 0.0F;
+    bool boosting = false;
+    bool boost_input_was_down = false;
 };
 
 struct VehicleTick {

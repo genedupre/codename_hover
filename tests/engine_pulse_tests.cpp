@@ -1,4 +1,5 @@
 #include "render/engine_pulse.hpp"
+#include "render/vehicle_presentation.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -19,11 +20,11 @@ void check(bool condition, std::string_view description) {
 
 void test_visibility_tracks_positive_propulsion() {
     const hover::render::EnginePulseSample idle =
-        hover::render::sample_engine_pulse(1.0, 0.0F, 0.5F);
+        hover::render::sample_engine_pulse(1.0, 0.0F, 0.5F, false);
     const hover::render::EnginePulseSample braking =
-        hover::render::sample_engine_pulse(1.0, -1.0F, 0.5F);
+        hover::render::sample_engine_pulse(1.0, -1.0F, 0.5F, false);
     const hover::render::EnginePulseSample accelerating =
-        hover::render::sample_engine_pulse(1.0, 1.0F, 0.5F);
+        hover::render::sample_engine_pulse(1.0, 1.0F, 0.5F, false);
 
     check(!idle.visible && idle.radial_scale == 0.0F && idle.length_scale == 0.0F,
           "idle propulsion produces no engine pulse");
@@ -55,15 +56,15 @@ void test_release_envelope_shrinks_before_switching_off() {
 
 void test_speed_intensity_and_time_shape_the_pulse() {
     const hover::render::EnginePulseSample partial =
-        hover::render::sample_engine_pulse(0.0, 0.25F, 0.5F);
+        hover::render::sample_engine_pulse(0.0, 0.25F, 0.5F, false);
     const hover::render::EnginePulseSample full =
-        hover::render::sample_engine_pulse(0.0, 1.0F, 0.5F);
+        hover::render::sample_engine_pulse(0.0, 1.0F, 0.5F, false);
     const hover::render::EnginePulseSample stopped =
-        hover::render::sample_engine_pulse(0.0, 1.0F, 0.0F);
+        hover::render::sample_engine_pulse(0.0, 1.0F, 0.0F, false);
     const hover::render::EnginePulseSample fast =
-        hover::render::sample_engine_pulse(0.0, 1.0F, 1.0F);
+        hover::render::sample_engine_pulse(0.0, 1.0F, 1.0F, false);
     const hover::render::EnginePulseSample later =
-        hover::render::sample_engine_pulse(0.173, 1.0F, 0.5F);
+        hover::render::sample_engine_pulse(0.173, 1.0F, 0.5F, false);
 
     check(full.radial_scale > partial.radial_scale,
           "stronger propulsion produces a wider pulse at the same speed and phase");
@@ -78,13 +79,29 @@ void test_speed_intensity_and_time_shape_the_pulse() {
           "two frequencies vary pulse width and length over presentation time");
 }
 
+void test_boost_has_a_distinct_large_flare_response() {
+    const hover::render::EnginePulseSample normal =
+        hover::render::sample_engine_pulse(0.0, 1.0F, 1.0F, false);
+    const hover::render::EnginePulseSample boost =
+        hover::render::sample_engine_pulse(0.0, 1.0F, 1.0F, true);
+
+    check(!normal.boost_flare_visible && boost.boost_flare_visible &&
+              boost.boost_flare_scale > 0.0F,
+          "boost activates geometry that normal acceleration does not draw");
+    check(boost.radial_scale > normal.radial_scale && boost.length_scale > normal.length_scale,
+          "boost makes the core and outer plume react substantially");
+}
+
 void test_invalid_presentation_input_fails_closed() {
     const hover::render::EnginePulseSample invalid_time =
-        hover::render::sample_engine_pulse(std::numeric_limits<double>::infinity(), 1.0F, 1.0F);
+        hover::render::sample_engine_pulse(std::numeric_limits<double>::infinity(), 1.0F, 1.0F,
+                                           false);
     const hover::render::EnginePulseSample invalid_intensity =
-        hover::render::sample_engine_pulse(1.0, std::numeric_limits<float>::quiet_NaN(), 1.0F);
+        hover::render::sample_engine_pulse(1.0, std::numeric_limits<float>::quiet_NaN(), 1.0F,
+                                           false);
     const hover::render::EnginePulseSample invalid_speed =
-        hover::render::sample_engine_pulse(1.0, 1.0F, std::numeric_limits<float>::infinity());
+        hover::render::sample_engine_pulse(1.0, 1.0F,
+                                           std::numeric_limits<float>::infinity(), false);
     const float invalid_envelope = hover::render::advance_engine_pulse_intensity(
         1.0F, 0.0F, std::numeric_limits<double>::quiet_NaN());
 
@@ -93,13 +110,34 @@ void test_invalid_presentation_input_fails_closed() {
           "non-finite presentation input hides the pulse safely");
 }
 
+void test_full_speed_vibration_is_subtle_and_speed_gated() {
+    const hover::math::Vec3 below_onset =
+        hover::render::sample_full_speed_vibration(0.25, 0.95F);
+    const hover::math::Vec3 full_speed =
+        hover::render::sample_full_speed_vibration(0.25, 1.0F);
+    const hover::math::Vec3 boosted =
+        hover::render::sample_full_speed_vibration(0.25, 1.28F);
+
+    check(below_onset.x == 0.0F && below_onset.y == 0.0F && below_onset.z == 0.0F,
+          "ship vibration remains off below the full-speed threshold");
+    check(std::abs(full_speed.x) <= 0.012F && std::abs(full_speed.y) <= 0.008F &&
+              std::abs(full_speed.z) <= 0.003F,
+          "full-speed vibration remains a subtle local-space offset");
+    check(std::abs(boosted.x - full_speed.x) <= 0.0001F &&
+              std::abs(boosted.y - full_speed.y) <= 0.0001F &&
+              std::abs(boosted.z - full_speed.z) <= 0.0001F,
+          "boosted speed saturates rather than amplifying the subtle vibration");
+}
+
 } // namespace
 
 int main() {
     test_visibility_tracks_positive_propulsion();
     test_release_envelope_shrinks_before_switching_off();
     test_speed_intensity_and_time_shape_the_pulse();
+    test_boost_has_a_distinct_large_flare_response();
     test_invalid_presentation_input_fails_closed();
+    test_full_speed_vibration_is_subtle_and_speed_gated();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " engine-pulse test(s) failed\n";

@@ -4,8 +4,10 @@ namespace hover::render {
 
 struct EnginePulseSample {
     bool visible;
+    bool boost_flare_visible;
     float radial_scale;
     float length_scale;
+    float boost_flare_scale;
 };
 
 // Presentation-only release envelope. Ignition is immediate; reducing propulsion
@@ -17,6 +19,7 @@ struct EnginePulseSample {
 // Cosmetic animation only: elapsed time may be variable because this value never
 // feeds simulation. Propulsion intensity and speed ratio are clamped to [0, 1].
 [[nodiscard]] EnginePulseSample sample_engine_pulse(double elapsed_seconds,
-                                                    float propulsion_intensity, float speed_ratio);
+                                                    float propulsion_intensity, float speed_ratio,
+                                                    bool boosting);
 
 } // namespace hover::render

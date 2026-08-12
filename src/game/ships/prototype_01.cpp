@@ -9,13 +9,17 @@ const ShipDefinition& prototype_01_definition() {
         .visual_mesh_id = prototype_01_mesh_id,
         .handling =
             {
-                .maximum_forward_speed_metres_per_second = 260.0F,
+                .base_maximum_forward_speed_metres_per_second = 260.0F,
                 .forward_acceleration_metres_per_second_squared = 78.0F,
-                .braking_deceleration_metres_per_second_squared = 105.0F,
-                .coasting_deceleration_metres_per_second_squared = 24.0F,
+                .braking_deceleration_metres_per_second_squared = 180.0F,
+                .coasting_deceleration_metres_per_second_squared = 90.0F,
                 .steering_rate_radians_per_second = 1.90F,
                 .normal_lateral_grip_per_second = 7.0F,
                 .drift_lateral_grip_per_second = 2.4F,
+                .boost_maximum_speed_multiplier = 1.28F,
+                .boost_acceleration_metres_per_second_squared = 145.0F,
+                .boost_excess_speed_decay_metres_per_second_squared = 170.0F,
+                .boost_duration_seconds = 1.0F,
             },
         .presentation =
             {

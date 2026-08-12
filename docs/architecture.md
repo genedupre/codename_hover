@@ -179,6 +179,12 @@ local-space bounds, relative mass, energy, and collision-damage response.
 Replacing a generated prototype mesh with a Blender-authored GLB must not silently
 replace or derive these gameplay values.
 
+`HandlingProfile::base_maximum_forward_speed_metres_per_second` is deliberately a
+ship baseline, not a global cap. Vehicle/course simulation will own the eventual
+effective-speed calculation when track zones, slope, jumps, and airborne motion
+exist. Presentation consumes normalized values supplied from that state and must
+not independently impose gameplay speed limits.
+
 ## Error handling and diagnostics
 
 - Fail startup with a clear message when required GPU or asset initialization

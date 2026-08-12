@@ -78,4 +78,27 @@ render::MeshData make_engine_pulse_core_mesh() {
     });
 }
 
+render::MeshData make_engine_boost_flare_mesh() {
+    constexpr math::Vec3 flare_color{0.72F, 0.96F, 1.0F};
+    constexpr float opacity = 0.65F;
+    constexpr std::array ring{
+        math::Vec3{0.0F, 0.62F, -0.35F},
+        math::Vec3{0.78F, 0.0F, -0.35F},
+        math::Vec3{0.0F, -0.62F, -0.35F},
+        math::Vec3{-0.78F, 0.0F, -0.35F},
+    };
+    constexpr math::Vec3 front_center{0.0F, 0.0F, 0.15F};
+    constexpr math::Vec3 rear_center{0.0F, 0.0F, -1.45F};
+
+    MeshBuilder builder;
+    for (std::size_t side = 0; side < ring.size(); ++side) {
+        const std::size_t next = (side + 1U) % ring.size();
+        builder.add_triangle(
+            Triangle{front_center, ring[side], ring[next], flare_color, opacity});
+        builder.add_triangle(
+            Triangle{rear_center, ring[next], ring[side], flare_color, opacity});
+    }
+    return std::move(builder).build();
+}
+
 } // namespace hover::assets::generated

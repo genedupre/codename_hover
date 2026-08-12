@@ -37,23 +37,26 @@ before local multiplayer, but are not part of this one-player prototype.
 | --- | --- | --- |
 | Steer | A/D or Left/Right | Left stick X or D-pad |
 | Throttle | W/Up or left mouse | A/South button, 100% |
-| Brake | S/Down or right mouse | Left trigger analog or B/East or X/West button |
+| Brake | S/Down or right mouse | Left trigger analog or B/East button |
 | Drift | Space or mouse X1 | Left shoulder |
-| Boost | Shift or mouse X2 | Right shoulder |
+| Boost | X, Shift, or mouse X2 | X/West button |
 | Rumble test | R | Y/North button |
 | Escape | Escape/window close | Select/Back/View button |
 
 The Select/Back/View button currently exits because the prototype has no menu flow.
-Start/Menu remains available for a future pause/menu action. B/East and X/West
-both contribute 100% to the analog brake action; the left trigger preserves
-proportional braking.
+Start/Menu remains available for a future pause/menu action. B/East contributes
+100% to the analog brake action and the left trigger preserves proportional
+braking. X/West moved from duplicate braking to boost; the right shoulder is
+currently free.
 
 The right trigger is deliberately unbound for throttle in this checkpoint. The
 logical position names South/East/West/North are authoritative; printed letters
 vary on Nintendo-style and other layouts.
 
-Drift and boost are represented and displayed but do not yet alter the provisional
-runway simulation.
+Drift remains represented but does not yet alter the provisional runway
+simulation. Boost uses the rising edge of its merged digital action to start a
+timed fixed-step burst; holding a source does not continuously boost or retrigger
+the action. See `game_design.md` and `rendering.md`.
 
 ## Device lifecycle and capabilities
 

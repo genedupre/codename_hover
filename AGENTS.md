@@ -33,11 +33,28 @@ core and 50%-transparent outer shell. A presentation-only release envelope
 shrinks it for about 0.2 seconds before it disappears. Its canopy is also a
 separate 50%-transparent mesh over a simple opaque driver silhouette.
 
-The runway handling tune now uses 24 m/s² coasting deceleration and a 1.90 rad/s
-maximum steering rate. Steering drives a smoothed ship-specific visual roll up to
+The runway handling tune now uses 180 m/s² braking, 90 m/s² coasting deceleration,
+and a 1.90 rad/s maximum steering rate. Steering authority follows `0.60 + 0.40 ×
+sqrt(speed ratio)`, preserving the accepted full-speed rate while increasing
+low-speed rotation. Steering drives a smoothed ship-specific visual roll up to
 0.18 radians, scaled by speed; this roll does not affect planar travel or the
 future collision model. The driver silhouette is explicitly deferred for later
 visual improvement.
+
+X/West (plus keyboard X/Shift) now activates a provisional one-second fixed-step
+boost burst: a 1.28× speed ceiling, 145 m/s² added acceleration, and 170 m/s²
+excess-speed decay afterward. Holding the action does not retrigger it; release
+and press again. B/East and the left trigger remain brake and cancel an active
+burst. Boost adds a separate engine flare and stronger plume response for the
+timed state. Near normal full speed, the complete rendered ship receives a subtle
+local-space vibration that preserves turn roll and does not move the camera.
+Energy/cooldown and a boost camera effect remain deferred.
+
+Prototype 01's 260 m/s value is explicitly a provisional ship baseline, not a
+global maximum. Future effective speed may combine ship, track surface/zone,
+slope, jump/airborne state, boost, and other explicit effects. Add each factor
+only with its mechanic and tested composition rules; keep rendering and UI from
+inventing independent gameplay caps.
 
 The cross-device bootstrap is not complete. A wired Steam Controller was detected
 and used on the laptop on 2026-08-11. The first laptop-built executable and

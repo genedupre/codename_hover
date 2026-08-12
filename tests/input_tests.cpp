@@ -79,7 +79,7 @@ void test_controller_exit_binding() {
     check(!input.handle_event(east_button), "B/East braking does not request exit");
 }
 
-void test_virtual_controller_brake_binding() {
+void test_virtual_controller_brake_and_boost_bindings() {
     check(SDL_InitSubSystem(SDL_INIT_GAMEPAD), "SDL gamepad subsystem initializes for input test");
 
     SDL_VirtualJoystickDesc description;
@@ -106,6 +106,18 @@ void test_virtual_controller_brake_binding() {
                 const hover::input::PlayerInput sample = input.sample_player_one();
                 check(nearly_equal(sample.brake, 1.0F),
                       "B/East contributes full braking to the analog brake action");
+                check(!sample.boost, "B/East braking does not activate boost");
+
+                check(SDL_SetJoystickVirtualButton(joystick, SDL_GAMEPAD_BUTTON_EAST, false),
+                      "virtual B/East button can be released");
+                check(SDL_SetJoystickVirtualButton(joystick, SDL_GAMEPAD_BUTTON_WEST, true),
+                      "virtual X/West button can be pressed");
+                SDL_UpdateJoysticks();
+
+                const hover::input::PlayerInput boost_sample = input.sample_player_one();
+                check(boost_sample.boost, "X/West activates the digital boost action");
+                check(nearly_equal(boost_sample.brake, 0.0F),
+                      "X/West boost no longer contributes braking");
             }
         }
         check(SDL_DetachVirtualJoystick(gamepad_id), "virtual gamepad detaches after mapping test");
@@ -120,7 +132,7 @@ int main() {
     test_axis_normalization();
     test_simultaneous_merge();
     test_controller_exit_binding();
-    test_virtual_controller_brake_binding();
+    test_virtual_controller_brake_and_boost_bindings();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " input test(s) failed\n";

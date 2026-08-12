@@ -22,8 +22,9 @@ The first concrete track-bound vehicle state includes:
 - normal offset and normal velocity relative to the local surface;
 - forward speed.
 
-Energy, boost, damage, lap, checkpoint, recovery, and airborne state remain later
-additions. Local normal motion is intentionally not called world-vertical motion:
+Energy-backed boost limits, damage, lap, checkpoint, recovery, and airborne state
+remain later additions. Local normal motion is intentionally not called
+world-vertical motion:
 the ship may be banked, vertical, or upside down on loops. A true jump that leaves
 the track will later transition to world-space airborne state and may reacquire a
 different eligible path, including a shortcut or branch.
@@ -58,6 +59,40 @@ steering direction, grows with normalized speed, and eases back to level. It doe
 not change planar travel or collision behavior; future track-relative orientation
 will compose ship lean with the sampled surface frame rather than assuming
 world-up.
+
+Prototype 01's provisional planar steering authority uses `0.60 + 0.40 ×
+sqrt(speed ratio)`. This preserves its configured full-speed steering rate while
+providing substantially more yaw authority near rest and through middle speeds.
+Treat this as playtest tuning, not the final track-relative steering model.
+
+The first boost is deliberately a button-activated, one-second burst with no
+energy, cooldown, or camera effect. A rising boost-action edge starts the timed
+fixed-step state; holding the button cannot retrigger it, so the player must
+release and press again. During the burst it adds acceleration up to a ship-defined
+boosted speed ceiling. After the burst, speed above the normal ceiling decays at a
+separate ship-defined rate and settles exactly at the normal ceiling before
+ordinary throttle/coasting rules resume. Braking cancels an active burst. This
+establishes deterministic mechanics and tuning boundaries without prematurely
+designing the final energy system.
+
+## Effective speed limits
+
+A ship definition's base maximum forward speed is one input, not a universal or
+final game cap. The effective limit and acceleration response will eventually be
+resolved at runtime from relevant state, including:
+
+- the selected ship's base handling;
+- track surface or zone properties;
+- track slope and the local direction of travel;
+- attached, jumping, or airborne state;
+- boost and other temporary effects.
+
+Do not bake a single global maximum into rendering, input, track code, or UI. Do
+not multiply an arbitrary pile of modifiers without specifying their order and
+clamps either: introduce each factor alongside the observable track or airborne
+behavior that needs it, then test the resulting effective-speed calculation. The
+current 260 m/s base and 1.28× boost multiplier are provisional runway values that
+can change without redefining the architecture.
 
 ## Track representation
 

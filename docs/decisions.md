@@ -237,6 +237,21 @@ and reacquire an eligible path instead of remaining artificially constrained to
 one path. Do not build the graph, branching policy, or airborne state until an
 observable track checkpoint requires them.
 
+### D-020: Treat ship maximum speed as a baseline, not a universal cap
+
+Status: accepted on 2026-08-12.
+
+Store a provisional base maximum forward speed in each ship's handling profile.
+Do not define one immutable game-wide maximum. The eventual effective limit and
+acceleration response may depend on ship selection, track surface or zone, local
+slope, attached versus airborne/jump state, boost, and other explicit temporary
+effects.
+
+Add those factors only when their observable mechanics exist, with a documented
+composition order and tests. Rendering, UI, input, and asset code must not enforce
+their own gameplay caps. The current Prototype 01 value and boost multiplier are
+tuning data and may change freely.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.

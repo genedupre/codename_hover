@@ -8,5 +8,6 @@ namespace hover::assets::generated {
 // origin. Draw the transparent outer shell before the opaque core.
 [[nodiscard]] render::MeshData make_engine_pulse_outer_mesh();
 [[nodiscard]] render::MeshData make_engine_pulse_core_mesh();
+[[nodiscard]] render::MeshData make_engine_boost_flare_mesh();
 
 } // namespace hover::assets::generated

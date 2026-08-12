@@ -804,3 +804,77 @@ Next experiment:
 
 - Increase braking and coasting modestly, then reshape steering authority so its
   low-speed floor is higher and it converges to the accepted full-speed response.
+
+### 2026-08-12 — aggressive deceleration and low-speed steering
+
+Build/revision: `0aa03c6` plus the second and third handling-tune passes.
+
+Hardware and OS: Automated tests and interactive graphical tests on the HP ZBook
+Studio 16 G11, Ubuntu 24.04.4 LTS, Wayland and Vulkan.
+
+Input device: Wired Steam Controller.
+
+Track/scenario and settings: `--scenario runway`; fixed 90 Hz simulation and
+interpolated rendering in the decorated 1280x720 development window.
+
+Good:
+
+- Braking is now 180 m/s² and passive coasting deceleration is 90 m/s².
+- Steering authority starts at 60% near rest, follows a square-root speed curve,
+  and retains the previously accepted 1.90 rad/s full-speed rate.
+- The owner tested the stronger values and reported that they look and feel
+  better.
+- The owner confirmed that eventual coasting must become speed-sensitive and
+  should help a non-accelerating ship take a sharper line.
+
+Needs work:
+
+- Constant passive deceleration remains a temporary runway approximation.
+- There is no lateral grip or track-relative cornering model yet, so the requested
+  lift-off turning benefit is documented rather than faked through planar yaw.
+
+Next experiment:
+
+- Validate the first button-activated boost, full-speed vibration, and distinct
+  exhaust flare before returning to oval centerline movement.
+
+### 2026-08-12 — provisional boost and full-speed vibration
+
+Build/revision: `0aa03c6` plus uncommitted boost/presentation changes.
+
+Hardware and OS: Automated tests and interactive graphical run on the HP ZBook
+Studio 16 G11, Ubuntu 24.04.4 LTS, Wayland and Vulkan.
+
+Input device: Virtual SDL gamepad tests and the wired Steam Controller confirm
+X/West boost and B/East brake.
+
+Track/scenario and settings: `runway` is the intended visual/handling scenario.
+
+Good:
+
+- A rising-edge X/West press starts a one-second fixed-step boost burst with
+  ship-owned baseline tuning, a provisional 1.28× ceiling, added acceleration,
+  and deterministic return to normal speed. Holding X cannot retrigger the burst.
+- Prototype 01's 260 m/s value is now explicitly named and documented as a base
+  ship value rather than a universal game maximum.
+- Boost has separate flare geometry plus faster, larger core/shell behavior.
+- Full-speed vibration is a bounded local-space presentation offset that composes
+  with visual turn roll and does not move the camera or simulation.
+- The physical run reached about 1198 km/h from the current 936 km/h base, returned
+  cleanly to base speed after X release, retained steering during boost, cancelled
+  boost while braking, and exited cleanly.
+- The owner accepted the boost and thruster presentation as looking good for now,
+  and clarified that boost is a button activation rather than a held action.
+- All eight test executables pass and focused clang-tidy is clean.
+
+Needs work:
+
+- Burst duration and balance remain provisional even though the current visual
+  direction is accepted.
+- Boost has no energy/cooldown or camera response yet; both remain deliberate
+  follow-up work.
+
+Next experiment:
+
+- Verify that one X/West press produces one complete burst, holding cannot
+  retrigger it, and release-then-press starts another burst.

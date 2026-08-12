@@ -53,9 +53,9 @@ no intentional low-resolution internal renderer yet.
 
 ## Engine presentation
 
-- [ ] Give boost a deliberately different and more extreme engine presentation
-  than normal acceleration, potentially changing plume geometry, color, rhythm,
-  and supporting effects. Do not implement boost as only a larger normal pulse.
+- [ ] Add and tune a boost camera response after the current mechanic and exhaust
+  flare have been playtested. Keep it readable while steering and do not obscure
+  the ship's turn-roll feedback.
 - [ ] Move engine socket placement into ship visual data when a second ship or a
   Blender-authored mesh needs the effect; do not build a general attachment system
   before then.
@@ -66,3 +66,14 @@ no intentional low-resolution internal renderer yet.
   silhouette. Owner feedback on 2026-08-12 was that the layered exhaust and canopy
   looked much better, but the driver itself did not look good. Revisit it alongside
   authored ship work rather than delaying handling experiments now.
+
+## Handling follow-up
+
+- [ ] Replace Prototype 01's constant passive coasting deceleration with a tuned
+  speed-sensitive curve. Owner intent: releasing acceleration should change speed
+  differently across the range and should help the ship take a sharper line than
+  holding acceleration. Define the relationship with track-relative grip/turning
+  rather than treating it as only a larger drag constant.
+- [ ] Design the final boost resource rules, duration/cooldown or energy cost, and
+  balancing after the button-activated burst prototype has established useful
+  duration, acceleration, and excess-speed-return values.

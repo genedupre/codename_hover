@@ -30,13 +30,21 @@ void test_first_ship_definition() {
     check(ship.handling.normal_lateral_grip_per_second >
               ship.handling.drift_lateral_grip_per_second,
           "Prototype 01 loses lateral grip while drifting");
-    check(ship.handling.coasting_deceleration_metres_per_second_squared > 12.0F,
+    check(ship.handling.braking_deceleration_metres_per_second_squared == 180.0F,
+          "Prototype 01 has the more aggressive braking response");
+    check(ship.handling.coasting_deceleration_metres_per_second_squared == 90.0F,
           "Prototype 01 has the more aggressive coasting slowdown");
     check(ship.handling.steering_rate_radians_per_second > 1.65F,
           "Prototype 01 has the faster provisional steering rate");
     check(ship.presentation.maximum_turn_roll_radians > 0.0F &&
               ship.presentation.turn_roll_response_per_second > 0.0F,
           "Prototype 01 defines its visual turn-roll behavior explicitly");
+    check(ship.handling.boost_maximum_speed_multiplier > 1.0F &&
+              ship.handling.boost_acceleration_metres_per_second_squared >
+                  ship.handling.forward_acceleration_metres_per_second_squared &&
+              ship.handling.boost_excess_speed_decay_metres_per_second_squared > 0.0F &&
+              ship.handling.boost_duration_seconds > 0.0F,
+          "Prototype 01 boost exceeds normal speed and defines its duration and return rate");
     check(ship.collision.maximum_energy == 100.0F,
           "Prototype 01 establishes the baseline energy scale");
 }
@@ -93,8 +101,11 @@ void test_first_ship_mesh() {
 void test_engine_pulse_mesh() {
     const hover::render::MeshData outer = hover::assets::generated::make_engine_pulse_outer_mesh();
     const hover::render::MeshData core = hover::assets::generated::make_engine_pulse_core_mesh();
-    check(hover::render::is_valid(outer) && hover::render::is_valid(core),
-          "both engine pulse layers produce valid indexed triangles");
+    const hover::render::MeshData boost_flare =
+        hover::assets::generated::make_engine_boost_flare_mesh();
+    check(hover::render::is_valid(outer) && hover::render::is_valid(core) &&
+              hover::render::is_valid(boost_flare),
+          "both engine pulse layers and the boost flare produce valid indexed triangles");
     check(outer.vertices.size() == 36U && outer.indices.size() == 36U &&
               core.vertices.size() == 36U && core.indices.size() == 36U,
           "each engine pulse layer remains a deliberately tiny low-poly plume");
@@ -114,6 +125,14 @@ void test_engine_pulse_mesh() {
     check(outer_is_transparent_and_rearward,
           "outer engine pulse extends rearward with 50 percent opacity");
     check(core_is_opaque_and_rearward, "light-blue engine core is opaque and extends rearward");
+
+    bool flare_is_translucent = boost_flare.vertices.size() == 24U;
+    for (const hover::render::Vertex& vertex : boost_flare.vertices) {
+        flare_is_translucent =
+            flare_is_translucent && std::abs(vertex.opacity - 0.65F) <= tolerance;
+    }
+    check(flare_is_translucent,
+          "boost adds a tiny translucent flare mesh distinct from normal exhaust");
 }
 
 } // namespace
