@@ -16,7 +16,12 @@ constexpr std::array scenario_registry{
     DevelopmentScenarioInfo{
         DevelopmentScenario::oval,
         "oval",
-        "Generated ship and closed sampled oval with provisional free planar driving.",
+        "Flat closed sampled oval with deterministic track-attached driving.",
+    },
+    DevelopmentScenarioInfo{
+        DevelopmentScenario::speedway,
+        "speedway",
+        "First map prototype: attached driving on an oval speedway with banked turns.",
     },
 };
 

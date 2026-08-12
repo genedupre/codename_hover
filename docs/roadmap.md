@@ -65,13 +65,19 @@ generated runway through a provisional planar fixed-step simulation. Rendering
 interpolates its model transform and uses a following camera. Keyboard, mouse, and
 SDL gamepad actions can remain active simultaneously; a wired Steam Controller was
 detected and used on the laptop. Its hotplug, resumed input, rumble, and exit paths
-are verified. Track-relative movement and Steam Deck verification remain required.
+are verified. Steam Deck verification of the current revision remains required.
 The runway is retained as the named `runway` development scenario. The closed
 `SampledTrack` boundary, deterministic flat oval generator, generic surface mesh,
 and separate `oval` scenario are implemented and tested. The surface and closed
 seam were visually verified on the laptop on 2026-08-11; track-relative vehicle
-state now has a validated path-local data boundary. Centerline simulation and
-world-pose derivation are next; lateral steering follows after that is verified.
+state now has a validated path-local data boundary. The separate `speedway`
+scenario adds the first map prototype, with smoothly banked 28-degree turns; its
+standalone geometry was visually accepted on the laptop on 2026-08-12. Flat centerline
+simulation, seam wrapping, speed-scaled lateral steering, collider-aware road
+limits, persistent heading, required horizontal-corner steering, selected-lane
+distance scaling, and full banked world-pose/camera derivation are now implemented
+for both track scenarios. Deterministic tests cover these behaviors across tested
+24–360 Hz render schedules. Interactive attached handling on the laptop is next.
 
 Scope:
 

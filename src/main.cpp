@@ -7,7 +7,9 @@
 #include "core/fixed_step.hpp"
 #include "core/launch_options.hpp"
 #include "game/ships/prototype_01.hpp"
+#include "game/track_vehicle_simulation.hpp"
 #include "game/tracks/oval_track.hpp"
+#include "game/tracks/speedway_track.hpp"
 #include "game/vehicle_simulation.hpp"
 #include "hover_math.hpp"
 #include "input/player_input.hpp"
@@ -24,8 +26,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -407,7 +411,19 @@ struct ScenarioSetup {
     hover::render::MeshData world_mesh;
     std::string_view world_mesh_id;
     hover::game::VehicleState initial_vehicle_state;
+    std::optional<hover::game::SampledTrack> driving_track;
 };
+
+ScenarioSetup make_track_scenario_setup(hover::game::SampledTrack track,
+                                        std::string_view world_mesh_id) {
+    hover::render::MeshData world_mesh = hover::assets::generated::make_track_surface_mesh(track);
+    return ScenarioSetup{
+        std::move(world_mesh),
+        world_mesh_id,
+        {},
+        std::move(track),
+    };
+}
 
 ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
     switch (scenario) {
@@ -416,6 +432,7 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
             hover::assets::generated::make_presentation_pad_mesh(),
             "generated/presentation_pad",
             {},
+            std::nullopt,
         };
     case hover::core::DevelopmentScenario::oval: {
         constexpr hover::game::tracks::OvalTrackDefinition oval_definition{
@@ -427,18 +444,24 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
         constexpr std::uint32_t sample_count = 512U;
         const hover::game::SampledTrack track = hover::game::tracks::make_sampled_oval(
             hover::game::tracks::OvalTrackBuild{oval_definition, sample_count});
-        const hover::game::TrackFrame start = hover::game::sample_track(track, 0.0F);
-
-        hover::game::VehicleState initial_vehicle_state{};
-        initial_vehicle_state.pose.position = hover::game::point_on_track_frame(
-            start, hover::game::TrackOffset{.lateral_metres = 0.0F, .height_metres = 0.62F});
-        initial_vehicle_state.pose.yaw_radians = std::atan2(start.tangent.x, start.tangent.z);
-
-        return ScenarioSetup{
-            hover::assets::generated::make_track_surface_mesh(track),
-            "generated/oval_track_surface",
-            initial_vehicle_state,
+        return make_track_scenario_setup(track, "generated/oval_track_surface");
+    }
+    case hover::core::DevelopmentScenario::speedway: {
+        constexpr hover::game::tracks::SpeedwayTrackDefinition speedway_definition{
+            .oval =
+                {
+                    .straight_length_metres = 600.0F,
+                    .turn_radius_metres = 180.0F,
+                    .half_width_metres = 24.0F,
+                    .elevation_metres = -0.62F,
+                },
+            .maximum_bank_radians = 0.4886921906F,
+            .bank_transition_metres = 85.0F,
         };
+        constexpr std::uint32_t sample_count = 512U;
+        const hover::game::SampledTrack track = hover::game::tracks::make_sampled_speedway(
+            hover::game::tracks::SpeedwayTrackBuild{speedway_definition, sample_count});
+        return make_track_scenario_setup(track, "generated/speedway_track_surface");
     }
     }
 
@@ -494,12 +517,11 @@ render_frame(SDL_GPUDevice* device, SDL_Window* window, SDL_GPUGraphicsPipeline*
     const float aspect_ratio =
         static_cast<float>(swapchain_width) / static_cast<float>(swapchain_height);
     const hover::math::Vec3 ship_forward = hover::game::forward_direction(ship_pose);
+    const hover::math::Vec3 ship_up = hover::game::up_direction(ship_pose);
     const hover::math::Mat4 view = hover::math::look_at_lh(hover::math::LookAt{
-        ship_pose.position - ship_forward * boost_camera.follow_distance_metres +
-            hover::math::Vec3{0.0F, 3.8F, 0.0F},
-        ship_pose.position + ship_forward * boost_camera.look_ahead_metres +
-            hover::math::Vec3{0.0F, 0.35F, 0.0F},
-        hover::math::Vec3{0.0F, 1.0F, 0.0F},
+        ship_pose.position - ship_forward * boost_camera.follow_distance_metres + ship_up * 3.8F,
+        ship_pose.position + ship_forward * boost_camera.look_ahead_metres + ship_up * 0.35F,
+        ship_up,
     });
     const hover::math::Mat4 projection = hover::math::perspective_lh(hover::math::Perspective{
         boost_camera.vertical_field_of_view_radians, aspect_ratio, 0.1F, 400.0F});
@@ -697,6 +719,15 @@ int run(hover::core::DevelopmentScenario scenario) {
     FrameStatistics frame_statistics{window.get()};
     hover::game::VehicleState previous_vehicle_state = scenario_setup.initial_vehicle_state;
     hover::game::VehicleState current_vehicle_state = scenario_setup.initial_vehicle_state;
+    constexpr hover::game::TrackPathId primary_path_id{1U};
+    std::optional<hover::game::TrackVehicleState> track_vehicle_state;
+    if (scenario_setup.driving_track.has_value()) {
+        track_vehicle_state = hover::game::make_track_vehicle_state(
+            {}, ship_definition,
+            hover::game::ResolvedTrackPath{primary_path_id, *scenario_setup.driving_track});
+        previous_vehicle_state = track_vehicle_state->vehicle;
+        current_vehicle_state = track_vehicle_state->vehicle;
+    }
     double engine_pulse_elapsed_seconds = 0.0;
     float engine_pulse_intensity = 0.0F;
     hover::render::BoostCameraFeedbackState boost_camera_feedback{};
@@ -726,10 +757,24 @@ int run(hover::core::DevelopmentScenario scenario) {
             bool boost_activated_this_frame = false;
             for (std::uint32_t tick = 0; tick < step_plan.tick_count; ++tick) {
                 previous_vehicle_state = current_vehicle_state;
-                const hover::game::VehicleTickEvents events = hover::game::simulate_vehicle(
-                    current_vehicle_state,
-                    hover::game::VehicleTick{player_input, ship_definition,
-                                             static_cast<float>(simulation_tick_seconds)});
+                hover::game::VehicleTickEvents events{};
+                if (track_vehicle_state.has_value()) {
+                    events = hover::game::simulate_track_vehicle(
+                        *track_vehicle_state,
+                        hover::game::TrackVehicleTick{
+                            player_input,
+                            ship_definition,
+                            hover::game::ResolvedTrackPath{primary_path_id,
+                                                           *scenario_setup.driving_track},
+                            static_cast<float>(simulation_tick_seconds),
+                        });
+                    current_vehicle_state = track_vehicle_state->vehicle;
+                } else {
+                    events = hover::game::simulate_vehicle(
+                        current_vehicle_state,
+                        hover::game::VehicleTick{player_input, ship_definition,
+                                                 static_cast<float>(simulation_tick_seconds)});
+                }
                 boost_activated_this_frame = boost_activated_this_frame || events.boost_activated;
             }
             if (boost_activated_this_frame) {

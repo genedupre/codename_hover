@@ -17,18 +17,15 @@ void check(bool condition, std::string_view description) {
 }
 
 hover::game::TrackVehicleState valid_state() {
-    return hover::game::TrackVehicleState{
-        .location =
-            {
-                .path = hover::game::TrackPathId{7U},
-                .distance_along_path_metres = 120.0F,
-                .lateral_offset_metres = -3.0F,
-            },
-        .forward_speed_metres_per_second = 80.0F,
-        .lateral_velocity_metres_per_second = -2.0F,
-        .normal_offset_metres = 0.62F,
-        .normal_velocity_metres_per_second = 1.5F,
-    };
+    hover::game::TrackVehicleState state{};
+    state.location.path = hover::game::TrackPathId{7U};
+    state.location.distance_along_path_metres = 120.0F;
+    state.location.lateral_offset_metres = -3.0F;
+    state.vehicle.forward_speed_metres_per_second = 80.0F;
+    state.lateral_velocity_metres_per_second = -2.0F;
+    state.normal_offset_metres = 0.62F;
+    state.normal_velocity_metres_per_second = 1.5F;
+    return state;
 }
 
 void test_valid_track_bound_state() {
@@ -51,7 +48,7 @@ void test_unassigned_and_noncanonical_state_is_invalid() {
     check(!hover::game::is_valid(state), "stored path distance must be canonical and nonnegative");
 
     state = valid_state();
-    state.forward_speed_metres_per_second = -0.01F;
+    state.vehicle.forward_speed_metres_per_second = -0.01F;
     check(!hover::game::is_valid(state), "track-bound forward speed cannot be negative");
 
     state = valid_state();
@@ -66,6 +63,10 @@ void test_nonfinite_state_is_invalid() {
     hover::game::TrackVehicleState state = valid_state();
     state.location.lateral_offset_metres = infinity;
     check(!hover::game::is_valid(state), "infinite lateral offset is invalid");
+
+    state = valid_state();
+    state.heading_offset_radians = not_a_number;
+    check(!hover::game::is_valid(state), "non-finite relative heading is invalid");
 
     state = valid_state();
     state.lateral_velocity_metres_per_second = not_a_number;

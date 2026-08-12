@@ -971,3 +971,123 @@ Needs interactive verification:
   braking.
 - Confirm the 0.20-second tail feels short enough and the transition into excess
   speed decay feels continuous.
+
+### 2026-08-12 — first map prototype: Oval Speedway
+
+Build/revision: uncommitted map/scenario changes after `c5c7be2`.
+
+Hardware and OS: Compilation and automated tests on the HP ZBook Studio 16 G11,
+Ubuntu 24.04.4 LTS. Interactive graphics and driving are not yet verified.
+
+Track/scenario and settings: new `speedway` scenario; 600-metre straights,
+180-metre turn radius, 24-metre half-width, 512 centerline samples, 28-degree
+maximum banking, and 85-metre bank transitions.
+
+Implemented:
+
+- Registered `speedway` separately from the unchanged `runway` sandbox and flat
+  `oval` geometry reference.
+- Reused the generic oval centerline and surface generator. Only the sampled
+  normal/binormal frames are banked, keeping vehicle and mesh consumers generic.
+- Both left turns lower the inside edge and raise the outside edge; smoothstep
+  transitions leave the straights and start seam level.
+- Added definition, frame-orientation, edge-height, mesh, and launch-option tests.
+  All nine automated test executables pass.
+
+Known limitation:
+
+- At this checkpoint the vehicle remained free and world-planar. The owner
+  subsequently accepted the standalone track surface and requested the attached
+  driving implementation recorded below.
+
+### 2026-08-12 — first track-attached driving model
+
+Build/revision: uncommitted attachment changes after `c5c7be2` and the uncommitted
+Oval Speedway scenario.
+
+Hardware and OS: Compilation, focused clang-tidy, and deterministic host tests on
+the HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS. Interactive attached handling is
+not yet verified.
+
+Track/scenario and settings: `oval` is the flat attachment reference; `speedway`
+is the banked playtest map. Fixed simulation remains 90 Hz. Automated render
+schedules cover 24, 60, 90, 120, 240, 244, and 360 Hz.
+
+Implemented:
+
+- Shared propulsion, braking, boost, event, and visual-roll dynamics between the
+  unchanged free-planar `runway` and both attached scenarios.
+- Advanced canonical path distance and speed-scaled lateral velocity from the
+  existing semantic input boundary. Normal/drift grip controls lateral response.
+- Replaced yaw-only world poses with orthonormal forward/up poses. Ship rendering
+  and the follow camera now inherit sampled banking without assuming world-up.
+- Added explicit Prototype 01 attached values: 42 m/s maximum lateral speed and
+  0.62 m ride height.
+- Provisionally constrained the ship's local box footprint inside each sampled
+  road width. This is not a final invisible-wall or falling policy.
+- Kept path geometry under scenario/course ownership. Per-vehicle state retains
+  only an opaque path ID, leaving explicit future transitions for splits and
+  joins and a separate airborne mode for jumps or cross-path landings.
+- All ten automated test executables pass. Coverage includes spawn pose, ride
+  height, seam wrapping, lateral motion, road limits, banked model orientation,
+  and render-schedule independence. Focused clang-tidy reports no project-code
+  findings.
+
+Needs interactive verification:
+
+- Confirm the ship remains visually above the road through straights, both bank
+  transitions, both fully banked turns, and repeated seam crossings.
+- Evaluate the provisional lateral speed and grip: responsiveness, drift lag,
+  edge arrival, and whether steering feels like driving rather than sliding.
+- Evaluate full camera banking for comfort. Horizon damping is possible later,
+  but should not be added before observing the current surface-relative camera.
+- Confirm boost, braking, exhaust, rumble, and camera boost feedback still behave
+  as accepted while attached.
+
+### 2026-08-12 — persistent heading and player-steered corners
+
+Build/revision: uncommitted revision of the first attached-driving checkpoint.
+
+Hardware and OS: Compilation and deterministic host tests on the HP ZBook Studio
+16 G11, Ubuntu 24.04.4 LTS. Revised interactive handling is not yet verified.
+
+Owner feedback:
+
+- Following a curved track perfectly without steering feels like an autopilot;
+  the player should need to steer through a corner or reach the outside wall.
+- Rotating without acceleration visibly snapped back to the path direction; the
+  ship's heading should persist instead.
+- Deferred hover, gravity, slope, collision, wall/fall, jump, zone/trap, and
+  course-graph mechanics should be captured explicitly in `TODO.md`.
+
+Implemented:
+
+- Added persistent signed heading in the local surface plane. Steering rotates
+  it at the ship's existing speed-dependent steering rate, including at rest;
+  releasing steering does not recenter it.
+- Decomposed body-forward speed by heading into along-track and lateral targets.
+  Existing normal/drift grip controls lateral response and the ship-specific
+  lateral-speed limit remains explicit.
+- Measured the sampled path's local world-distance scale at the selected lateral
+  offset. Equal body speed therefore advances farther in centerline distance on
+  a shorter inside lane than on a longer outside lane.
+- Removed sampled tangent yaw from the relative heading after travel. Horizontal
+  curves now rotate beneath an unsteered ship, carrying it to the outside edge;
+  steering into the curve is required to hold a line. Surface-normal changes
+  still supply automatic pitch/roll for banking and future loops.
+- Added deterministic coverage for idle heading persistence, unsteered outside
+  edge contact, steered cornering, inside/outside lane distance, and automatic
+  surface pitch through a vertical-loop fixture.
+- Recorded the intentionally missing mechanics in `TODO.md` without implementing
+  speculative physics or course systems.
+
+Needs interactive verification:
+
+- Find the steering input needed to hold the centerline through Speedway's 180 m
+  turns at low, normal-maximum, and boosted speeds.
+- Confirm rotation no longer snaps back when throttle and steering are released.
+- Assess whether the provisional 1.90 rad/s steering rate, 42 m/s lateral cap,
+  normal/drift grip, and full camera banking work together or need separate
+  tuning.
+- The current outside-edge result is still a hard width clamp with no wall mesh,
+  impact response, damage, or fall behavior; those are explicit deferred tasks.

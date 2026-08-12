@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/vehicle_simulation.hpp"
+
 #include <cstdint>
 
 namespace hover::game {
@@ -23,7 +25,11 @@ struct TrackLocation {
 // works while the path is banked, vertical, or inverted.
 struct TrackVehicleState {
     TrackLocation location;
-    float forward_speed_metres_per_second = 0.0F;
+    VehicleState vehicle;
+    // Signed heading within the local driving plane: positive points toward
+    // track-right. It persists independently from the path tangent, so the
+    // player must steer through horizontal curvature.
+    float heading_offset_radians = 0.0F;
     float lateral_velocity_metres_per_second = 0.0F;
     float normal_offset_metres = 0.0F;
     float normal_velocity_metres_per_second = 0.0F;

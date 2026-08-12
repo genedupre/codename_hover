@@ -12,8 +12,8 @@ drift, boost, collision response, recovery, and camera behavior are tuned.
 Use specialized arcade vehicle logic rather than asking a general rigid-body
 engine to simulate the normal driving state. Most of the time a vehicle is related
 to a known track surface. It may become genuinely airborne for jumps, crashes, or
-loss of contact, then reacquire an appropriate track surface.
-when there are jumps, there could be a possability to jump to another track (a short shortcut) which at a later point joins the main track again.
+loss of contact, then reacquire an appropriate track surface. A jump may land on
+a different path, such as a shortcut that later rejoins the main route.
 
 The first concrete track-bound vehicle state includes:
 
@@ -29,9 +29,8 @@ the ship may be banked, vertical, or upside down on loops. A true jump that leav
 the track will later transition to world-space airborne state and may reacquire a
 different eligible path, including a shortcut or branch.
 
-Longer-term vehicle state also needs:
+Longer-term vehicle state still needs:
 
-- orientation relative to the local track frame;
 - energy, boost, and damage state;
 - current lap, checkpoint, and recovery state.
 
@@ -43,7 +42,8 @@ their render meshes. The current definition boundary supports:
 
 - a stable ship identity and visual-mesh reference;
 - a local-space box collider sized for that ship;
-- maximum forward speed, acceleration, braking, and steering rate;
+- maximum forward speed, acceleration, braking, planar steering rate, attached
+  lateral speed, and track ride height;
 - separate normal and drift lateral-grip rates;
 - relative collision mass, maximum energy, and a collision-damage multiplier.
 
@@ -53,17 +53,45 @@ heavier, more agile, drift-oriented, fragile, or durable. Tune them through
 controlled driving and collision tests once the corresponding behavior exists;
 the initial constants are not claims about final balance.
 
-The runway prototype also gives each ship a small presentation profile. Its first
+The prototype also gives each ship a small presentation profile. Its first
 parameters control maximum visual turn roll and response speed. The roll follows
 steering direction, grows with normalized speed, and eases back to level. It does
-not change planar travel or collision behavior; future track-relative orientation
-will compose ship lean with the sampled surface frame rather than assuming
-world-up.
+not change travel or collision behavior. Attached orientation composes this lean
+with the sampled surface frame rather than assuming world-up.
 
 Prototype 01's provisional planar steering authority uses `0.60 + 0.40 ×
 sqrt(speed ratio)`. This preserves its configured full-speed steering rate while
 providing substantially more yaw authority near rest and through middle speeds.
 Treat this as playtest tuning, not the final track-relative steering model.
+
+The first attached steering model deliberately remains small. The ship owns a
+persistent signed heading relative to the path tangent. Steering rotates that
+heading even without throttle; releasing steering does not snap it back to the
+tangent. Forward speed is resolved into along-track and sideways components.
+Normal or drift grip controls how quickly actual lateral velocity approaches the
+sideways component, capped by the ship's maximum lateral speed.
+
+As the path advances, its change in horizontal direction is removed from the
+ship's relative heading. Consequently, entering a horizontal corner without
+steering causes the road to turn underneath the ship and carries it toward the
+outside edge. The player or AI must steer into the turn to hold a line. Changes
+in the sampled surface normal still provide automatic pitch and roll, so banking
+and a future vertical loop do not require an unrelated horizontal steering hack.
+Along-track advancement also accounts for the shorter inside and longer outside
+lane geometry.
+
+Position and full 3D orientation are then derived from the sampled path frame.
+Prototype 01's local box footprint is provisionally constrained inside the
+sampled road width, preventing it from crossing through the surface edge before
+wall impacts, open edges, falling, and recovery have explicit mechanics.
+
+This does not make the course spline an AI-only rail. Human and AI controllers
+both supply the same semantic throttle, brake, steering, drift, and boost values.
+Course-level logic will later resolve a path ID and perform explicit transitions
+at splits or joins. Jump takeoff transitions out of attached state into
+world-space airborne motion; landing selects an eligible path and reconstructs
+path-local state. Track zones and traps remain course/surface data consumed by the
+shared simulation, not special cases embedded in an AI controller.
 
 The first boost is deliberately a button-activated, one-second burst with no
 energy or cooldown. A rising boost-action edge starts the timed fixed-step state

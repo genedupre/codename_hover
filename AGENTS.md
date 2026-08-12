@@ -18,15 +18,24 @@ reconnect, and simultaneous keyboard input are verified. Select/Back/View maps t
 the prototype Escape action; Start/Menu remains free, B/East and the analog left
 trigger apply braking, and X/West activates the boost burst.
 
-Two named development scenarios now share that runtime: `runway` preserves the
-long free-driving/input sandbox, while `oval` renders a closed strip from the
-generic sampled-track representation and spawns the ship at its seam. The oval
-surface and closed seam were visually verified on the laptop on 2026-08-11. Its
-driving remains deliberately free and planar. A validated `TrackVehicleState` now
-holds an opaque path ID plus path-local distance, lateral motion, forward speed,
-and surface-normal motion. It is not wired into `oval` yet; the next gameplay
-implementation advances that state along the oval centerline without steering.
-Do not jump ahead to race systems.
+Three named development scenarios now share that runtime: `runway` preserves the
+long free-driving/input sandbox; `oval` preserves the flat closed sampled-track
+reference; and `speedway` is the first map prototype, with level straights and
+two turns that smoothly bank to 28 degrees. All spawn at a level seam. The oval
+surface and closed seam were visually verified on the laptop on 2026-08-11;
+the owner visually accepted the standalone `speedway` surface on 2026-08-12.
+`runway` remains free and planar. `oval` and `speedway` now use deterministic
+track-attached movement. The ship owns a persistent heading in the local surface
+plane; steering rotates that heading, grip changes lateral velocity toward its
+direction, and centerline curvature is not automatic steering. An unsteered ship
+therefore reaches the outside edge of a horizontal corner. Sampled surface
+orientation still supplies pitch and roll for banks and future loops. The
+ship/camera follow the resulting 3D pose, and the ship's collider-sized footprint
+is provisionally clamped inside the road width. This revised behavior still needs
+interactive verification. A resolved opaque path
+ID leaves future course ownership free to transition racers at splits and joins;
+true jumps will use a separate world-space airborne state and may reacquire a
+different path. Do not jump ahead to race systems.
 
 Prototype 01's acceleration exhaust uses a strongly speed-responsive light-blue
 core and 50%-transparent outer shell. A presentation-only release envelope
@@ -37,8 +46,8 @@ The runway handling tune now uses 180 m/s² braking, 90 m/s² coasting decelerat
 and a 1.90 rad/s maximum steering rate. Steering authority follows `0.60 + 0.40 ×
 sqrt(speed ratio)`, preserving the accepted full-speed rate while increasing
 low-speed rotation. Steering drives a smoothed ship-specific visual roll up to
-0.18 radians, scaled by speed; this roll does not affect planar travel or the
-future collision model. The driver silhouette is explicitly deferred for later
+0.18 radians, scaled by speed; this presentation roll does not alter attached or
+planar travel and is separate from surface banking. The driver silhouette is explicitly deferred for later
 visual improvement.
 
 X/West (plus keyboard X/Shift) now activates a provisional one-second fixed-step

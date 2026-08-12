@@ -1,6 +1,7 @@
 #include "assets/generated/track_surface_mesh.hpp"
 #include "game/track.hpp"
 #include "game/tracks/oval_track.hpp"
+#include "game/tracks/speedway_track.hpp"
 #include "hover_math.hpp"
 
 #include <cmath>
@@ -166,6 +167,58 @@ void test_generated_surface_mesh() {
     }
 }
 
+void test_banked_speedway() {
+    const hover::game::tracks::OvalTrackDefinition oval = test_definition();
+    constexpr float maximum_bank_radians = 0.4886921906F;
+    const hover::game::tracks::SpeedwayTrackDefinition definition{
+        .oval = oval,
+        .maximum_bank_radians = maximum_bank_radians,
+        .bank_transition_metres = 20.0F,
+    };
+    check(hover::game::tracks::is_valid(definition), "the banked speedway definition is valid");
+
+    hover::game::tracks::SpeedwayTrackDefinition invalid = definition;
+    invalid.bank_transition_metres = oval.turn_radius_metres * std::numbers::pi_v<float> * 0.51F;
+    check(!hover::game::tracks::is_valid(invalid),
+          "speedway bank transition must fit inside half a turn");
+
+    const hover::game::SampledTrack track = hover::game::tracks::make_sampled_speedway(
+        hover::game::tracks::SpeedwayTrackBuild{definition, 512U});
+    check(hover::game::is_valid(track) && track.frames.size() == 512U,
+          "speedway produces a valid generic sampled track");
+    check(nearly_equal(track.length_metres, hover::game::tracks::oval_track_length(oval)),
+          "banking does not change the speedway centerline length");
+
+    const hover::game::TrackFrame start = hover::game::sample_track(track, 0.0F);
+    check(nearly_equal(start.normal, {0.0F, 1.0F, 0.0F}) &&
+              nearly_equal(start.binormal, {1.0F, 0.0F, 0.0F}),
+          "speedway seam and straight begin level");
+
+    const float far_turn_midpoint =
+        oval.straight_length_metres + oval.turn_radius_metres * std::numbers::pi_v<float> * 0.5F;
+    const hover::game::TrackFrame banked = hover::game::sample_track(track, far_turn_midpoint);
+    check(nearly_equal(banked.normal.y, std::cos(maximum_bank_radians), sampled_tolerance) &&
+              nearly_equal(banked.binormal.y, std::sin(maximum_bank_radians), sampled_tolerance),
+          "turn midpoint reaches the configured bank angle and raises track-right");
+
+    const hover::math::Vec3 left_edge = hover::game::point_on_track_frame(
+        banked,
+        hover::game::TrackOffset{.lateral_metres = -oval.half_width_metres, .height_metres = 0.0F});
+    const hover::math::Vec3 right_edge = hover::game::point_on_track_frame(
+        banked,
+        hover::game::TrackOffset{.lateral_metres = oval.half_width_metres, .height_metres = 0.0F});
+    check(left_edge.y < banked.center.y && right_edge.y > banked.center.y,
+          "banked left turn lowers its inside edge and raises its outside edge");
+
+    const hover::render::MeshData mesh = hover::assets::generated::make_track_surface_mesh(track);
+    bool has_banked_surface = false;
+    for (const hover::render::Vertex& vertex : mesh.vertices) {
+        has_banked_surface = has_banked_surface || vertex.normal.y < 0.95F;
+    }
+    check(hover::render::is_valid(mesh) && has_banked_surface,
+          "generic track mesh preserves visibly angled speedway corners");
+}
+
 } // namespace
 
 int main() {
@@ -175,6 +228,7 @@ int main() {
     test_wrapping_and_closed_seam();
     test_frame_quality_and_offsets();
     test_generated_surface_mesh();
+    test_banked_speedway();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " track test(s) failed\n";

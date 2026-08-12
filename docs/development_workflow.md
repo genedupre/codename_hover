@@ -72,7 +72,9 @@ Current scenarios:
 - `runway`: Prototype 01, the long presentation runway, free planar movement,
   follow camera, and full input/timing diagnostics.
 - `oval`: Prototype 01 at the highlighted seam of a generated closed stadium
-  track, with the same provisional free planar movement and diagnostics.
+  track, providing the flat track-attached movement reference.
+- `speedway`: the first map prototype, reusing the oval centerline with level
+  straights, smoothly banked turns, and the same track-attached movement.
 
 Running without `--scenario` currently defaults to `runway`. The eventual normal
 game/menu boot may replace that default without removing explicit development

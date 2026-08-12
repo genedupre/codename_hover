@@ -90,7 +90,7 @@ void test_vehicle_pose_and_interpolation() {
                                         1.0F / 90.0F});
 
     check(state.forward_speed_metres_per_second > 0.0F, "throttle accelerates the vehicle");
-    check(state.pose.yaw_radians > 0.0F, "positive steering turns the vehicle right");
+    check(state.pose.forward.x > 0.0F, "positive steering turns the vehicle right");
     check(state.pose.turn_roll_radians < 0.0F,
           "a right turn visually lowers the ship's right wing");
     check(state.pose.position.x > 0.0F && state.pose.position.z > 0.0F,
@@ -98,11 +98,17 @@ void test_vehicle_pose_and_interpolation() {
 
     const hover::game::VehiclePose halfway =
         hover::game::interpolate(hover::game::VehiclePose{},
-                                 hover::game::VehiclePose{{10.0F, 2.0F, 4.0F}, 1.0F, -0.2F}, 0.5F);
+                                 hover::game::VehiclePose{
+                                     .position = {10.0F, 2.0F, 4.0F},
+                                     .forward = {1.0F, 0.0F, 0.0F},
+                                     .up = {0.0F, 1.0F, 0.0F},
+                                     .turn_roll_radians = -0.2F,
+                                 },
+                                 0.5F);
     check(nearly_equal(halfway.position.x, 5.0F) && nearly_equal(halfway.position.y, 1.0F) &&
-              nearly_equal(halfway.position.z, 2.0F) && nearly_equal(halfway.yaw_radians, 0.5F) &&
-              nearly_equal(halfway.turn_roll_radians, -0.1F),
-          "render pose interpolates position, heading, and turn roll");
+              nearly_equal(halfway.position.z, 2.0F) && halfway.forward.x > 0.0F &&
+              halfway.forward.z > 0.0F && nearly_equal(halfway.turn_roll_radians, -0.1F),
+          "render pose interpolates position, 3D orientation, and turn roll");
 }
 
 void test_coasting_and_speed_scaled_turn_roll() {
@@ -147,7 +153,7 @@ void test_low_speed_steering_authority_increases_without_changing_full_speed() {
                                   hover::game::VehicleTick{right_turn, ship, tick_seconds});
     const float expected_low_speed_yaw =
         ship.handling.steering_rate_radians_per_second * 0.60F * tick_seconds;
-    check(nearly_equal(stopped.pose.yaw_radians, expected_low_speed_yaw),
+    check(nearly_equal(stopped.pose.forward.x, std::sin(expected_low_speed_yaw)),
           "low-speed steering begins at sixty percent authority");
 
     hover::game::VehicleState full_speed{};
@@ -158,7 +164,7 @@ void test_low_speed_steering_authority_increases_without_changing_full_speed() {
         hover::game::VehicleTick{{.steering = 1.0F, .throttle = 1.0F}, ship, tick_seconds});
     const float accepted_full_speed_yaw =
         ship.handling.steering_rate_radians_per_second * tick_seconds;
-    check(nearly_equal(full_speed.pose.yaw_radians, accepted_full_speed_yaw),
+    check(nearly_equal(full_speed.pose.forward.x, std::sin(accepted_full_speed_yaw)),
           "full-speed steering retains the previously accepted turn rate");
 }
 

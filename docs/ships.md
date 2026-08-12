@@ -81,8 +81,10 @@ Its provisional definition currently specifies:
 | Braking deceleration | 180 m/s² |
 | Coasting deceleration | 90 m/s² |
 | Steering rate | 1.90 rad/s |
+| Maximum attached lateral speed | 42 m/s |
 | Normal lateral grip | 7.0/s |
 | Drift lateral grip | 2.4/s |
+| Track ride height | 0.62 m |
 | Boost speed multiplier | 1.28× (332.8 m/s ceiling) |
 | Boost acceleration | 145 m/s² |
 | Excess boost-speed decay | 170 m/s² |
@@ -120,16 +122,16 @@ collider or handling automatically merely because the authored mesh changed.
 
 ## Current provisional simulation
 
-Prototype 01 now has a planar runway simulation that consumes semantic input at a
-fixed 90 Hz. It accelerates up to its definition's maximum speed, brakes without
-reversing, coasts with stronger passive deceleration, rotates with speed-dependent
-steering authority, and moves along its local forward direction. Steering starts
-at 60% authority near rest and follows a square-root speed curve to the unchanged
-full-speed rate, giving low and middle speeds more rotation without sharpening
-maximum-speed turns. Steering also drives a smoothed visual roll that grows with
-speed and returns to level after release. Rendering interpolates its
-previous/current pose and applies a per-object model matrix; the camera follows
-that interpolated pose without inheriting the ship's visual roll.
+Prototype 01 consumes semantic input at a fixed 90 Hz in two movement modes. The
+`runway` keeps its planar free-driving simulation. `oval` and `speedway` share an
+attached simulation that advances path distance, uses speed-scaled lateral
+heading and grip for steering, keeps the provisional box footprint inside the
+road width, and derives its full pose from the sampled surface frame. Attached
+heading persists without throttle or steering, and horizontal track curvature
+must be steered rather than being followed automatically. Both modes
+share acceleration, braking, coasting, boost, and smoothed visual turn roll.
+Rendering interpolates the previous/current full 3D pose; the camera follows its
+surface-relative up direction without inheriting the additional visual turn roll.
 
 Pressing boost currently starts a one-second burst that accelerates above
 Prototype 01's provisional 260 m/s base ceiling to at most 332.8 m/s. Holding X
@@ -152,8 +154,8 @@ and releases smoothly afterward. Revisit whether camera feedback belongs to a
 global accessibility/presentation profile or has limited ship-specific tuning
 only when multiple ship identities require different behavior.
 
-This exists to validate timing, input, transforms, and camera plumbing. It is not
-the intended track-relative hover physics and its feel is not final.
+This is the first intended track-relative architecture, but its handling constants,
+hard ride-height attachment, width constraint, and camera feel are provisional.
 
 ## Known missing pieces
 
@@ -161,10 +163,12 @@ the intended track-relative hover physics and its feel is not final.
 - There is no mesh instancing yet.
 - The current vertex format has position, normal, color, and opacity but no UV
   coordinates.
-- Colliders are validated as data but not simulated or drawn.
+- The collider footprint limits attached lateral position, but vehicle/track and
+  vehicle/vehicle collision response is not simulated or drawn.
 - Damage, explosions, boost energy/cooldown, hover behavior, and ship selection do
   not exist.
 - GLB loading and Blender export conventions remain future work.
 
-Introduce each missing piece when a playable checkpoint needs it. The next major
-physics boundary is replacing free runway movement with a generated track frame.
+Introduce each missing piece when a playable checkpoint needs it. The next physics
+work is interactive attached-handling validation, followed by explicit edge,
+airborne, or collision behavior chosen from those observations.

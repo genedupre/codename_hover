@@ -71,9 +71,11 @@ hover_enable_warnings(hover_assets)
 add_library(hover_game STATIC
     src/game/track.cpp
     src/game/track_vehicle_state.cpp
+    src/game/track_vehicle_simulation.cpp
     src/game/ship_definition.cpp
     src/game/ships/prototype_01.cpp
     src/game/tracks/oval_track.cpp
+    src/game/tracks/speedway_track.cpp
     src/game/vehicle_simulation.cpp
 )
 target_include_directories(hover_game PUBLIC src)
@@ -128,6 +130,11 @@ if(BUILD_TESTING)
     target_link_libraries(hover_track_vehicle_state_tests PRIVATE hover_game)
     hover_enable_warnings(hover_track_vehicle_state_tests)
     add_test(NAME hover_track_vehicle_state_tests COMMAND hover_track_vehicle_state_tests)
+
+    add_executable(hover_track_vehicle_simulation_tests tests/track_vehicle_simulation_tests.cpp)
+    target_link_libraries(hover_track_vehicle_simulation_tests PRIVATE hover_core hover_game)
+    hover_enable_warnings(hover_track_vehicle_simulation_tests)
+    add_test(NAME hover_track_vehicle_simulation_tests COMMAND hover_track_vehicle_simulation_tests)
 
     add_executable(hover_engine_pulse_tests tests/engine_pulse_tests.cpp)
     target_link_libraries(hover_engine_pulse_tests PRIVATE hover_render)

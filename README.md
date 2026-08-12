@@ -2,7 +2,9 @@
 
 Codename Hover is an early native-Linux prototype for a low-poly futuristic
 anti-gravity arcade racer. The current executable provides separate `runway` and
-`oval` development scenarios.
+`oval` development scenarios, plus the first map prototype: the banked oval
+`speedway`. `oval` and `speedway` use the first deterministic track-attached
+vehicle simulation; `runway` remains the free-driving regression sandbox.
 
 ## Build on the development laptop
 
@@ -18,7 +20,7 @@ Build and run:
 
 ```bash
 cmake --build --preset development
-./build/development/codename_hover --scenario oval
+./build/development/codename_hover --scenario speedway
 ```
 
 Use `--list-scenarios` to see every available development scenario.
@@ -48,7 +50,7 @@ startup check. It does not copy source files or delete unrelated remote files.
 Then run this from a terminal on the Deck's graphical desktop:
 
 ```bash
-/run/media/deck/SR01T/development/codename_hover/codename_hover --scenario oval
+/run/media/deck/SR01T/development/codename_hover/codename_hover --scenario speedway
 ```
 
 Deployment settings can be overridden when another Deck, mount, or build tree is

@@ -91,6 +91,29 @@ no intentional low-resolution internal renderer yet.
 
 ## Handling follow-up
 
+- [ ] Replace hard ride-height attachment with an explicit hover/suspension
+  response when vertical feel becomes the active experiment. Define spring,
+  damping, surface attraction, loss-of-contact criteria, and how these behave on
+  banks, vertical sections, and inverted loops without assuming world gravity is
+  the surface normal.
+- [ ] Add a separate world-space airborne state with gravity, takeoff momentum,
+  limited airborne control, landing eligibility, impact response, and path
+  reacquisition. A jump must be able to land on a different shortcut or branch.
+- [ ] Define per-edge behavior instead of the provisional width clamp: solid
+  wall, guard rail, open/fall edge, soft boundary, or another explicit course
+  property. Add wall collision normals, bounce/scrape response, speed loss,
+  damage, and controller/camera feedback when that experiment begins.
+- [ ] Model vehicle/vehicle collision, relative mass, impact damage, explosions,
+  and elimination using ship definitions rather than render-mesh dimensions.
+- [ ] Decide how track curvature, banking, slope, grip, and lift-off throttle
+  affect cornering authority and effective speed. Do not add fake centrifugal or
+  slope modifiers without a controllable playtest and deterministic tests.
+- [ ] Add surface and zone data for boost/recharge strips, grip changes, damage,
+  traps, checkpoints, jump launch regions, and recovery hints. Keep zones in
+  course data and consume them through shared player/AI simulation.
+- [ ] Build explicit course-path transitions and topology for lane splits,
+  shortcuts, jump-only branches, joins, and route-relative race progress when the
+  first split-track scenario becomes active.
 - [ ] Replace Prototype 01's constant passive coasting deceleration with a tuned
   speed-sensitive curve. Owner intent: releasing acceleration should change speed
   differently across the range and should help the ship take a sharper line than

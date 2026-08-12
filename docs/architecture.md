@@ -108,9 +108,10 @@ scene graph, scripting layer, or project milestone.
 Scenario names are parsed into a closed enum so unknown names fail clearly. Keep
 the registry small and retain a scenario when it remains a useful regression or
 hardware diagnostic. The `runway` scenario is the current default and permanent
-free-driving/input sandbox. `oval` uses the same runtime with a generated closed
-track surface and a scenario-specific spawn; it deliberately retains free planar
-simulation until the mesh and seam are visually verified.
+free-driving/input sandbox. `oval` is the flat attached-motion reference and
+`speedway` is the first map prototype with banked turns. Both use the same
+track-vehicle simulation; a scenario supplies geometry and spawn configuration,
+not a parallel movement implementation.
 
 ## Input boundary
 
@@ -164,12 +165,26 @@ oval is a source of those frames, not a special runtime track type that vehicle 
 renderer code should depend upon. See `tracks.md`.
 
 While a ship is attached to a driving surface, `TrackVehicleState` stores an
-opaque path ID and scalar values in that path's local frame. It does not own or
-point at track geometry. Scenario/course ownership resolves the ID to sampled
-geometry, which permits a future graph to switch paths at splits and joins. Banks,
-vertical sections, and loops use the frame's normal and binormal rather than
-world-up. Truly airborne motion will be a separate state that can later reacquire
-any eligible path; the graph and airborne transition are not implemented yet.
+opaque path ID, shared vehicle dynamics, and scalar values in that path's local
+frame. It does not own or point at track geometry. Scenario/course ownership
+resolves the ID to a `ResolvedTrackPath` for one tick, which permits a future
+graph to switch paths at splits and joins. Banks, vertical sections, and loops
+derive the rendered pose and camera up direction from the frame's tangent,
+normal, and binormal rather than world-up.
+
+The attached step shares propulsion, braking, boost state, events, and visual
+steering response with free-planar movement. It owns a persistent signed heading
+within the local surface plane. Semantic steering rotates that heading; lateral
+grip approaches its sideways velocity component. Path progress uses the forward
+component and the physical length scale of the selected lateral lane. Change in
+the path's tangent around its surface normal is subtracted from relative heading,
+so horizontal curvature must be actively steered while surface pitch and roll
+remain automatic. The step then applies a provisional collider-aware road-width
+constraint and derives a full 3D pose.
+
+Truly airborne motion will be a separate mutually exclusive state that can later
+reacquire any eligible path; the graph, branch-selection policy, surface zones,
+and airborne transition are not implemented yet.
 
 A ship's gameplay `ShipDefinition` is separate from its visual mesh. It contains a
 stable identity and visual-mesh key plus handling, presentation, and collision

@@ -252,6 +252,39 @@ composition order and tests. Rendering, UI, input, and asset code must not enfor
 their own gameplay caps. The current Prototype 01 value and boost multiplier are
 tuning data and may change freely.
 
+### D-021: Separate shared vehicle dynamics from movement mode
+
+Status: accepted and implemented for first attached driving on 2026-08-12.
+
+Propulsion, braking, coasting, boost state/events, and visual steering response
+are shared deterministic vehicle dynamics. Free-planar `runway` movement and
+track-attached movement build on that step, then independently choose how position
+and orientation advance. Do not fork boost or input mechanics per course or give
+AI vehicles separate movement physics.
+
+While attached, course ownership resolves the state's opaque path ID to sampled
+geometry for the tick. The ship owns a persistent heading in that path's local
+surface plane. Steering rotates the heading; body speed is decomposed into path
+and lateral motion; grip controls lateral response; and selected-lane length
+scales centerline progress. Tangent rotation around the surface normal is removed
+from relative heading, so horizontal turns require steering rather than becoming
+an autopilot rail. Surface pitch and roll remain automatic. A full forward/up
+basis is derived from tangent, normal, and binormal, replacing world-yaw-only
+orientation so banks, vertical sections, loops, and corkscrews do not require
+another model.
+
+Prototype 01 has explicit provisional attached lateral speed and ride-height
+parameters. Its local box footprint is temporarily clamped to the sampled road
+width. This is a bootstrap safety boundary, not a final edge policy: walls, open
+edges, falling, traps, collision response, and recovery require explicit course
+data and mechanics.
+
+Splits and joins will transition path ID and canonical distance at the course
+layer. A genuine jump will transition to a separate world-space airborne state
+and may reacquire a different eligible path. Do not encode branch choice into
+`SampledTrack`, force airborne ships onto a surface normal, or build the graph and
+zone system before their first playable track experiment.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.

@@ -17,8 +17,10 @@ struct HandlingProfile {
     float braking_deceleration_metres_per_second_squared;
     float coasting_deceleration_metres_per_second_squared;
     float steering_rate_radians_per_second;
+    float maximum_lateral_speed_metres_per_second;
     float normal_lateral_grip_per_second;
     float drift_lateral_grip_per_second;
+    float track_ride_height_metres;
     float boost_maximum_speed_multiplier;
     float boost_acceleration_metres_per_second_squared;
     float boost_excess_speed_decay_metres_per_second_squared;
