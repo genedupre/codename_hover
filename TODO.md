@@ -53,9 +53,6 @@ no intentional low-resolution internal renderer yet.
 
 ## Engine presentation
 
-- [ ] Add and tune a boost camera response after the current mechanic and exhaust
-  flare have been playtested. Keep it readable while steering and do not obscure
-  the ship's turn-roll feedback.
 - [ ] Move engine socket placement into ship visual data when a second ship or a
   Blender-authored mesh needs the effect; do not build a general attachment system
   before then.
@@ -66,6 +63,31 @@ no intentional low-resolution internal renderer yet.
   silhouette. Owner feedback on 2026-08-12 was that the layered exhaust and canopy
   looked much better, but the driver itself did not look good. Revisit it alongside
   authored ship work rather than delaying handling experiments now.
+
+## Dynamic race portraits
+
+- [ ] Prototype the player portrait plus the current first-through-fifth-place
+  portraits, without duplicating the player when the player occupies one of those
+  positions.
+- [ ] Drive expressions from explicit race and vehicle presentation events such
+  as boost, sustained high speed, impact, critical damage, elimination, and
+  finishing result.
+- [ ] Prototype aligned transparent PNG layers for pilot, expression, cockpit
+  background, and transient fire/spark effects. Test 32-by-32 prominent portraits
+  and 24-by-24 secondary portraits as a deliberately pixelated starting point,
+  not a fixed requirement. Retain lossless working sources, compare larger tiers
+  at 1080p, 1440p, 4K, and Steam Deck, and keep the dimensions changeable.
+- [ ] Add a HUD-size setting when the settings UI exists. Keep HUD layout scale,
+  display resolution, and portrait asset resolution independent so a large HUD
+  does not merely expose an unnecessarily blurry 32-by-32 source.
+- [ ] Pack portrait layers into resident atlases before a race. Runtime animation
+  must select UV regions and transforms rather than decode or load PNG files per
+  frame.
+- [ ] Animate eliminated portraits shrinking to zero, smoothly reflow surviving
+  entries into their new rank-sized rectangles, and admit the next eligible
+  leader without losing stable racer identity during the transition.
+- [ ] Keep critical damage and race position readable elsewhere in the HUD so the
+  portraits are expressive feedback rather than the sole accessibility channel.
 
 ## Handling follow-up
 

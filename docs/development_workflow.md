@@ -167,6 +167,13 @@ prototypes or export validation. They should be kept in the repository, reviewed
 and documented like other tools. Do not create a proprietary asset database or
 runtime binary format until profiling demonstrates the need.
 
+A release build will process only runtime assets, compress each format where that
+is useful, and may bundle them into one or more deployment archives. Source files,
+lossless working masters, sketches, and Blender project history do not need to
+ship. Bundling is distinct from inventing a custom mesh/audio format and is not a
+security boundary: it improves installation, integrity checks, and loading, but a
+determined player can still extract assets the game can decode.
+
 ## Learning approach
 
 Learn game math, graphics concepts, Blender, and C++ techniques when a milestone

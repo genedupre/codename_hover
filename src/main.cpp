@@ -446,14 +446,13 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
     std::abort();
 }
 
-RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
-                          SDL_GPUGraphicsPipeline* opaque_pipeline,
-                          SDL_GPUGraphicsPipeline* transparent_vehicle_pipeline,
-                          SDL_GPUGraphicsPipeline* pulse_pipeline, const SceneMeshes& meshes,
-                          const hover::game::VehiclePose& ship_pose,
-                          hover::render::EnginePulseSample engine_pulse,
-                          hover::math::Vec3 vehicle_vibration,
-                          DepthTarget& depth_target) {
+RenderResult
+render_frame(SDL_GPUDevice* device, SDL_Window* window, SDL_GPUGraphicsPipeline* opaque_pipeline,
+             SDL_GPUGraphicsPipeline* transparent_vehicle_pipeline,
+             SDL_GPUGraphicsPipeline* pulse_pipeline, const SceneMeshes& meshes,
+             const hover::game::VehiclePose& ship_pose,
+             hover::render::EnginePulseSample engine_pulse, hover::math::Vec3 vehicle_vibration,
+             hover::render::BoostCameraSample boost_camera, DepthTarget& depth_target) {
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     if (command_buffer == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not acquire a GPU command buffer: %s",
@@ -496,12 +495,14 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
         static_cast<float>(swapchain_width) / static_cast<float>(swapchain_height);
     const hover::math::Vec3 ship_forward = hover::game::forward_direction(ship_pose);
     const hover::math::Mat4 view = hover::math::look_at_lh(hover::math::LookAt{
-        ship_pose.position - ship_forward * 8.5F + hover::math::Vec3{0.0F, 3.8F, 0.0F},
-        ship_pose.position + ship_forward * 3.0F + hover::math::Vec3{0.0F, 0.35F, 0.0F},
+        ship_pose.position - ship_forward * boost_camera.follow_distance_metres +
+            hover::math::Vec3{0.0F, 3.8F, 0.0F},
+        ship_pose.position + ship_forward * boost_camera.look_ahead_metres +
+            hover::math::Vec3{0.0F, 0.35F, 0.0F},
         hover::math::Vec3{0.0F, 1.0F, 0.0F},
     });
-    const hover::math::Mat4 projection = hover::math::perspective_lh(
-        hover::math::Perspective{1.0471975512F, aspect_ratio, 0.1F, 400.0F});
+    const hover::math::Mat4 projection = hover::math::perspective_lh(hover::math::Perspective{
+        boost_camera.vertical_field_of_view_radians, aspect_ratio, 0.1F, 400.0F});
     const hover::math::Mat4 view_projection = projection * view;
 
     SDL_GPUColorTargetInfo color_target{};
@@ -643,9 +644,8 @@ int run(hover::core::DevelopmentScenario scenario) {
         return EXIT_FAILURE;
     }
     hover::render::GpuMesh engine_boost_flare_mesh{gpu_device.get()};
-    if (!engine_boost_flare_mesh.upload(
-            hover::assets::generated::make_engine_boost_flare_mesh(),
-            "generated/prototype_01_engine_boost_flare")) {
+    if (!engine_boost_flare_mesh.upload(hover::assets::generated::make_engine_boost_flare_mesh(),
+                                        "generated/prototype_01_engine_boost_flare")) {
         return EXIT_FAILURE;
     }
 
@@ -654,8 +654,13 @@ int run(hover::core::DevelopmentScenario scenario) {
     if (!world_mesh.upload(scenario_setup.world_mesh, scenario_setup.world_mesh_id)) {
         return EXIT_FAILURE;
     }
-    const SceneMeshes scene_meshes{ship_mesh, canopy_mesh, driver_mesh, engine_pulse_outer_mesh,
-                                   engine_pulse_core_mesh, engine_boost_flare_mesh, world_mesh};
+    const SceneMeshes scene_meshes{ship_mesh,
+                                   canopy_mesh,
+                                   driver_mesh,
+                                   engine_pulse_outer_mesh,
+                                   engine_pulse_core_mesh,
+                                   engine_boost_flare_mesh,
+                                   world_mesh};
     DepthTarget depth_target{gpu_device.get()};
 
     const std::string_view active_scenario = hover::core::scenario_name(scenario);
@@ -694,6 +699,7 @@ int run(hover::core::DevelopmentScenario scenario) {
     hover::game::VehicleState current_vehicle_state = scenario_setup.initial_vehicle_state;
     double engine_pulse_elapsed_seconds = 0.0;
     float engine_pulse_intensity = 0.0F;
+    hover::render::BoostCameraFeedbackState boost_camera_feedback{};
     bool running = true;
     while (running) {
         const double elapsed_seconds = frame_timer.elapsed_seconds();
@@ -739,14 +745,18 @@ int run(hover::core::DevelopmentScenario scenario) {
                 hover::render::sample_engine_pulse(engine_pulse_elapsed_seconds,
                                                    engine_pulse_intensity, speed_ratio,
                                                    current_vehicle_state.boosting);
-            const hover::math::Vec3 vehicle_vibration =
-                hover::render::sample_full_speed_vibration(engine_pulse_elapsed_seconds,
-                                                            speed_ratio);
+            const hover::math::Vec3 vehicle_vibration = hover::render::sample_full_speed_vibration(
+                engine_pulse_elapsed_seconds, speed_ratio);
+            hover::render::advance_boost_camera_feedback(boost_camera_feedback, elapsed_seconds,
+                                                         current_vehicle_state.boosting,
+                                                         speed_ratio);
+            const hover::render::BoostCameraSample boost_camera =
+                hover::render::sample_boost_camera(boost_camera_feedback.intensity);
 
             const RenderResult render_result = render_frame(
                 gpu_device.get(), window.get(), vehicle_pipeline.get(),
                 transparent_vehicle_pipeline.get(), engine_pulse_pipeline.get(), scene_meshes,
-                render_pose, engine_pulse, vehicle_vibration, depth_target);
+                render_pose, engine_pulse, vehicle_vibration, boost_camera, depth_target);
             if (render_result == RenderResult::failed) {
                 return EXIT_FAILURE;
             }

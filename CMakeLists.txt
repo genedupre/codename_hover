@@ -133,6 +133,11 @@ if(BUILD_TESTING)
     target_link_libraries(hover_engine_pulse_tests PRIVATE hover_render)
     hover_enable_warnings(hover_engine_pulse_tests)
     add_test(NAME hover_engine_pulse_tests COMMAND hover_engine_pulse_tests)
+
+    add_executable(hover_vehicle_presentation_tests tests/vehicle_presentation_tests.cpp)
+    target_link_libraries(hover_vehicle_presentation_tests PRIVATE hover_render)
+    hover_enable_warnings(hover_vehicle_presentation_tests)
+    add_test(NAME hover_vehicle_presentation_tests COMMAND hover_vehicle_presentation_tests)
 endif()
 
 include(cmake/HoverShaders.cmake)

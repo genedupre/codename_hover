@@ -137,6 +137,13 @@ ends, excess speed returns smoothly to the normal ceiling instead of snapping th
 ship down. Braking cancels a burst. This initial mechanic has no energy cost or
 cooldown and is intended for handling validation, not final balance.
 
+The prototype camera adds a speed-gated response shared by the current scenario
+camera rather than storing camera numbers in `ShipDefinition`. It activates at
+65% of this ship's normal maximum speed during a boost, latches for that burst,
+and releases smoothly afterward. Revisit whether camera feedback belongs to a
+global accessibility/presentation profile or has limited ship-specific tuning
+only when multiple ship identities require different behavior.
+
 This exists to validate timing, input, transforms, and camera plumbing. It is not
 the intended track-relative hover physics and its feel is not final.
 

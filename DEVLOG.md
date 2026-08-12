@@ -878,3 +878,33 @@ Next experiment:
 
 - Verify that one X/West press produces one complete burst, holding cannot
   retrigger it, and release-then-press starts another burst.
+
+### 2026-08-12 — speed-gated boost camera feedback
+
+Build/revision: uncommitted camera-presentation changes after `fb0223c`.
+
+Hardware and OS: Compilation and automated tests on the HP ZBook Studio 16 G11,
+Ubuntu 24.04.4 LTS. Interactive graphical feel is not yet verified.
+
+Track/scenario and settings: `runway` is the intended first test scenario.
+
+Implemented:
+
+- Camera feedback stays inactive during boost below 65% of normal maximum speed.
+- Reaching the threshold during an active burst latches the response for that
+  burst, so it cannot flicker if speed fluctuates around the boundary.
+- The presentation envelope reaches full intensity in about 0.1 seconds and
+  releases over about one third of a second while excess speed decays.
+- Full response widens vertical FOV from 60° to 68°, increases follow distance
+  from 8.5 m to 9.1 m, and increases look-ahead from 3.0 m to 3.5 m.
+- Camera state changes no simulation values and advances independently of render
+  frame rate.
+- All nine automated test executables pass, including focused speed-gate, latch,
+  release, frame-rate independence, and invalid-input coverage.
+
+Needs interactive verification:
+
+- Confirm the 65% onset feels intentional rather than late or early.
+- Confirm the FOV, pullback, and look-ahead preserve steering readability.
+- Check that release carries the speed sensation without lingering too long or
+  causing discomfort.

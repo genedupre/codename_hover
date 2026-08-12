@@ -66,14 +66,23 @@ providing substantially more yaw authority near rest and through middle speeds.
 Treat this as playtest tuning, not the final track-relative steering model.
 
 The first boost is deliberately a button-activated, one-second burst with no
-energy, cooldown, or camera effect. A rising boost-action edge starts the timed
-fixed-step state; holding the button cannot retrigger it, so the player must
-release and press again. During the burst it adds acceleration up to a ship-defined
-boosted speed ceiling. After the burst, speed above the normal ceiling decays at a
-separate ship-defined rate and settles exactly at the normal ceiling before
-ordinary throttle/coasting rules resume. Braking cancels an active burst. This
-establishes deterministic mechanics and tuning boundaries without prematurely
-designing the final energy system.
+energy or cooldown. A rising boost-action edge starts the timed fixed-step state;
+holding the button cannot retrigger it, so the player must release and press
+again. During the burst it adds acceleration up to a ship-defined boosted speed
+ceiling. After the burst, speed above the normal ceiling decays at a separate
+ship-defined rate and settles exactly at the normal ceiling before ordinary
+throttle/coasting rules resume. Braking cancels an active burst. This establishes
+deterministic mechanics and tuning boundaries without prematurely designing the
+final energy system.
+
+Boost camera feedback is presentation-only and speed-gated. When an active burst
+reaches 65% of the ship's normal maximum speed, the response latches for the
+remainder of that burst. It widens vertical FOV by at most 8°, pulls the follow
+camera back by at most 0.6 m, and adds at most 0.5 m of look-ahead. It attacks over
+roughly 0.1 seconds and releases over roughly one third of a second, allowing the
+sensation to continue while excess boost speed returns toward normal. Boosting at
+low speed still changes simulation but does not move the camera until the speed
+threshold is crossed.
 
 ## Effective speed limits
 

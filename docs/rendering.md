@@ -58,7 +58,17 @@ The first boost presentation now combines faster plume rhythm, a substantially
 wider and longer core/shell response, and a separate translucent cyan diamond
 flare at each engine. The extra geometry is only drawn while fixed-step vehicle
 state reports active boost, making boost visually distinct from ordinary
-acceleration. A future camera response remains deferred.
+acceleration.
+
+The boost camera response is a render-time envelope driven by fixed-step boost
+and speed state. It stays off below 65% of the ship's normal maximum speed. Once
+that threshold is reached during a burst, it remains latched until the burst ends
+even if speed briefly falls, then eases out rather than snapping back. At full
+intensity the follow distance increases from 8.5 m to 9.1 m, look-ahead from 3.0 m
+to 3.5 m, and vertical FOV from 60° to 68°. The smooth envelope is independent of
+render frame rate and never changes vehicle simulation. All values remain
+provisional until interactive handling tests confirm the effect supports speed
+without weakening steering readability or causing discomfort.
 
 At 97% of normal maximum speed, a smooth presentation envelope begins applying a
 very small multi-frequency local-space offset to the complete ship transform. It
@@ -87,6 +97,16 @@ The long-term PC settings should support:
 
 UI and camera layouts must use actual drawable pixel size and safe layout rules,
 not assume 1920x1080 or 16:9.
+
+Dynamic pilot portraits deliberately use low-resolution authored art even in the
+crisp modern display mode. Keep portrait texel resolution separate from its
+screen rectangle: rank and relevance may resize portraits, eliminated portraits
+may shrink away, and the complete HUD must still scale across modern outputs.
+The 32-by-32 prototype reference is not a fixed resolution: test larger asset
+tiers at 1440p and 4K, and eventually expose HUD size independently from output
+resolution. Use nearest-neighbor sampling for the portrait artwork unless an
+explicit later art-direction test chooses otherwise. See `pilot_portraits.md` for
+the portrait atlas, animation, and reflow design.
 
 ## Resolution and frame-rate policy
 

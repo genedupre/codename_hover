@@ -15,8 +15,8 @@ The project is currently in pre-production. The laptop prototype has fixed-step
 simulation, interpolated rendering, a follow camera, and simultaneous
 keyboard/mouse/SDL gamepad input. Laptop controller discovery, rumble, hotplug,
 reconnect, and simultaneous keyboard input are verified. Select/Back/View maps to
-the prototype Escape action; Start/Menu remains free, and B/East applies full
-braking alongside the analog left trigger and X/West button.
+the prototype Escape action; Start/Menu remains free, B/East and the analog left
+trigger apply braking, and X/West activates the boost burst.
 
 Two named development scenarios now share that runtime: `runway` preserves the
 long free-driving/input sandbox, while `oval` renders a closed strip from the
@@ -46,9 +46,13 @@ boost burst: a 1.28× speed ceiling, 145 m/s² added acceleration, and 170 m/s²
 excess-speed decay afterward. Holding the action does not retrigger it; release
 and press again. B/East and the left trigger remain brake and cancel an active
 burst. Boost adds a separate engine flare and stronger plume response for the
-timed state. Near normal full speed, the complete rendered ship receives a subtle
-local-space vibration that preserves turn roll and does not move the camera.
-Energy/cooldown and a boost camera effect remain deferred.
+timed state. At 65% of normal maximum speed, an active burst also latches a
+presentation-only camera response for the remainder of that burst: up to 8° more
+vertical FOV, 0.6 m more follow distance, and 0.5 m more look-ahead, with a smooth
+release while excess speed decays. A low-speed boost still works but has no camera
+response until it reaches that threshold. Near normal full speed, the complete
+rendered ship receives a subtle local-space vibration that preserves turn roll.
+Energy/cooldown remain deferred.
 
 Prototype 01's 260 m/s value is explicitly a provisional ship baseline, not a
 global maximum. Future effective speed may combine ship, track surface/zone,
@@ -76,6 +80,12 @@ deferred. Retain the remaining input, exit, suspend/resume, and display criteria
 - [Game design](docs/game_design.md) — handling, tracks, race systems, and AI.
 - [Ship system](docs/ships.md) — ship definitions, visual sources, collider
   contracts, and the current Prototype 01 state.
+- [Pilot ideas](docs/pilot_ideas.md) — tentative pilot concepts and relationships;
+  ideas here are not automatically canon.
+- [Pilot portraits](docs/pilot_portraits.md) — dynamic race portraits, expression
+  state, composited layers, damage effects, and leaderboard selection.
+- [Ship ideas](docs/ship_ideas.md) — tentative vehicle concepts kept separate from
+  implemented ship definitions.
 - [Track system](docs/tracks.md) — sampled frames, distance wrapping, coordinate
   conventions, and generated track sources.
 - [Input](docs/input.md) — semantic actions, simultaneous-device merging,
@@ -84,6 +94,10 @@ deferred. Retain the remaining input, exit, suspend/resume, and display criteria
   runtime design.
 - [Rendering and display](docs/rendering.md) — visual direction, display behavior,
   and performance policy.
+- [Audio](docs/audio.md) — source formats, runtime playback, mixing, licensing,
+  and the limits of shipped-asset protection.
+- [Persistence](docs/persistence.md) — portable settings, saves, storage backends,
+  versioning, and cloud boundaries.
 - [Platforms and release](docs/platforms_and_release.md) — desktop, Steam Deck,
   Steam, and future console plans.
 - [Development workflow](docs/development_workflow.md) — tools, build/test loop,
@@ -131,8 +145,13 @@ then read the smallest applicable set:
 | Product direction, scope, or originality | `docs/project_brief.md` |
 | Handling, track geometry, racing, AI, or camera feel | `docs/game_design.md` |
 | Ship definitions, colliders, visual sources, or adding a ship | `docs/ships.md` |
+| Pilot concepts, personalities, fiction, or roster ideas | `docs/pilot_ideas.md` |
+| Dynamic pilot portraits, expressions, portrait effects, or leader portraits | `docs/pilot_portraits.md` |
+| Tentative ship concepts or pilot/ship pairings | `docs/ship_ideas.md` |
 | Track samples, frames, seams, offsets, or generated track geometry | `docs/tracks.md` |
 | Keyboard, mouse, gamepad, Steam Input, bindings, or rumble | `docs/input.md` |
+| Sound effects, music, codecs, mixing, or audio assets | `docs/audio.md` |
+| Settings, saves, user storage, corruption recovery, or cloud sync | `docs/persistence.md` |
 | C++ structure, dependencies, ownership, simulation, or services | `docs/architecture.md` |
 | GPU code, shaders, visuals, resolutions, frame pacing, or UI rendering | `docs/rendering.md` |
 | Linux, Steam Deck, Windows, macOS, Steam, Xbox, or PlayStation | `docs/platforms_and_release.md` |
