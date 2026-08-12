@@ -49,22 +49,27 @@ land on a different path without changing position representation. See
 
 The first world-physics tune binds Q/LB/L1 to left drift and E/RB/R1 to right
 drift. A single shoulder applies lateral force even with neutral steering; both
-held cancel and use normal grip. `speedway_physics` retains exact ride height and
-the collider-aware edge safety constraint pending hover and contact work. Its
-automated behavior passes. The owner says the current result looks good but still
-permits repeated boosts and cornering without enough fear of washing or drifting
-out; the tune is not accepted as the target feel.
+held cancel and use normal grip. Available traction now falls with speed and
+sustained slip, while lifting or braking improves recovery. The previous exact
+ride height is replaced by gravity, damped hover force, penetration correction,
+and explicit supported/airborne/falling modes. `speedway_physics` has guarded
+straights and first turn, then an open second turn: walls recoil and remove scrape
+speed, while an open-edge departure falls under gravity and automatically returns
+to the last safe pose. The owner playtested this implementation and reported that
+it still does not feel even close to the intended F-Zero X physics. Treat the
+contact work as accepted architecture, not accepted handling; the next physics
+work needs measured reference reconstruction rather than more arbitrary grip
+multiplier tuning.
 
-World physics now decomposes velocity into the physical ship axes and applies
+World physics decomposes velocity into the physical ship axes and applies
 time-correct exponential damping. Positive propulsion follows a speed-shaped,
 smoothed response; measured direction change and drift force reduce it. Lateral
-slip above 8 m/s builds a persistent response that can halve propulsion and then
-releases after grip recovers. This replaces the former constant drift slowdown
-and proportional slip drag. Scalar scenarios retain their existing 90 m/s²
-coasting model; world scenarios coast through forward damping. The new baseline
-passes deterministic traces and equal-duration 60/120 Hz comparison but still
-needs further boost-speed loss-of-control work in `handling_lab` and
-`speedway_physics`.
+slip above 8 m/s builds persistent propulsion and traction loss, then releases
+after grip recovers. Scalar scenarios retain their existing 90 m/s² coasting
+model; world scenarios coast through forward damping. Deterministic traces,
+force/contact tests, wall/open-edge tests, equal-duration 60/120 Hz comparison,
+and render-schedule independence pass. The next gate is interactive comparison in
+`handling_lab` and `speedway_physics`, not another unmeasured tuning rewrite.
 
 Prototype 01's acceleration exhaust uses a strongly speed-responsive light-blue
 core and 50%-transparent outer shell. A presentation-only release envelope

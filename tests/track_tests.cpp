@@ -222,15 +222,21 @@ void test_generated_surface_mesh() {
 
     constexpr std::size_t vertices_per_quad = 6U;
     constexpr std::size_t bands_per_segment = 3U;
+    constexpr std::size_t walls_per_segment = 2U;
     const std::size_t expected_element_count =
-        track.frames.size() * bands_per_segment * vertices_per_quad;
+        track.frames.size() * (bands_per_segment + walls_per_segment) * vertices_per_quad;
     check(hover::render::is_valid(mesh), "generated track surface is a valid indexed mesh");
     check(mesh.vertices.size() == expected_element_count &&
               mesh.indices.size() == expected_element_count,
-          "surface includes three bands and the closing segment for every track frame");
+          "surface includes three bands, two walls, and the closing segment for every frame");
 
-    for (const hover::render::Vertex& vertex : mesh.vertices) {
-        check(vertex.normal.y > 0.99F, "flat oval surface triangles face upward");
+    const std::size_t vertices_per_segment =
+        (bands_per_segment + walls_per_segment) * vertices_per_quad;
+    for (std::size_t segment = 0; segment < track.frames.size(); ++segment) {
+        for (std::size_t vertex = 0; vertex < bands_per_segment * vertices_per_quad; ++vertex) {
+            check(mesh.vertices[segment * vertices_per_segment + vertex].normal.y > 0.99F,
+                  "flat oval surface bands face upward");
+        }
     }
 }
 
@@ -241,6 +247,11 @@ void test_banked_speedway() {
         .oval = oval,
         .maximum_bank_radians = maximum_bank_radians,
         .bank_transition_metres = 20.0F,
+        .second_turn_properties =
+            {
+                .left_edge = hover::game::TrackEdgePolicy::open,
+                .right_edge = hover::game::TrackEdgePolicy::open,
+            },
     };
     check(hover::game::tracks::is_valid(definition), "the banked speedway definition is valid");
 
@@ -255,6 +266,23 @@ void test_banked_speedway() {
           "speedway produces a valid generic sampled track");
     check(nearly_equal(track.length_metres, hover::game::tracks::oval_track_length(oval)),
           "banking does not change the speedway centerline length");
+
+    const float turn_length = std::numbers::pi_v<float> * oval.turn_radius_metres;
+    const hover::game::TrackProjection guarded_turn = hover::game::project_point_onto_track(
+        track,
+        hover::game::sample_track(track, oval.straight_length_metres + turn_length * 0.5F).center,
+        oval.straight_length_metres + turn_length * 0.5F, 2.0F);
+    const hover::game::TrackProjection open_turn = hover::game::project_point_onto_track(
+        track,
+        hover::game::sample_track(track, 2.0F * oval.straight_length_metres + turn_length +
+                                             turn_length * 0.5F)
+            .center,
+        2.0F * oval.straight_length_metres + turn_length + turn_length * 0.5F, 2.0F);
+    check(track.segment_properties[guarded_turn.segment_index].left_edge ==
+                  hover::game::TrackEdgePolicy::solid_wall &&
+              track.segment_properties[open_turn.segment_index].left_edge ==
+                  hover::game::TrackEdgePolicy::open,
+          "Speedway can guard its first turn while leaving its second turn open");
 
     const hover::game::TrackFrame start = hover::game::sample_track(track, 0.0F);
     check(nearly_equal(start.normal, {0.0F, 1.0F, 0.0F}) &&
@@ -278,12 +306,21 @@ void test_banked_speedway() {
           "banked left turn lowers its inside edge and raises its outside edge");
 
     const hover::render::MeshData mesh = hover::assets::generated::make_track_surface_mesh(track);
+    std::size_t solid_edge_count = 0U;
+    for (const hover::game::TrackSegmentProperties properties : track.segment_properties) {
+        solid_edge_count +=
+            properties.left_edge == hover::game::TrackEdgePolicy::solid_wall ? 1U : 0U;
+        solid_edge_count +=
+            properties.right_edge == hover::game::TrackEdgePolicy::solid_wall ? 1U : 0U;
+    }
     bool has_banked_surface = false;
     for (const hover::render::Vertex& vertex : mesh.vertices) {
         has_banked_surface = has_banked_surface || vertex.normal.y < 0.95F;
     }
     check(hover::render::is_valid(mesh) && has_banked_surface,
           "generic track mesh preserves visibly angled speedway corners");
+    check(mesh.vertices.size() == (track.frames.size() * 3U + solid_edge_count) * 6U,
+          "track mesh emits wall quads only for guarded segment edges");
 }
 
 } // namespace

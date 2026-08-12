@@ -2,6 +2,7 @@
 
 #include "hover_math.hpp"
 
+#include <cstddef>
 #include <limits>
 #include <vector>
 
@@ -16,9 +17,22 @@ struct TrackFrame {
     float half_width_metres;
 };
 
+enum class TrackEdgePolicy {
+    solid_wall,
+    open,
+};
+
+struct TrackSegmentProperties {
+    TrackEdgePolicy left_edge = TrackEdgePolicy::solid_wall;
+    TrackEdgePolicy right_edge = TrackEdgePolicy::solid_wall;
+};
+
 struct SampledTrack {
     float length_metres;
     std::vector<TrackFrame> frames;
+    // One entry for the chord beginning at the frame with the same index. The
+    // final entry describes the closing chord back to frame zero.
+    std::vector<TrackSegmentProperties> segment_properties;
 };
 
 struct TrackOffset {
@@ -32,6 +46,7 @@ struct TrackOffset {
 struct TrackProjection {
     TrackFrame frame;
     TrackOffset offset;
+    std::size_t segment_index;
     float signed_distance_from_hint_metres;
     float centerline_distance_metres;
 };

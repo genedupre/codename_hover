@@ -543,7 +543,7 @@ The handling model is ready to replace the scalar regression when:
 - Do not begin race systems, content production, or generic engine work to avoid
   completing handling.
 
-## Immediate checkpoint
+## Completed grounded checkpoint
 
 The next implementation checkpoint is Stage 0 plus the smallest part of Stage 1:
 
@@ -567,8 +567,28 @@ change, a speed-shaped/smoothed positive-propulsion response, and persistent
 sustained-slip buildup/release. The old constant drift deceleration and direct
 proportional slip drag have been removed. Automated comparison covers 60 and
 120 Hz equal-duration response plus deterministic scripted traces. Interactive
-owner acceptance remains the gate before Stage 3 hover/contact work.
+owner feedback identified boost-speed traction and contact consequences as the
+next linked milestone.
 
-Do not start hover, walls, loops, or AI during this checkpoint. Its output should
-be an understandable and measurable grounded handling core ready for owner A/B
-playtesting.
+## Current traction and contact checkpoint
+
+The dependency chain is implemented and awaiting interactive acceptance:
+
+1. [x] Reduce available grip across the boost-speed envelope and under sustained
+   slip; restore some authority through lift-off and braking.
+2. [x] Replace exact ride height with gravity, damped hover lift, penetration-only
+   correction, and supported/airborne/falling modes.
+3. [x] Add per-segment left/right solid/open edge policy and guarded-only generated
+   wall geometry.
+4. [x] Make Speedway's first turn guarded and second turn open for an A/B contact
+   test.
+5. [x] Add deterministic oriented-wall collision, falling, last-safe-pose recovery,
+   semantic events, and impact rumble.
+6. [x] Cover traction saturation, hover stability, takeoff, landing, penetration,
+   mirrored walls, open falling, recovery, track policy, and wall generation.
+
+Do not tune final values from automated assertions. The owner should next compare
+`handling_lab` and `speedway_physics`; record whether boost-speed entry now needs
+anticipation, whether lift/brake recovery is useful, and whether the first/second
+turn consequences are readable. Jumps, damage, effects, pipes, and AI remain
+subsequent stages.

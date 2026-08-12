@@ -110,9 +110,11 @@ the registry small and retain a scenario when it remains a useful regression or
 hardware diagnostic. The `runway` scenario is the current default and permanent
 free-driving/input sandbox. `oval` is the flat attached-motion reference and
 `speedway` is the first map prototype with banked turns. `speedway_physics` reuses
-exactly that geometry and spawn as an isolated comparison for the world-space
-replacement. The temporary movement selector exists only to compare and retire
-the scalar implementation; scenarios do not duplicate rendering or platform code.
+that centerline and spawn as an isolated comparison for the world-space
+replacement, while giving its second turn explicit open edges. Its straights and
+first turn remain guarded. The temporary movement selector exists only to compare
+and retire the scalar implementation; scenarios do not duplicate rendering or
+platform code.
 
 ## Input boundary
 

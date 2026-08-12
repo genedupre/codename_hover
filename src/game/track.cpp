@@ -66,7 +66,8 @@ bool is_valid(const TrackFrame& frame) {
 
 bool is_valid(const SampledTrack& track) {
     if (!std::isfinite(track.length_metres) || track.length_metres <= 0.0F ||
-        track.frames.size() < 2 || track.frames.front().distance_metres != 0.0F) {
+        track.frames.size() < 2 || track.segment_properties.size() != track.frames.size() ||
+        track.frames.front().distance_metres != 0.0F) {
         return false;
     }
 
@@ -144,6 +145,7 @@ TrackProjection project_point_onto_track(const SampledTrack& track, math::Vec3 w
     float best_distance_squared = std::numeric_limits<float>::infinity();
     float best_hint_delta = 0.0F;
     float best_unwrapped_distance = hint;
+    std::size_t best_segment_index = 0U;
 
     for (std::size_t index = 0; index < track.frames.size(); ++index) {
         const TrackFrame& start = track.frames[index];
@@ -187,6 +189,7 @@ TrackProjection project_point_onto_track(const SampledTrack& track, math::Vec3 w
                 best_distance_squared = distance_squared;
                 best_hint_delta = hint_delta;
                 best_unwrapped_distance = unwrapped_distance;
+                best_segment_index = index;
             }
         }
     }
@@ -201,6 +204,7 @@ TrackProjection project_point_onto_track(const SampledTrack& track, math::Vec3 w
                 .lateral_metres = math::dot(displacement, frame.binormal),
                 .height_metres = math::dot(displacement, frame.normal),
             },
+        .segment_index = best_segment_index,
         .signed_distance_from_hint_metres = best_hint_delta,
         .centerline_distance_metres = length(displacement),
     };

@@ -82,19 +82,21 @@ that scalar path distance should not remain the movement authority. A bounded,
 hint-aware world-point projection primitive is implemented and tested; staged
 world position/velocity/basis migration is now playable as `speedway_physics`.
 That scenario adds projection-derived progress, momentum-preserving steering,
-velocity-based grip, and directional LB/RB drift while retaining exact ride height
-and edge constraints. Two owner playtests confirmed visible improvement but found
-the model still less unstable and less speed-sensitive than its behavioral
-reference. Source-informed side-force attenuation, propulsion suppression, and
-slip loss are now implemented and tested. The accepted staged reconstruction is
+velocity-based grip, directional LB/RB drift, force-based hover/contact, and
+explicit wall/open-edge consequences. Two owner playtests confirmed the earlier
+grounded model improved visibly but remained too safe at boost speed. Available
+traction now falls with speed and sustained slip, while lift/brake recovery is
+explicit. Source-informed side-force attenuation, propulsion suppression, and
+slip loss remain implemented and tested. The accepted staged reconstruction is
 recorded in `handling_implementation_plan.md`. Its grounded-update reference
 ledger, telemetry vocabulary, named tick stages, wide flat `handling_lab`, and
 repeatable scripted traces are now implemented. Local-axis exponential damping,
 speed-dependent smoothed propulsion, measured direction-change loss, and named
 sustained-slip buildup/release now replace the provisional direct slip drag and
-constant drift slowdown. Automated equal-duration 60/120 Hz comparisons pass.
-The next checkpoint is owner A/B playtesting in `handling_lab` and
-`speedway_physics`; hover and wall work remain later.
+constant drift slowdown. Automated equal-duration 60/120 Hz comparisons and
+contact-policy tests pass. The next checkpoint is owner A/B playtesting in
+`handling_lab` and `speedway_physics`: compare boost washout, the guarded first
+turn, the open second turn, falling, and recovery before further tuning.
 
 Scope:
 

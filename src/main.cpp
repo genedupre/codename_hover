@@ -39,6 +39,20 @@ namespace {
 constexpr int initial_window_width = 1280;
 constexpr int initial_window_height = 720;
 
+const char* contact_mode_name(hover::game::VehicleContactMode mode) {
+    switch (mode) {
+    case hover::game::VehicleContactMode::supported:
+        return "supported";
+    case hover::game::VehicleContactMode::airborne:
+        return "airborne";
+    case hover::game::VehicleContactMode::falling:
+        return "falling";
+    case hover::game::VehicleContactMode::crashed:
+        return "crashed";
+    }
+    return "unknown";
+}
+
 #if defined(NDEBUG)
 constexpr bool gpu_debug_mode = false;
 #else
@@ -199,7 +213,8 @@ class FrameStatistics final {
                 "Frame timing: %.1f FPS | %.3f ms average | %.3f ms worst | %.1f km/h | "
                 "steer %.2f throttle %.2f brake %.2f drift L%s/R%s boost %s | "
                 "lateral %.2f m/s slip %.2f deg direction %.4f rad drift force %.2f "
-                "sustained %.2f propulsion %.2f m/s^2",
+                "sustained %.2f propulsion %.2f m/s^2 | grip %.1f/%.1f sat %.2f "
+                "height %.2f normal %.2f contact %s",
                 frames_per_second, average_frame_ms, worst_frame_ms,
                 static_cast<double>(speed_metres_per_second) * 3.6,
                 static_cast<double>(input.steering), static_cast<double>(input.throttle),
@@ -212,7 +227,15 @@ class FrameStatistics final {
                 static_cast<double>(handling_telemetry->drift_force_fraction),
                 static_cast<double>(handling_telemetry->sustained_slip_intensity),
                 static_cast<double>(
-                    handling_telemetry->applied_propulsion_acceleration_metres_per_second_squared));
+                    handling_telemetry->applied_propulsion_acceleration_metres_per_second_squared),
+                static_cast<double>(
+                    handling_telemetry->available_grip_deceleration_metres_per_second_squared),
+                static_cast<double>(
+                    handling_telemetry->grip_demand_deceleration_metres_per_second_squared),
+                static_cast<double>(handling_telemetry->traction_saturation_ratio),
+                static_cast<double>(handling_telemetry->height_above_surface_metres),
+                static_cast<double>(handling_telemetry->surface_normal_speed_metres_per_second),
+                contact_mode_name(handling_telemetry->contact_mode));
         } else {
             SDL_Log("Frame timing: %.1f FPS | %.3f ms average | %.3f ms worst | %.1f km/h | "
                     "steer %.2f throttle %.2f brake %.2f drift L%s/R%s boost %s",
@@ -481,7 +504,7 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
     }
     case hover::core::DevelopmentScenario::speedway:
     case hover::core::DevelopmentScenario::speedway_physics: {
-        constexpr hover::game::tracks::SpeedwayTrackDefinition speedway_definition{
+        hover::game::tracks::SpeedwayTrackDefinition speedway_definition{
             .oval =
                 {
                     .straight_length_metres = 600.0F,
@@ -492,6 +515,12 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
             .maximum_bank_radians = 0.4886921906F,
             .bank_transition_metres = 85.0F,
         };
+        if (scenario == hover::core::DevelopmentScenario::speedway_physics) {
+            speedway_definition.second_turn_properties = {
+                .left_edge = hover::game::TrackEdgePolicy::open,
+                .right_edge = hover::game::TrackEdgePolicy::open,
+            };
+        }
         constexpr std::uint32_t sample_count = 512U;
         const hover::game::SampledTrack track = hover::game::tracks::make_sampled_speedway(
             hover::game::tracks::SpeedwayTrackBuild{speedway_definition, sample_count});
@@ -815,6 +844,7 @@ int run(hover::core::DevelopmentScenario scenario) {
                             "Simulation catch-up limit reached; excess accumulated time dropped.");
             }
             bool boost_activated_this_frame = false;
+            float wall_impact_speed_this_frame = 0.0F;
             for (std::uint32_t tick = 0; tick < step_plan.tick_count; ++tick) {
                 previous_vehicle_state = current_vehicle_state;
                 hover::game::VehicleTickEvents events{};
@@ -829,7 +859,10 @@ int run(hover::core::DevelopmentScenario scenario) {
                                                                *scenario_setup.driving_track},
                                 static_cast<float>(hover::core::simulation_tick_seconds),
                             });
-                    events = result.events;
+                    events.boost_activated = result.events.boost_activated;
+                    wall_impact_speed_this_frame =
+                        std::max(wall_impact_speed_this_frame,
+                                 result.events.wall_impact_speed_metres_per_second);
                     world_track_telemetry = result.telemetry;
                     current_vehicle_state = world_track_vehicle_state->vehicle;
                 } else if (track_vehicle_state.has_value()) {
@@ -854,6 +887,17 @@ int run(hover::core::DevelopmentScenario scenario) {
             }
             if (boost_activated_this_frame) {
                 input_system.rumble_all(boost_activation_rumble);
+            }
+            if (wall_impact_speed_this_frame > 0.0F) {
+                const float impact_fraction = std::clamp(
+                    wall_impact_speed_this_frame /
+                        ship_definition.handling.base_maximum_forward_speed_metres_per_second,
+                    0.0F, 1.0F);
+                input_system.rumble_all({
+                    .low_frequency = 0.18F + 0.52F * impact_fraction,
+                    .high_frequency = 0.12F + 0.58F * impact_fraction,
+                    .duration_ms = 100,
+                });
             }
             const hover::game::VehiclePose render_pose =
                 hover::game::interpolate(previous_vehicle_state.pose, current_vehicle_state.pose,

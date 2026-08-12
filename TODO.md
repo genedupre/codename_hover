@@ -91,19 +91,19 @@ no intentional low-resolution internal renderer yet.
 
 ## Handling follow-up
 
-- [ ] Replace hard ride-height attachment with an explicit hover/suspension
-  response when vertical feel becomes the active experiment. Define spring,
-  damping, surface attraction, loss-of-contact criteria, and how these behave on
-  banks, vertical sections, and inverted loops without assuming world gravity is
-  the surface normal.
-- [ ] Add airborne/contact modes to the authoritative world-space racer state,
-  with gravity, takeoff momentum, limited airborne control, landing eligibility,
-  impact response, and path-reference refresh. A jump must be able to land on a
-  different shortcut or branch without changing position representation.
-- [ ] Define per-edge behavior instead of the provisional width clamp: solid
-  wall, guard rail, open/fall edge, soft boundary, or another explicit course
-  property. Add wall collision normals, bounce/scrape response, speed loss,
-  damage, and controller/camera feedback when that experiment begins.
+- [x] Replace hard ride-height attachment with gravity, damped hover lift,
+  penetration-only correction, contact hysteresis, and a surface-relative gravity
+  frame. Validate and retune it on vertical sections and inverted loops when those
+  track fixtures exist.
+- [ ] Add limited airborne control, route-aware landing eligibility, landing
+  impact, and path-reference refresh. Supported/airborne/falling state, gravity,
+  takeoff momentum, same-path landing, and development recovery are implemented.
+  A jump must be able to land on a different shortcut or branch without changing
+  position representation.
+- [x] Replace the provisional width clamp with per-segment solid/open edges,
+  oriented wall collision, bounce/scrape speed loss, falling, recovery, visible
+  walls, and controller rumble. Damage, sparks, sound, camera recoil, guard-rail
+  variants, and soft boundaries remain later consumers/policies.
 - [ ] Model vehicle/vehicle collision, relative mass, impact damage, explosions,
   and elimination using ship definitions rather than render-mesh dimensions.
 - [ ] Decide how track curvature, banking, slope, grip, and lift-off throttle

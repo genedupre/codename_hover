@@ -81,7 +81,11 @@ SampledTrack make_sampled_oval(OvalTrackBuild build) {
         frames.push_back(sample_oval_centerline(build.definition, distance));
     }
 
-    SampledTrack result{length, std::move(frames)};
+    SampledTrack result{
+        length,
+        std::move(frames),
+        std::vector<TrackSegmentProperties>(build.sample_count),
+    };
     assert(hover::game::is_valid(result));
     return result;
 }

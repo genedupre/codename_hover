@@ -132,6 +132,11 @@ bool nearly_equal(const hover::game::WorldTrackVehicleTelemetry& left,
            nearly_equal(left.drift_force_fraction, right.drift_force_fraction) &&
            nearly_equal(left.selected_grip_deceleration_metres_per_second_squared,
                         right.selected_grip_deceleration_metres_per_second_squared) &&
+           nearly_equal(left.available_grip_deceleration_metres_per_second_squared,
+                        right.available_grip_deceleration_metres_per_second_squared) &&
+           nearly_equal(left.grip_demand_deceleration_metres_per_second_squared,
+                        right.grip_demand_deceleration_metres_per_second_squared) &&
+           nearly_equal(left.traction_saturation_ratio, right.traction_saturation_ratio) &&
            nearly_equal(left.forward_damping_deceleration_metres_per_second_squared,
                         right.forward_damping_deceleration_metres_per_second_squared) &&
            nearly_equal(left.lateral_damping_deceleration_metres_per_second_squared,
@@ -148,6 +153,12 @@ bool nearly_equal(const hover::game::WorldTrackVehicleTelemetry& left,
            nearly_equal(left.propulsion_fraction, right.propulsion_fraction) &&
            nearly_equal(left.post_boost_return_deceleration_metres_per_second_squared,
                         right.post_boost_return_deceleration_metres_per_second_squared) &&
+           nearly_equal(left.height_above_surface_metres, right.height_above_surface_metres) &&
+           nearly_equal(left.surface_normal_speed_metres_per_second,
+                        right.surface_normal_speed_metres_per_second) &&
+           nearly_equal(left.wall_impact_speed_metres_per_second,
+                        right.wall_impact_speed_metres_per_second) &&
+           left.contact_mode == right.contact_mode &&
            left.edge_constraint_activated == right.edge_constraint_activated;
 }
 
@@ -174,6 +185,12 @@ bool nearly_equal(const TraceSample& left, const TraceSample& right) {
            left.state.vehicle.boosting == right.state.vehicle.boosting &&
            left.state.vehicle.boost_input_was_down == right.state.vehicle.boost_input_was_down &&
            left.result.events.boost_activated == right.result.events.boost_activated &&
+           left.result.events.wall_impact == right.result.events.wall_impact &&
+           left.result.events.support_lost == right.result.events.support_lost &&
+           left.result.events.landed == right.result.events.landed &&
+           left.result.events.recovered == right.result.events.recovered &&
+           nearly_equal(left.result.events.wall_impact_speed_metres_per_second,
+                        right.result.events.wall_impact_speed_metres_per_second) &&
            nearly_equal(left.result.telemetry, right.result.telemetry);
 }
 
@@ -290,6 +307,53 @@ void test_fixed_grip_loses_directional_authority_as_speed_rises() {
               boosted_maximum_slip > base_maximum_slip + 0.5F,
           "fixed grip holds a low-speed turn but leaves progressively more slip at base and "
           "boost maximum speed");
+}
+
+void test_speed_slip_and_recovery_inputs_shape_available_traction() {
+    const hover::game::SampledTrack track = make_handling_lab_track();
+    const hover::game::ShipDefinition ship = test_ship();
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    const float base_speed = ship.handling.base_maximum_forward_speed_metres_per_second;
+    const float boost_speed = base_speed * ship.handling.boost_maximum_speed_multiplier;
+
+    const auto sample_grip = [&](float speed, float slip_intensity,
+                                 hover::input::PlayerInput input) {
+        hover::game::WorldTrackVehicleState state =
+            hover::game::make_world_track_vehicle_state({}, ship, path);
+        const hover::math::Vec3 right = hover::math::normalized(
+            hover::math::cross(state.physical.basis.up, state.physical.basis.forward));
+        state.physical.velocity = state.physical.basis.forward * speed + right * 20.0F;
+        state.vehicle.forward_speed_metres_per_second = speed;
+        state.handling.sustained_slip_intensity = slip_intensity;
+        return hover::game::simulate_world_track_vehicle(
+                   state, hover::game::WorldTrackVehicleTick{input, ship, path, tick_seconds})
+            .telemetry;
+    };
+
+    const hover::game::WorldTrackVehicleTelemetry low =
+        sample_grip(base_speed * 0.5F, 0.0F, {.throttle = 1.0F});
+    const hover::game::WorldTrackVehicleTelemetry boosted =
+        sample_grip(boost_speed, 0.0F, {.throttle = 1.0F});
+    const hover::game::WorldTrackVehicleTelemetry slipping =
+        sample_grip(boost_speed, 1.0F, {.throttle = 1.0F});
+    const hover::game::WorldTrackVehicleTelemetry lifted = sample_grip(boost_speed, 0.0F, {});
+    const hover::game::WorldTrackVehicleTelemetry braking =
+        sample_grip(boost_speed, 0.0F, {.brake = 1.0F});
+
+    check(nearly_equal(low.available_grip_deceleration_metres_per_second_squared,
+                       ship.handling.world_lateral_grip_deceleration_metres_per_second_squared,
+                       0.01F) &&
+              boosted.available_grip_deceleration_metres_per_second_squared <
+                  low.available_grip_deceleration_metres_per_second_squared &&
+              slipping.available_grip_deceleration_metres_per_second_squared <
+                  boosted.available_grip_deceleration_metres_per_second_squared,
+          "boost speed and sustained slip progressively reduce available traction");
+    check(lifted.available_grip_deceleration_metres_per_second_squared >
+                  boosted.available_grip_deceleration_metres_per_second_squared &&
+              braking.available_grip_deceleration_metres_per_second_squared >
+                  lifted.available_grip_deceleration_metres_per_second_squared &&
+              slipping.traction_saturation_ratio > boosted.traction_saturation_ratio,
+          "lifting and braking recover traction while accumulated slip increases saturation");
 }
 
 void test_directional_drift_and_both_held_policy() {
@@ -435,7 +499,7 @@ void test_world_integration_derives_progress_and_wraps_seam() {
           "supported position is reconstructed only after progress is derived by projection");
 }
 
-void test_banked_basis_and_temporary_edge_constraint() {
+void test_banked_basis_and_solid_wall_response() {
     const hover::game::SampledTrack banked_track = make_banked_track();
     const hover::game::ShipDefinition ship = test_ship();
     const hover::game::ResolvedTrackPath banked_path{primary_path, banked_track};
@@ -462,8 +526,145 @@ void test_banked_basis_and_temporary_edge_constraint() {
             edge, hover::game::WorldTrackVehicleTick{{}, ship, flat_path, tick_seconds});
     check(edge.course.location.lateral_offset_metres <= maximum_lateral + tolerance &&
               hover::math::dot(edge.physical.velocity, edge.course.frame.binormal) <= tolerance &&
-              edge_result.telemetry.edge_constraint_activated,
-          "temporary edge safety constraint removes only outward lateral velocity");
+              edge_result.events.wall_impact && edge_result.telemetry.edge_constraint_activated &&
+              edge_result.events.wall_impact_speed_metres_per_second > 0.0F,
+          "a solid wall corrects penetration, reflects outward velocity, and emits impact data");
+}
+
+void test_hover_forces_takeoff_landing_and_penetration() {
+    const hover::game::SampledTrack track = make_flat_track();
+    const hover::game::ShipDefinition ship = test_ship();
+    const hover::game::ResolvedTrackPath path{primary_path, track};
+    const float target_height = ship.handling.track_ride_height_metres;
+
+    hover::game::WorldTrackVehicleState stable =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    for (int tick = 0; tick < 240; ++tick) {
+        hover::game::simulate_world_track_vehicle(
+            stable, hover::game::WorldTrackVehicleTick{{}, ship, path, tick_seconds});
+    }
+    check(stable.contact.mode == hover::game::VehicleContactMode::supported &&
+              nearly_equal(stable.course.height_above_surface_metres, target_height, 0.001F) &&
+              nearly_equal(stable.physical.velocity.y, 0.0F, 0.001F),
+          "gravity and hover force balance at the target ride height without drift");
+
+    hover::game::WorldTrackVehicleState below =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    below.physical.position.y -= 0.10F;
+    below.course.height_above_surface_metres -= 0.10F;
+    hover::game::simulate_world_track_vehicle(
+        below, hover::game::WorldTrackVehicleTick{{}, ship, path, tick_seconds});
+    hover::game::WorldTrackVehicleState above =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    above.physical.position.y += 0.20F;
+    above.course.height_above_surface_metres += 0.20F;
+    hover::game::simulate_world_track_vehicle(
+        above, hover::game::WorldTrackVehicleTick{{}, ship, path, tick_seconds});
+    check(below.physical.velocity.y > 0.0F && above.physical.velocity.y < 0.0F &&
+              !nearly_equal(above.course.height_above_surface_metres, target_height, 0.01F),
+          "hover force corrects height error without snapping the ship to its target");
+
+    hover::game::WorldTrackVehicleState takeoff =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    takeoff.physical.velocity = takeoff.physical.basis.up * 6.0F;
+    const hover::game::WorldTrackVehicleTickResult takeoff_result =
+        hover::game::simulate_world_track_vehicle(
+            takeoff, hover::game::WorldTrackVehicleTick{{}, ship, path, tick_seconds});
+    check(takeoff.contact.mode == hover::game::VehicleContactMode::airborne &&
+              takeoff_result.events.support_lost && takeoff.physical.velocity.y > 0.0F,
+          "sufficient outward normal speed leaves support without discarding momentum");
+
+    hover::game::WorldTrackVehicleState landing =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    landing.contact.mode = hover::game::VehicleContactMode::airborne;
+    landing.physical.position.y = target_height + 0.20F;
+    landing.course.height_above_surface_metres = target_height + 0.20F;
+    landing.physical.velocity = landing.physical.basis.up * -1.0F;
+    const hover::game::WorldTrackVehicleTickResult landing_result =
+        hover::game::simulate_world_track_vehicle(
+            landing, hover::game::WorldTrackVehicleTick{{}, ship, path, tick_seconds});
+    check(landing.contact.mode == hover::game::VehicleContactMode::supported &&
+              landing_result.events.landed && landing.physical.velocity.y < 0.0F,
+          "a descending airborne ship reacquires an eligible road without a height teleport");
+
+    hover::game::WorldTrackVehicleState penetrating =
+        hover::game::make_world_track_vehicle_state({}, ship, path);
+    penetrating.physical.position.y = 0.20F;
+    penetrating.course.height_above_surface_metres = 0.20F;
+    penetrating.physical.velocity = penetrating.physical.basis.up * -5.0F;
+    hover::game::simulate_world_track_vehicle(
+        penetrating, hover::game::WorldTrackVehicleTick{{}, ship, path, tick_seconds});
+    const float minimum_height =
+        ship.collision.local_bounds.half_extents.y - ship.collision.local_bounds.center.y;
+    check(nearly_equal(penetrating.course.height_above_surface_metres, minimum_height, 0.001F) &&
+              penetrating.physical.velocity.y >= 0.0F &&
+              !nearly_equal(minimum_height, target_height),
+          "surface penetration corrects only the hull clearance and removes inward velocity");
+}
+
+void test_mirrored_walls_and_open_edge_recovery() {
+    const hover::game::SampledTrack solid_track = make_flat_track();
+    const hover::game::ShipDefinition ship = test_ship();
+    const hover::game::ResolvedTrackPath solid_path{primary_path, solid_track};
+    const float maximum_lateral =
+        oval_definition().half_width_metres - ship.collision.local_bounds.half_extents.x;
+    hover::game::WorldTrackVehicleState left = hover::game::make_world_track_vehicle_state(
+        {.lateral_offset_metres = -maximum_lateral + 0.01F}, ship, solid_path);
+    hover::game::WorldTrackVehicleState right = hover::game::make_world_track_vehicle_state(
+        {.lateral_offset_metres = maximum_lateral - 0.01F}, ship, solid_path);
+    left.physical.velocity = {-50.0F, 0.0F, 100.0F};
+    right.physical.velocity = {50.0F, 0.0F, 100.0F};
+    const hover::game::WorldTrackVehicleTickResult left_result =
+        hover::game::simulate_world_track_vehicle(
+            left, hover::game::WorldTrackVehicleTick{{}, ship, solid_path, tick_seconds});
+    const hover::game::WorldTrackVehicleTickResult right_result =
+        hover::game::simulate_world_track_vehicle(
+            right, hover::game::WorldTrackVehicleTick{{}, ship, solid_path, tick_seconds});
+    check(left_result.events.wall_impact && right_result.events.wall_impact &&
+              left.physical.velocity.x > 0.0F && right.physical.velocity.x < 0.0F &&
+              nearly_equal(left.physical.velocity.x, -right.physical.velocity.x, 0.01F) &&
+              left.vehicle.forward_speed_metres_per_second < 90.0F &&
+              right.vehicle.forward_speed_metres_per_second < 90.0F,
+          "left and right walls mirror recoil while retaining only part of scrape speed");
+
+    hover::game::SampledTrack open_track = make_flat_track();
+    for (hover::game::TrackSegmentProperties& properties : open_track.segment_properties) {
+        properties.left_edge = hover::game::TrackEdgePolicy::open;
+        properties.right_edge = hover::game::TrackEdgePolicy::open;
+    }
+    const hover::game::ResolvedTrackPath open_path{primary_path, open_track};
+    hover::game::WorldTrackVehicleState falling =
+        hover::game::make_world_track_vehicle_state({}, ship, open_path);
+    const hover::math::Vec3 recovery_position = falling.contact.last_safe_physical.position;
+    falling.physical.position = hover::game::point_on_track_frame(
+        falling.course.frame, {11.9F, ship.handling.track_ride_height_metres});
+    falling.course.location.lateral_offset_metres = 11.9F;
+    falling.physical.velocity = falling.course.frame.binormal * 100.0F;
+    const hover::game::WorldTrackVehicleTickResult departure =
+        hover::game::simulate_world_track_vehicle(
+            falling, hover::game::WorldTrackVehicleTick{{}, ship, open_path, tick_seconds});
+    check(falling.contact.mode == hover::game::VehicleContactMode::falling &&
+              departure.events.support_lost && !departure.events.wall_impact &&
+              falling.course.location.lateral_offset_metres >
+                  open_track.frames.front().half_width_metres,
+          "an open edge does not clamp or reflect a departing ship");
+
+    bool recovered = false;
+    for (int tick = 0; tick < 240 && !recovered; ++tick) {
+        const hover::game::WorldTrackVehicleTickResult result =
+            hover::game::simulate_world_track_vehicle(
+                falling, hover::game::WorldTrackVehicleTick{{}, ship, open_path, tick_seconds});
+        recovered = result.events.recovered;
+    }
+    check(recovered && falling.contact.mode == hover::game::VehicleContactMode::supported &&
+              nearly_equal(falling.physical.position, recovery_position, 0.01F) &&
+              nearly_equal(falling.vehicle.forward_speed_metres_per_second,
+                           ship.handling.base_maximum_forward_speed_metres_per_second *
+                               ship.handling.world_recovery_speed_fraction,
+                           0.01F) &&
+              !falling.vehicle.boosting &&
+              nearly_equal(falling.handling.sustained_slip_intensity, 0.0F),
+          "falling recovers once to the last safe pose with reset transient handling state");
 }
 
 void test_telemetry_reconstructs_authoritative_velocity() {
@@ -505,6 +706,7 @@ void test_local_axis_damping_uses_time_correct_exponential_rates() {
     const hover::game::ResolvedTrackPath path{primary_path, track};
     hover::game::WorldTrackVehicleState state =
         hover::game::make_world_track_vehicle_state({}, ship, path);
+    state.contact.mode = hover::game::VehicleContactMode::airborne;
     const hover::math::Vec3 right = hover::math::normalized(
         hover::math::cross(state.physical.basis.up, state.physical.basis.forward));
     state.physical.velocity =
@@ -854,12 +1056,15 @@ int main() {
     test_steering_rotates_orientation_without_rotating_momentum();
     test_grip_removes_lateral_velocity_by_a_bounded_amount();
     test_fixed_grip_loses_directional_authority_as_speed_rises();
+    test_speed_slip_and_recovery_inputs_shape_available_traction();
     test_directional_drift_and_both_held_policy();
     test_drift_force_fades_as_same_direction_slide_builds();
     test_drift_suppresses_propulsion_and_loses_forward_speed();
     test_sustained_high_speed_steering_turns_slip_into_speed_loss();
     test_world_integration_derives_progress_and_wraps_seam();
-    test_banked_basis_and_temporary_edge_constraint();
+    test_banked_basis_and_solid_wall_response();
+    test_hover_forces_takeoff_landing_and_penetration();
+    test_mirrored_walls_and_open_edge_recovery();
     test_telemetry_reconstructs_authoritative_velocity();
     test_local_axis_damping_uses_time_correct_exponential_rates();
     test_speed_curve_and_propulsion_response();

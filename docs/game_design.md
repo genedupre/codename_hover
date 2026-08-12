@@ -78,12 +78,14 @@ lags; grip removes local sideways velocity by a bounded per-second amount. LB/L1
 and RB/R1 apply directional lateral forces even with neutral steering. The
 existing paragraph above describes only the retained scalar regression.
 
-Normal grip is a fixed lateral-speed removal budget, so it does not scale up to
-cancel the larger velocity-direction error produced by steering at higher speed.
-Prototype 01 is currently tuned to hold low-speed steering more readily, begin
-slipping near its normal maximum, and lose still more directional authority in
-the boost-speed envelope. Proper wall impacts and open-edge consequences are
-still required before that loss of control has its final gameplay cost.
+Normal grip begins from a fixed lateral-speed removal budget rather than scaling
+up to cancel the larger velocity-direction error produced at higher speed.
+Prototype 01 retains that full budget below 75% of base speed. It falls smoothly
+to 45% at the boosted ceiling and sustained slip can reduce it to 55% of the
+remaining amount. Releasing throttle improves recovery by 1.5x and full braking
+by 1.8x; those recovery multipliers do not stack. The handling log exposes grip
+demand, available grip, and saturation so boost-speed washout can be tuned from
+measured behavior instead of random steering noise.
 
 Directional drift must not be a constant sideways thruster. Its force fades as
 same-direction lateral speed builds, while its reduced grip lets momentum keep
@@ -103,10 +105,18 @@ and a future vertical loop do not require an unrelated horizontal steering hack.
 Along-track advancement also accounts for the shorter inside and longer outside
 lane geometry.
 
-Position and full 3D orientation are then derived from the sampled path frame.
-Prototype 01's local box footprint is provisionally constrained inside the
-sampled road width, preventing it from crossing through the surface edge before
-wall impacts, open edges, falling, and recovery have explicit mechanics.
+World position remains authoritative after projection. The 0.62 m ride height is
+now a damped-hover target under gravity rather than an assigned position.
+Supported, airborne, and falling modes share the same physical state; only real
+hull penetration is corrected. Physical up eases toward a supporting normal and
+airborne gravity-up gradually returns toward world up.
+
+Track segments declare solid or open behavior independently on each edge. A
+solid wall uses the ship's oriented box extent, corrects penetration, reflects
+outward speed, and removes some scrape velocity. An open edge never clamps. The
+current development recovery returns a falling ship to its last safely supported
+pose after 1.25 seconds or a 20 m drop, at 25% of base speed with transient boost
+and slip state cleared.
 
 This does not make the course spline an AI-only rail. Human and AI controllers
 both supply the same semantic throttle, brake, steering, directional-drift, and

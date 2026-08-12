@@ -210,7 +210,9 @@ Migrate in testable slices:
 4. Replace target lateral velocity with local-velocity grip and steering-driven
    physical orientation. Implemented provisionally and awaiting playtest tuning.
 5. Replace exact ride-height assignment with gravity plus hover spring/damping.
+   Implemented.
 6. Add explicit wall and open-edge policies before removing the safety clamp.
+   Implemented for road segments in `speedway_physics`.
 7. Add drift forces and tune their interaction with steering, traction, and
    acceleration.
 8. Add jump takeoff, airborne control, landing eligibility, and route changes.
@@ -227,9 +229,9 @@ and an interactive comparison before deleting the superseded behavior.
 selects `WorldTrackVehicleState`. The state owns world position, world velocity,
 physical forward/up, the existing gameplay/presentation state, and a derived
 course reference. Each 120 Hz tick rotates physical orientation, updates forward
-propulsion, applies drift and velocity-based grip, integrates a candidate point,
-projects it locally onto the current path, and only then enforces temporary
-ride-height and edge safety constraints.
+propulsion, applies drift and velocity-based grip, applies gravity and hover,
+integrates a candidate point, projects it locally onto the current path, and then
+resolves support, penetration, walls, or open-edge falling.
 
 The current directional drift tune is:
 
@@ -242,8 +244,9 @@ The current directional drift tune is:
 - 1.15× steering response;
 - steering can remove up to 35% of positive propulsion and full-strength drift
   can remove another 85%; combined loss is capped at 100%;
-- exponential local-axis damping at 0.240481/s forward, 0.180271/s lateral, and
-  3.71252/s normal;
+- exponential local-axis damping at 0.240481/s forward and 0.180271/s lateral;
+  the 3.71252/s normal rate is airborne-only because supported normal motion is
+  owned by hover damping;
 - propulsion remains full below 45% of base speed and smoothly reaches 0.81× at
   base maximum speed;
 - rising propulsion responds from 12/s at rest to 60/s at base maximum, while
@@ -253,13 +256,12 @@ The current directional drift tune is:
 - ordinary world coasting uses forward damping; post-boost excess speed adds a
   90 m/s² return term.
 
-Normal grip is deliberately a fixed maximum amount of sideways velocity removed
-per second, rather than a speed-proportional interpolation. A low-speed steering
-change can therefore remain fully planted while the larger direction change
-created by the same steering rate at base or boost maximum speed exceeds the
-available grip and leaves progressively more lateral slip. The 300 m/s² value was
-lowered from 420 m/s² after the first owner playtest found boosted cornering too
-safe. This is an initial tune, not an accepted final value.
+Normal grip begins as a fixed maximum amount of sideways velocity removed per
+second. Its available budget is full below 75% of base speed, falls smoothly to
+45% at the boosted ceiling, and full sustained slip reduces the remainder to
+55%. Lifting restores 1.5x and full braking 1.8x relative to that risky-speed
+budget. Telemetry reports demand, availability, and saturation. The 300 m/s²
+base remains an initial tune, not an accepted final value.
 
 The second tune follows relationships visible in the matching F-Zero X
 decompilation's [`Racer_UpdateFromControls`](https://github.com/inspectredc/fzerox/blob/main/src/game/racer.c#L3345):
@@ -286,18 +288,28 @@ slide. No random yaw is injected: instability comes from heading, momentum,
 lower grip, fading side-force authority, and delayed propulsion recovery
 disagreeing with each other.
 
-The exact ride height and collider-aware edge remain intentional temporary
-constraints. They remove velocity into the constrained direction rather than
-allowing hidden penetration to accumulate. Gravity, spring/damping hover, contact
-modes, wall/open-edge policies, jumps, and visual-basis smoothing remain later
-steps. Keep the scalar `speedway` scenario until the owner accepts this model.
+The exact ride-height assignment and universal edge clamp are removed from world
+physics. Prototype 01 uses 30 m/s² gravity, a 180/s² hover spring, 27/s damping,
+and a 120 m/s² lift cap around its 0.62 m target. Only real hull penetration is
+corrected. Explicit supported, airborne, and falling modes preserve world motion;
+physical up eases toward support and airborne gravity-up eases toward world up.
+
+Every sampled chord has independent left/right solid-wall or open-edge policy.
+Solid walls resolve the oriented local box, use 0.15 restitution, retain 85% of
+tangential scrape velocity, and emit impact telemetry/events. Open edges do not
+correct lateral motion. A fall returns to the last pose recorded at least one
+metre inside the collider-safe road after 1.25 seconds or a 20 m drop, at 25% base
+speed with transient boost/slip state reset. Damage, effects, jump ramps, and
+route-aware airborne landings remain later steps. Keep scalar `speedway` until
+the owner accepts this model.
 
 The fixed tick is internally divided into boost lifecycle, steering, local
-damping, drift/grip, sustained-slip, propulsion, and supported-contact stages.
+damping, drift/grip, sustained-slip, propulsion, gravity/hover, and contact stages.
 Every completed world-space tick returns a read-only telemetry snapshot containing
 world and local velocity, signed slip angle, measured steering direction change,
-axis damping, drift direction/force, selected grip, propulsion curve and response,
-sustained-slip state, post-boost return, and temporary edge-clamp activation.
+axis damping, drift direction/force, selected and available grip, grip demand and
+saturation, propulsion response, sustained-slip state, post-boost return, surface
+height/normal speed, contact mode, and wall impact speed.
 Telemetry is observational and never feeds back into physics.
 
 `--scenario handling_lab` runs this same authoritative simulation on a generated

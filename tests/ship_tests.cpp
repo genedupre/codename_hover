@@ -49,6 +49,12 @@ void test_first_ship_definition() {
           "Prototype 01 defines world-space grip and directional drift explicitly");
     check(ship.handling.world_lateral_grip_deceleration_metres_per_second_squared == 300.0F,
           "Prototype 01 retains less normal grip at maximum and boosted speeds");
+    check(ship.handling.world_high_speed_grip_multiplier < 1.0F &&
+              ship.handling.world_sustained_slip_grip_multiplier < 1.0F &&
+              ship.handling.world_lift_off_grip_multiplier > 1.0F &&
+              ship.handling.world_braking_grip_multiplier >
+                  ship.handling.world_lift_off_grip_multiplier,
+          "Prototype 01 defines traction washout and deliberate recovery inputs");
     check(ship.handling.world_forward_damping_per_second > 0.0F &&
               ship.handling.world_lateral_damping_per_second > 0.0F &&
               ship.handling.world_normal_damping_per_second > 0.0F &&
@@ -59,6 +65,15 @@ void test_first_ship_definition() {
               ship.handling.world_sustained_slip_release_seconds > 0.0F &&
               ship.handling.world_sustained_slip_full_propulsion_multiplier < 1.0F,
           "Prototype 01 turns sustained lateral slip into a persistent propulsion response");
+    check(ship.handling.world_gravity_acceleration_metres_per_second_squared > 0.0F &&
+              ship.handling.world_hover_spring_per_second_squared > 0.0F &&
+              ship.handling.world_hover_damping_per_second > 0.0F &&
+              ship.handling.world_support_detach_height_metres >
+                  ship.handling.world_support_landing_height_metres &&
+              ship.handling.world_wall_restitution < 1.0F &&
+              ship.handling.world_wall_tangent_retention < 1.0F &&
+              ship.handling.world_recovery_delay_seconds > 0.0F,
+          "Prototype 01 defines force-based hover, contact, wall, and recovery behavior");
     check(ship.presentation.maximum_turn_roll_radians > 0.0F &&
               ship.presentation.turn_roll_response_per_second > 0.0F,
           "Prototype 01 defines its visual turn-roll behavior explicitly");

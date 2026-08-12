@@ -74,7 +74,8 @@ hover::game::SampledTrack make_vertical_loop_track() {
             .half_width_metres = 12.0F,
         });
     }
-    return hover::game::SampledTrack{length, std::move(frames)};
+    std::vector<hover::game::TrackSegmentProperties> properties(frames.size());
+    return hover::game::SampledTrack{length, std::move(frames), std::move(properties)};
 }
 
 void test_spawn_uses_generic_path_frame() {

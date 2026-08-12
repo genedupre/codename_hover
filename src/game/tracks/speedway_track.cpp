@@ -22,6 +22,20 @@ float distance_into_turn(const SpeedwayTrackDefinition& definition, float distan
     return -1.0F;
 }
 
+TrackSegmentProperties properties_at(const SpeedwayTrackDefinition& definition,
+                                     float distance_metres) {
+    const float straight = definition.oval.straight_length_metres;
+    const float turn_length = std::numbers::pi_v<float> * definition.oval.turn_radius_metres;
+    if (distance_metres >= straight && distance_metres < straight + turn_length) {
+        return definition.first_turn_properties;
+    }
+    const float second_turn_start = 2.0F * straight + turn_length;
+    if (distance_metres >= second_turn_start) {
+        return definition.second_turn_properties;
+    }
+    return definition.straight_properties;
+}
+
 float bank_angle(const SpeedwayTrackDefinition& definition, float distance_metres) {
     const float turn_distance = distance_into_turn(definition, distance_metres);
     if (turn_distance < 0.0F) {
@@ -65,8 +79,15 @@ SampledTrack make_sampled_speedway(SpeedwayTrackBuild build) {
     assert(is_valid(build.definition));
     SampledTrack track =
         make_sampled_oval(OvalTrackBuild{build.definition.oval, build.sample_count});
-    for (TrackFrame& frame : track.frames) {
+    for (std::size_t index = 0; index < track.frames.size(); ++index) {
+        TrackFrame& frame = track.frames[index];
         apply_bank(frame, bank_angle(build.definition, frame.distance_metres));
+
+        const TrackFrame& next = track.frames[(index + 1U) % track.frames.size()];
+        const float segment_end =
+            index + 1U < track.frames.size() ? next.distance_metres : track.length_metres;
+        const float midpoint = frame.distance_metres + (segment_end - frame.distance_metres) * 0.5F;
+        track.segment_properties[index] = properties_at(build.definition, midpoint);
     }
     assert(hover::game::is_valid(track));
     return track;

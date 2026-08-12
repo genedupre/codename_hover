@@ -114,6 +114,14 @@ the start seam remain level. The resulting map is still an ordinary
 `SampledTrack`, preserving the path needed for authored tracks, loops, splits,
 and other future segment types.
 
+`SampledTrack` now stores one discrete edge-policy record per frame-to-frame
+segment, including the closing chord. Left and right edges independently select
+`solid_wall` or `open`; the policy comes from the segment selected by bounded
+world projection and is never blended like an orientation frame. Generated roads
+default to solid walls. In `speedway_physics`, both straights and both sides of
+the first turn are guarded, while both sides of the second turn are open. The
+scalar `speedway` regression remains fully guarded.
+
 Keep the flat `oval` scenario as the simplest attachment regression. Use
 `speedway` to validate that the same vehicle pose follows a banked surface without
 map-specific vehicle behavior.
@@ -165,6 +173,8 @@ Focused tests cover:
 - valid speedway frames without changing the underlying oval length;
 - a level speedway seam, configured maximum turn bank, and correct inside/outside
   edge heights;
+- discrete guarded-first/open-second Speedway turn policy and wall geometry only
+  on solid segment edges;
 - preservation of the banked orientation by the generic surface mesh;
 - spawn pose and ship-defined ride height from a generic path frame;
 - forward seam wrapping, lateral steering, and collider-aware width limits;
@@ -180,10 +190,12 @@ Focused tests cover:
 - bounded backward projection through the closed seam.
 
 The generated prototype surface consumes only `SampledTrack`. It joins three
-bands between each adjacent pair of frames and includes the implicit
-last-to-first segment, so there is no special open end. The first segment is
-copper-colored to make the start/seam visually inspectable. Variable frame widths
-are respected independently at both ends of every segment.
+surface bands between each adjacent pair of frames and includes the implicit
+last-to-first segment, so there is no special open end. Solid edges additionally
+emit two-metre cyan-blue wall quads with inward-facing winding; open edges emit no
+wall geometry. The first surface segment is copper-colored to make the start/seam
+visually inspectable. Variable frame widths are respected independently at both
+ends of every segment.
 
 ## Next boundary
 
@@ -195,11 +207,12 @@ playable regression while world-space physics replaces its movement authority in
 staged changes. Preserve `--scenario runway` as the free-driving regression
 sandbox.
 
-Next, initialize a physical world velocity/basis beside the current spawn state,
-then use the projection primitive to derive progress without allowing both models
-to move the same axis. Playtest the replacement on `speedway` before deleting the
-scalar regression. A later course graph can transition `TrackPathId` at splits
-and joins, but branch metadata and policy should arrive with the first observable
+The world-space comparison now derives progress from physical motion, applies
+force-based hover/contact, and resolves solid versus open edges. Playtest it in
+`speedway_physics`: the first turn is the guarded collision case and the second
+turn is the open-edge/falling case. Preserve scalar `speedway` until the owner
+accepts the replacement. A later course graph can transition `TrackPathId` at
+splits and joins, but branch metadata should arrive with the first observable
 split-track experiment rather than being guessed now.
 
 Loops, banks, corkscrews, and other continuously attached shapes are represented

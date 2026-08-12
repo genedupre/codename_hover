@@ -3,9 +3,10 @@
 Codename Hover is an early native-Linux prototype for a low-poly futuristic
 anti-gravity arcade racer. The current executable provides `runway`, `oval`, and
 banked `speedway` regression scenarios plus `speedway_physics`, the first playable
-world-space momentum, grip, and directional-drift experiment. `handling_lab`
-provides a wide flat surface and additional live telemetry for controlled handling
-experiments.
+world-space momentum, traction, hover, wall, and open-edge experiment. Its first
+turn is guarded and its second turn is open for direct contact testing.
+`handling_lab` provides a wide flat surface and additional live telemetry for
+controlled handling experiments.
 
 ## Build on the development laptop
 

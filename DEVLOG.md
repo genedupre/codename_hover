@@ -3,6 +3,54 @@
 Use this file for dated build and playtest observations. Keep durable product and
 architecture decisions in `docs/decisions.md` and the relevant topical document.
 
+### 2026-08-12 — traction saturation, hover contact, and explicit edges
+
+Build/revision: pending changes after `f77638a`.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS. Compilation and
+automated verification completed locally; graphical behavior and physical wall
+rumble still require owner playtesting.
+
+Track/scenario and settings: `handling_lab` and `speedway_physics`; 120 Hz fixed
+simulation. Scalar `speedway` remains the fully guarded movement regression.
+
+Good:
+
+- Available normal/drift grip is now measured separately from requested lateral
+  correction. It falls from full below 75% base speed to 45% at the boost ceiling,
+  and full sustained slip keeps 55% of that remainder.
+- Throttle lift gives 1.5x recovery grip and full brake gives 1.8x without
+  stacking. No random yaw or forced velocity rotation was added.
+- Gravity and a damped hover force replace exact ride-height assignment. Contact
+  state is explicit, only hull penetration is corrected, and world momentum
+  survives takeoff and landing.
+- Sampled segments now own independent left/right solid/open edge policy.
+  `speedway_physics` guards its straights and first turn and opens both sides of
+  its second turn; guarded sections render two-metre cyan-blue walls.
+- Solid walls use the oriented ship box, 0.15 restitution, and 85% tangential
+  retention. Their semantic impact event drives a speed-scaled 100 ms rumble.
+- Open edges do not clamp. Falling continues under gravity and returns after 1.25
+  seconds or a 20 m drop to the last collider-safe pose at 25% base speed.
+- All 11 test executables pass. New coverage exercises traction risk/recovery,
+  hover balance, correction without snapping, takeoff/landing, mirrored walls,
+  open-edge falling/recovery, segment policy, and guarded-only wall geometry.
+
+Needs work / interactive verification:
+
+- The owner playtested the result and reported that it still does not feel even
+  close to the intended F-Zero X physics. The contact milestone is therefore an
+  architectural checkpoint, not a handling-acceptance checkpoint. Continue from
+  measured reference relationships rather than treating the current traction
+  multipliers as fundamentally correct.
+- Compare a full-throttle base-speed turn and boost-speed turn in
+  `handling_lab`; confirm the latter now develops visibly stronger saturation and
+  that lifting or braking gives useful recovery rather than an automatic save.
+- In `speedway_physics`, deliberately hit the first turn's guard wall, then drive
+  off the second turn and verify the visible wall layout, impact feel/rumble,
+  falling camera behavior, and automatic recovery pose.
+- Initial constants are testable defaults, not accepted final game feel. Damage,
+  sparks, sound, camera recoil, jump ramps, and route-aware landing remain later.
+
 ### 2026-08-12 — source-shaped grounded propulsion and sustained slip
 
 Build/revision: pending changes after `73a2788`, building on the handling

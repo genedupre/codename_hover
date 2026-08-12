@@ -326,8 +326,8 @@ Keep `runway`, `oval`, and `speedway` as existing regressions while
 `speedway_physics` reuses the Speedway geometry and spawn with authoritative world
 position, velocity, and physical basis. Track progress, lateral displacement, and
 height are derived through the bounded projection query after candidate movement.
-The temporary exact ride-height and collider-aware edge constraints remain until
-hover and contact policies are implemented.
+The temporary exact ride-height and collider-aware edge constraints were
+subsequently replaced by D-026.
 
 Replace the single drift action with independent left and right semantic actions.
 LB/L1 and Q request left drift; RB/R1 and E request right drift. Each produces a
@@ -385,6 +385,30 @@ direct proportional slip drag rather than stacking both models.
 Prototype 01's initial values are tuning data, not reference constants. Require
 deterministic scripts, equal-duration 60/120 Hz comparisons, and owner playtests
 before treating the tune as accepted feel.
+
+### D-026: Make traction risk and road contact consequential
+
+Status: accepted and implemented provisionally on 2026-08-12; owner playtest
+pending.
+
+Do not create boost instability with random yaw. Shape the bounded grip already
+used by world physics: reduce available traction across the upper speed envelope
+and under sustained slip, then let throttle lift or braking recover some control.
+Expose demand, availability, and saturation through telemetry so tuning remains
+measurable.
+
+Replace exact ride-height assignment with gravity, damped hover force,
+penetration-only correction, and explicit supported/airborne/falling state while
+keeping world position and velocity authoritative. Track segments own discrete
+left/right solid or open edge policy. Solid walls correct the oriented ship box,
+recoil, remove scrape speed, and emit semantic impact feedback; open edges never
+clamp and can enter falling/recovery.
+
+Use `speedway_physics` as a deliberate A/B course: guarded straights and first
+turn, open second turn. Automatic recovery to the last collider-safe pose is a
+development policy, not the final damage/rescue design. Preserve scalar
+`speedway` until deterministic coverage and repeated owner playtests accept the
+world replacement.
 
 ## Deferred decisions
 

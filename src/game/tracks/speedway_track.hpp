@@ -10,6 +10,9 @@ struct SpeedwayTrackDefinition {
     OvalTrackDefinition oval;
     float maximum_bank_radians;
     float bank_transition_metres;
+    TrackSegmentProperties straight_properties{};
+    TrackSegmentProperties first_turn_properties{};
+    TrackSegmentProperties second_turn_properties{};
 };
 
 struct SpeedwayTrackBuild {

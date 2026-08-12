@@ -68,6 +68,12 @@ boost is activated by keyboard or mouse. No-throttle presses and simultaneous
 braking suppress both boost and the pulse. See `game_design.md` and
 `rendering.md`.
 
+World-space wall contact emits a separate semantic impact event. The current
+single-player runtime converts its impact speed into a 100 ms rumble pulse whose
+low/high amplitudes grow up to the ship's base-speed scale. Persistent penetration
+while moving away does not emit another impact. This feedback follows the
+simulation event regardless of which device supplied steering.
+
 ## Device lifecycle and capabilities
 
 - Enumerate and open existing SDL gamepads at startup.

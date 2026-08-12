@@ -45,13 +45,16 @@ float drift_direction(const input::PlayerInput& input) {
     return static_cast<float>(input.drift_right) - static_cast<float>(input.drift_left);
 }
 
-void transport_basis_to_surface(PhysicalVehicleBasis& basis, const TrackFrame& frame) {
+void smooth_basis_up(PhysicalVehicleBasis& basis, math::Vec3 target_up, float response_per_second,
+                     float tick_seconds) {
+    const float blend = 1.0F - std::exp(-response_per_second * tick_seconds);
+    const math::Vec3 blended_up = math::normalized(basis.up * (1.0F - blend) + target_up * blend);
     const math::Vec3 projected_forward =
-        basis.forward - frame.normal * math::dot(basis.forward, frame.normal);
+        basis.forward - blended_up * math::dot(basis.forward, blended_up);
     basis.forward = length_squared(projected_forward) > 0.000001F
                         ? math::normalized(projected_forward)
-                        : frame.tangent;
-    basis.up = frame.normal;
+                        : math::normalized(math::cross(right_direction(basis), blended_up));
+    basis.up = blended_up;
 }
 
 float clamp_lateral_offset(float requested, const TrackFrame& frame,
@@ -62,17 +65,43 @@ float clamp_lateral_offset(float requested, const TrackFrame& frame,
     return std::clamp(requested, minimum, maximum);
 }
 
-void remove_constrained_velocity(PhysicalVehicleState& physical, const TrackFrame& frame,
-                                 float requested_lateral, float constrained_lateral) {
-    const float lateral_speed = math::dot(physical.velocity, frame.binormal);
-    const bool stopped_at_left = constrained_lateral > requested_lateral && lateral_speed < 0.0F;
-    const bool stopped_at_right = constrained_lateral < requested_lateral && lateral_speed > 0.0F;
-    if (stopped_at_left || stopped_at_right) {
-        physical.velocity = physical.velocity - frame.binormal * lateral_speed;
-    }
+struct ColliderLateralExtent {
+    float center;
+    float radius;
+};
 
-    const float normal_speed = math::dot(physical.velocity, frame.normal);
-    physical.velocity = physical.velocity - frame.normal * normal_speed;
+ColliderLateralExtent collider_lateral_extent(const PhysicalVehicleState& physical,
+                                              const TrackFrame& frame,
+                                              const LocalBoxCollider& collider) {
+    const math::Vec3 right = right_direction(physical.basis);
+    const math::Vec3 collider_center = physical.position + right * collider.center.x +
+                                       physical.basis.up * collider.center.y +
+                                       physical.basis.forward * collider.center.z;
+    const float radius =
+        std::abs(math::dot(right, frame.binormal)) * collider.half_extents.x +
+        std::abs(math::dot(physical.basis.up, frame.binormal)) * collider.half_extents.y +
+        std::abs(math::dot(physical.basis.forward, frame.binormal)) * collider.half_extents.z;
+    return ColliderLateralExtent{
+        .center = math::dot(collider_center - frame.center, frame.binormal),
+        .radius = radius,
+    };
+}
+
+ColliderLateralExtent collider_normal_extent(const PhysicalVehicleState& physical,
+                                             const TrackFrame& frame,
+                                             const LocalBoxCollider& collider) {
+    const math::Vec3 right = right_direction(physical.basis);
+    const math::Vec3 collider_center = physical.position + right * collider.center.x +
+                                       physical.basis.up * collider.center.y +
+                                       physical.basis.forward * collider.center.z;
+    const float radius =
+        std::abs(math::dot(right, frame.normal)) * collider.half_extents.x +
+        std::abs(math::dot(physical.basis.up, frame.normal)) * collider.half_extents.y +
+        std::abs(math::dot(physical.basis.forward, frame.normal)) * collider.half_extents.z;
+    return ColliderLateralExtent{
+        .center = math::dot(collider_center - frame.center, frame.normal),
+        .radius = radius,
+    };
 }
 
 void update_presentation_pose(WorldTrackVehicleState& state) {
@@ -132,8 +161,10 @@ LocalDampingStageResult apply_local_axis_damping(WorldTrackVehicleState& state,
         forward_before * std::exp(-handling.world_forward_damping_per_second * tick.tick_seconds);
     const float lateral_after =
         lateral_before * std::exp(-handling.world_lateral_damping_per_second * tick.tick_seconds);
-    const float normal_after =
-        normal_before * std::exp(-handling.world_normal_damping_per_second * tick.tick_seconds);
+    const float normal_damping = state.contact.mode == VehicleContactMode::supported
+                                     ? 0.0F
+                                     : handling.world_normal_damping_per_second;
+    const float normal_after = normal_before * std::exp(-normal_damping * tick.tick_seconds);
     state.physical.velocity = state.physical.basis.forward * forward_after +
                               vehicle_right * lateral_after +
                               state.physical.basis.up * normal_after;
@@ -153,7 +184,7 @@ struct DriftStageResult {
 DriftStageResult resolve_drift(const WorldTrackVehicleState& state,
                                const WorldTrackVehicleTick& tick, math::Vec3 vehicle_right) {
     const float direction = drift_direction(tick.input);
-    const bool active = direction != 0.0F;
+    const bool active = direction != 0.0F && state.contact.mode == VehicleContactMode::supported;
     const float lateral_speed = math::dot(state.physical.velocity, vehicle_right);
     const float same_direction_speed = std::max(0.0F, direction * lateral_speed);
     const float force_fraction =
@@ -167,6 +198,9 @@ DriftStageResult resolve_drift(const WorldTrackVehicleState& state,
 
 struct GroundedForcesStageResult {
     float selected_grip;
+    float available_grip;
+    float grip_demand;
+    float saturation_ratio;
     float lateral_speed_after_grip;
 };
 
@@ -175,7 +209,8 @@ GroundedForcesStageResult apply_drift_and_grip(WorldTrackVehicleState& state,
                                                const DriftStageResult& drift,
                                                math::Vec3 vehicle_right) {
     const HandlingProfile& handling = tick.definition.handling;
-    if (drift.active) {
+    const bool supported = state.contact.mode == VehicleContactMode::supported;
+    if (supported && drift.active) {
         state.physical.velocity =
             state.physical.velocity +
             vehicle_right * (drift.direction * drift.force_fraction *
@@ -187,13 +222,48 @@ GroundedForcesStageResult apply_drift_and_grip(WorldTrackVehicleState& state,
     const float selected_grip =
         drift.active ? handling.world_drift_grip_deceleration_metres_per_second_squared
                      : handling.world_lateral_grip_deceleration_metres_per_second_squared;
+    if (!supported) {
+        return GroundedForcesStageResult{
+            .selected_grip = selected_grip,
+            .available_grip = 0.0F,
+            .grip_demand = 0.0F,
+            .saturation_ratio = 0.0F,
+            .lateral_speed_after_grip = lateral_speed,
+        };
+    }
+
+    const float forward_speed =
+        std::max(0.0F, math::dot(state.physical.velocity, state.physical.basis.forward));
+    const float risk_start = handling.base_maximum_forward_speed_metres_per_second *
+                             handling.world_traction_risk_start_speed_fraction;
+    const float risk_end = handling.base_maximum_forward_speed_metres_per_second *
+                           handling.boost_maximum_speed_multiplier;
+    const float speed_risk = smoothstep(risk_start, risk_end, forward_speed);
+    const float speed_multiplier =
+        1.0F + (handling.world_high_speed_grip_multiplier - 1.0F) * speed_risk;
+    const float slip_multiplier = 1.0F + (handling.world_sustained_slip_grip_multiplier - 1.0F) *
+                                             state.handling.sustained_slip_intensity;
+    constexpr float active_input_threshold = 0.001F;
+    float recovery_multiplier = 1.0F;
+    if (tick.input.brake > active_input_threshold) {
+        recovery_multiplier =
+            1.0F + (handling.world_braking_grip_multiplier - 1.0F) * tick.input.brake;
+    } else if (tick.input.throttle <= active_input_threshold) {
+        recovery_multiplier = handling.world_lift_off_grip_multiplier;
+    }
+    const float available_grip =
+        selected_grip * speed_multiplier * slip_multiplier * recovery_multiplier;
+    const float grip_demand = std::abs(lateral_speed) / tick.tick_seconds;
     const float gripped_lateral_speed =
-        move_toward_zero(lateral_speed, selected_grip * tick.tick_seconds);
+        move_toward_zero(lateral_speed, available_grip * tick.tick_seconds);
     state.physical.velocity =
         state.physical.velocity + vehicle_right * (gripped_lateral_speed - lateral_speed);
 
     return GroundedForcesStageResult{
         .selected_grip = selected_grip,
+        .available_grip = available_grip,
+        .grip_demand = grip_demand,
+        .saturation_ratio = available_grip > 0.0F ? grip_demand / available_grip : 0.0F,
         .lateral_speed_after_grip = gripped_lateral_speed,
     };
 }
@@ -319,41 +389,208 @@ apply_propulsion(WorldTrackVehicleState& state, const WorldTrackVehicleTick& tic
     };
 }
 
+void apply_gravity_and_hover(WorldTrackVehicleState& state, const WorldTrackVehicleTick& tick) {
+    const HandlingProfile& handling = tick.definition.handling;
+    const math::Vec3 gravity =
+        state.contact.gravity_up * -handling.world_gravity_acceleration_metres_per_second_squared;
+    math::Vec3 acceleration = gravity;
+    if (state.contact.mode == VehicleContactMode::supported) {
+        const math::Vec3 surface_normal = state.course.frame.normal;
+        const float normal_speed = math::dot(state.physical.velocity, surface_normal);
+        const float height_error =
+            handling.track_ride_height_metres - state.course.height_above_surface_metres;
+        const float gravity_compensation =
+            handling.world_gravity_acceleration_metres_per_second_squared *
+            std::max(0.0F, math::dot(state.contact.gravity_up, surface_normal));
+        const float hover_acceleration = std::clamp(
+            gravity_compensation + handling.world_hover_spring_per_second_squared * height_error -
+                handling.world_hover_damping_per_second * normal_speed,
+            0.0F, handling.world_maximum_hover_acceleration_metres_per_second_squared);
+        acceleration = acceleration + surface_normal * hover_acceleration;
+    }
+    state.physical.velocity = state.physical.velocity + acceleration * tick.tick_seconds;
+}
+
 struct ContactStageResult {
-    bool edge_constraint_activated;
+    bool edge_constraint_activated = false;
+    bool wall_impact = false;
+    bool support_lost = false;
+    bool landed = false;
+    bool recovered = false;
+    float wall_impact_speed = 0.0F;
 };
 
-ContactStageResult integrate_and_resolve_supported_contact(WorldTrackVehicleState& state,
-                                                           const WorldTrackVehicleTick& tick) {
-    const math::Vec3 candidate_position =
-        state.physical.position + state.physical.velocity * tick.tick_seconds;
+float resolve_wall_impact(PhysicalVehicleState& physical, math::Vec3 outward_normal,
+                          const HandlingProfile& handling) {
+    const float outward_speed = math::dot(physical.velocity, outward_normal);
+    if (outward_speed <= 0.0F) {
+        return 0.0F;
+    }
+    const math::Vec3 tangential_velocity = physical.velocity - outward_normal * outward_speed;
+    physical.velocity = tangential_velocity * handling.world_wall_tangent_retention -
+                        outward_normal * (outward_speed * handling.world_wall_restitution);
+    return outward_speed;
+}
+
+void recover_to_last_safe_pose(WorldTrackVehicleState& state, const WorldTrackVehicleTick& tick) {
+    assert(state.contact.has_last_safe_pose);
+    state.physical = state.contact.last_safe_physical;
+    state.course = state.contact.last_safe_course;
+    state.physical.velocity =
+        state.physical.basis.forward *
+        (tick.definition.handling.base_maximum_forward_speed_metres_per_second *
+         tick.definition.handling.world_recovery_speed_fraction);
+    state.contact.mode = VehicleContactMode::supported;
+    state.contact.gravity_up = state.course.frame.normal;
+    state.contact.unsupported_seconds = 0.0F;
+    state.contact.drop_from_last_safe_metres = 0.0F;
+    state.handling = {};
+    state.vehicle.boost_seconds_remaining = 0.0F;
+    state.vehicle.boosting = false;
+    state.vehicle.boost_input_was_down = tick.input.boost;
+}
+
+ContactStageResult integrate_and_resolve_contact(WorldTrackVehicleState& state,
+                                                 const WorldTrackVehicleTick& tick) {
+    ContactStageResult result{};
+    state.physical.position = state.physical.position + state.physical.velocity * tick.tick_seconds;
     const float search_radius =
         std::max(minimum_projection_search_radius_metres,
                  length(state.physical.velocity) * tick.tick_seconds * 2.0F + 2.0F);
     const TrackProjection projection =
-        project_point_onto_track(tick.path.geometry, candidate_position,
+        project_point_onto_track(tick.path.geometry, state.physical.position,
                                  state.course.location.distance_along_path_metres, search_radius);
-    const float constrained_lateral = clamp_lateral_offset(
-        projection.offset.lateral_metres, projection.frame, tick.definition.collision.local_bounds);
-    const bool edge_constraint_activated = constrained_lateral != projection.offset.lateral_metres;
-    remove_constrained_velocity(state.physical, projection.frame, projection.offset.lateral_metres,
-                                constrained_lateral);
+    const TrackSegmentProperties properties =
+        tick.path.geometry.segment_properties[projection.segment_index];
+    const HandlingProfile& handling = tick.definition.handling;
+    const LocalBoxCollider& collider = tick.definition.collision.local_bounds;
+    const VehicleContactMode previous_mode = state.contact.mode;
+
+    if (previous_mode == VehicleContactMode::supported) {
+        ColliderLateralExtent extent =
+            collider_lateral_extent(state.physical, projection.frame, collider);
+        const float left_penetration =
+            -projection.frame.half_width_metres - (extent.center - extent.radius);
+        if (left_penetration > 0.0F && properties.left_edge == TrackEdgePolicy::solid_wall) {
+            state.physical.position =
+                state.physical.position + projection.frame.binormal * left_penetration;
+            result.edge_constraint_activated = true;
+            result.wall_impact_speed = std::max(
+                result.wall_impact_speed,
+                resolve_wall_impact(state.physical, projection.frame.binormal * -1.0F, handling));
+        }
+
+        extent = collider_lateral_extent(state.physical, projection.frame, collider);
+        const float right_penetration =
+            extent.center + extent.radius - projection.frame.half_width_metres;
+        if (right_penetration > 0.0F && properties.right_edge == TrackEdgePolicy::solid_wall) {
+            state.physical.position =
+                state.physical.position - projection.frame.binormal * right_penetration;
+            result.edge_constraint_activated = true;
+            result.wall_impact_speed =
+                std::max(result.wall_impact_speed,
+                         resolve_wall_impact(state.physical, projection.frame.binormal, handling));
+        }
+        result.wall_impact = result.wall_impact_speed > 0.0F;
+    }
+
+    const math::Vec3 displacement = state.physical.position - projection.frame.center;
+    const float lateral = math::dot(displacement, projection.frame.binormal);
+    float height = math::dot(displacement, projection.frame.normal);
+    const float normal_speed = math::dot(state.physical.velocity, projection.frame.normal);
+    const ColliderLateralExtent corrected_extent =
+        collider_lateral_extent(state.physical, projection.frame, collider);
+    const bool beyond_open_left = corrected_extent.center < -projection.frame.half_width_metres &&
+                                  properties.left_edge == TrackEdgePolicy::open;
+    const bool beyond_open_right = corrected_extent.center > projection.frame.half_width_metres &&
+                                   properties.right_edge == TrackEdgePolicy::open;
 
     state.course = ProjectedCourseReference{
         .location =
             TrackLocation{
                 .path = tick.path.id,
                 .distance_along_path_metres = projection.frame.distance_metres,
-                .lateral_offset_metres = constrained_lateral,
+                .lateral_offset_metres = lateral,
             },
-        .height_above_surface_metres = tick.definition.handling.track_ride_height_metres,
+        .height_above_surface_metres = height,
         .frame = projection.frame,
     };
-    state.physical.position = point_on_track_frame(
-        projection.frame,
-        TrackOffset{constrained_lateral, tick.definition.handling.track_ride_height_metres});
-    transport_basis_to_surface(state.physical.basis, projection.frame);
-    return ContactStageResult{edge_constraint_activated};
+
+    if (previous_mode == VehicleContactMode::crashed) {
+        state.contact.mode = VehicleContactMode::crashed;
+    } else if (previous_mode == VehicleContactMode::falling) {
+        state.contact.mode = VehicleContactMode::falling;
+    } else if (beyond_open_left || beyond_open_right) {
+        state.contact.mode = VehicleContactMode::falling;
+        result.support_lost = previous_mode == VehicleContactMode::supported;
+    } else if (previous_mode == VehicleContactMode::supported &&
+               (height > handling.track_ride_height_metres +
+                             handling.world_support_detach_height_metres ||
+                normal_speed > handling.world_takeoff_normal_speed_metres_per_second)) {
+        state.contact.mode = VehicleContactMode::airborne;
+        result.support_lost = true;
+    } else if (previous_mode == VehicleContactMode::airborne && normal_speed <= 0.0F &&
+               height <= handling.track_ride_height_metres +
+                             handling.world_support_landing_height_metres) {
+        state.contact.mode = VehicleContactMode::supported;
+        result.landed = true;
+    }
+
+    if (state.contact.mode == VehicleContactMode::supported) {
+        const ColliderLateralExtent normal_extent =
+            collider_normal_extent(state.physical, projection.frame, collider);
+        const float penetration = normal_extent.radius - normal_extent.center;
+        if (penetration > 0.0F) {
+            state.physical.position =
+                state.physical.position + projection.frame.normal * penetration;
+            height += penetration;
+            state.course.height_above_surface_metres = height;
+            const float inward_speed = math::dot(state.physical.velocity, projection.frame.normal);
+            if (inward_speed < 0.0F) {
+                state.physical.velocity =
+                    state.physical.velocity - projection.frame.normal * inward_speed;
+            }
+        }
+        state.contact.gravity_up = projection.frame.normal;
+        state.contact.unsupported_seconds = 0.0F;
+        state.contact.drop_from_last_safe_metres = 0.0F;
+        smooth_basis_up(state.physical.basis, projection.frame.normal,
+                        handling.world_supported_up_response_per_second, tick.tick_seconds);
+
+        const ColliderLateralExtent safe_extent =
+            collider_lateral_extent(state.physical, projection.frame, collider);
+        if (std::abs(safe_extent.center) + safe_extent.radius +
+                handling.world_recovery_safe_margin_metres <=
+            projection.frame.half_width_metres) {
+            state.contact.last_safe_physical = state.physical;
+            state.contact.last_safe_course = state.course;
+            state.contact.has_last_safe_pose = true;
+        }
+    } else {
+        state.contact.unsupported_seconds += tick.tick_seconds;
+        const math::Vec3 world_up{0.0F, 1.0F, 0.0F};
+        const float gravity_blend =
+            1.0F -
+            std::exp(-handling.world_airborne_gravity_up_response_per_second * tick.tick_seconds);
+        state.contact.gravity_up = math::normalized(
+            state.contact.gravity_up * (1.0F - gravity_blend) + world_up * gravity_blend);
+        smooth_basis_up(state.physical.basis, state.contact.gravity_up,
+                        handling.world_airborne_gravity_up_response_per_second, tick.tick_seconds);
+        if (state.contact.has_last_safe_pose) {
+            state.contact.drop_from_last_safe_metres = std::max(
+                0.0F, math::dot(state.contact.last_safe_physical.position - state.physical.position,
+                                state.contact.last_safe_course.frame.normal));
+        }
+    }
+
+    if (state.contact.mode == VehicleContactMode::falling && state.contact.has_last_safe_pose &&
+        (state.contact.unsupported_seconds >= handling.world_recovery_delay_seconds ||
+         state.contact.drop_from_last_safe_metres >= handling.world_recovery_drop_metres)) {
+        recover_to_last_safe_pose(state, tick);
+        result.recovered = true;
+    }
+
+    return result;
 }
 
 WorldTrackVehicleTelemetry
@@ -377,6 +614,9 @@ make_telemetry(const WorldTrackVehicleState& state, const SteeringStageResult& s
         .drift_direction = drift.direction,
         .drift_force_fraction = drift.force_fraction,
         .selected_grip_deceleration_metres_per_second_squared = grounded_forces.selected_grip,
+        .available_grip_deceleration_metres_per_second_squared = grounded_forces.available_grip,
+        .grip_demand_deceleration_metres_per_second_squared = grounded_forces.grip_demand,
+        .traction_saturation_ratio = grounded_forces.saturation_ratio,
         .forward_damping_deceleration_metres_per_second_squared = damping.forward_deceleration,
         .lateral_damping_deceleration_metres_per_second_squared = damping.lateral_deceleration,
         .normal_damping_deceleration_metres_per_second_squared = damping.normal_deceleration,
@@ -390,6 +630,11 @@ make_telemetry(const WorldTrackVehicleState& state, const SteeringStageResult& s
         .propulsion_fraction = propulsion.applied_fraction,
         .post_boost_return_deceleration_metres_per_second_squared =
             propulsion.post_boost_return_deceleration,
+        .height_above_surface_metres = state.course.height_above_surface_metres,
+        .surface_normal_speed_metres_per_second =
+            math::dot(state.physical.velocity, state.course.frame.normal),
+        .wall_impact_speed_metres_per_second = contact.wall_impact_speed,
+        .contact_mode = state.contact.mode,
         .edge_constraint_activated = contact.edge_constraint_activated,
     };
 }
@@ -412,8 +657,20 @@ bool is_valid(const ProjectedCourseReference& reference) {
            std::isfinite(reference.location.distance_along_path_metres) &&
            reference.location.distance_along_path_metres >= 0.0F &&
            std::isfinite(reference.location.lateral_offset_metres) &&
-           std::isfinite(reference.height_above_surface_metres) &&
-           reference.height_above_surface_metres >= 0.0F && is_valid(reference.frame);
+           std::isfinite(reference.height_above_surface_metres) && is_valid(reference.frame);
+}
+
+bool is_valid(const SurfaceContactState& state) {
+    const bool mode_valid =
+        state.mode == VehicleContactMode::supported || state.mode == VehicleContactMode::airborne ||
+        state.mode == VehicleContactMode::falling || state.mode == VehicleContactMode::crashed;
+    return mode_valid && is_finite(state.gravity_up) &&
+           std::abs(length_squared(state.gravity_up) - 1.0F) <= basis_tolerance &&
+           std::isfinite(state.unsupported_seconds) && state.unsupported_seconds >= 0.0F &&
+           std::isfinite(state.drop_from_last_safe_metres) &&
+           state.drop_from_last_safe_metres >= 0.0F &&
+           (!state.has_last_safe_pose ||
+            (is_valid(state.last_safe_physical) && is_valid(state.last_safe_course)));
 }
 
 bool is_valid(const HandlingRuntimeState& state) {
@@ -425,8 +682,8 @@ bool is_valid(const HandlingRuntimeState& state) {
 }
 
 bool is_valid(const WorldTrackVehicleState& state) {
-    return is_valid(state.physical) && is_valid(state.course) && is_valid(state.handling) &&
-           is_valid(state.vehicle);
+    return is_valid(state.physical) && is_valid(state.course) && is_valid(state.contact) &&
+           is_valid(state.handling) && is_valid(state.vehicle);
 }
 
 bool is_valid(const WorldTrackVehicleTelemetry& telemetry) {
@@ -446,6 +703,12 @@ bool is_valid(const WorldTrackVehicleTelemetry& telemetry) {
            telemetry.drift_force_fraction >= 0.0F && telemetry.drift_force_fraction <= 1.0F &&
            std::isfinite(telemetry.selected_grip_deceleration_metres_per_second_squared) &&
            telemetry.selected_grip_deceleration_metres_per_second_squared >= 0.0F &&
+           std::isfinite(telemetry.available_grip_deceleration_metres_per_second_squared) &&
+           telemetry.available_grip_deceleration_metres_per_second_squared >= 0.0F &&
+           std::isfinite(telemetry.grip_demand_deceleration_metres_per_second_squared) &&
+           telemetry.grip_demand_deceleration_metres_per_second_squared >= 0.0F &&
+           std::isfinite(telemetry.traction_saturation_ratio) &&
+           telemetry.traction_saturation_ratio >= 0.0F &&
            std::isfinite(telemetry.forward_damping_deceleration_metres_per_second_squared) &&
            telemetry.forward_damping_deceleration_metres_per_second_squared >= 0.0F &&
            std::isfinite(telemetry.lateral_damping_deceleration_metres_per_second_squared) &&
@@ -465,7 +728,11 @@ bool is_valid(const WorldTrackVehicleTelemetry& telemetry) {
            std::isfinite(telemetry.propulsion_fraction) && telemetry.propulsion_fraction >= 0.0F &&
            telemetry.propulsion_fraction <= 1.0F &&
            std::isfinite(telemetry.post_boost_return_deceleration_metres_per_second_squared) &&
-           telemetry.post_boost_return_deceleration_metres_per_second_squared >= 0.0F;
+           telemetry.post_boost_return_deceleration_metres_per_second_squared >= 0.0F &&
+           std::isfinite(telemetry.height_above_surface_metres) &&
+           std::isfinite(telemetry.surface_normal_speed_metres_per_second) &&
+           std::isfinite(telemetry.wall_impact_speed_metres_per_second) &&
+           telemetry.wall_impact_speed_metres_per_second >= 0.0F;
 }
 
 WorldTrackVehicleState make_world_track_vehicle_state(WorldTrackVehicleSpawn spawn,
@@ -495,6 +762,29 @@ WorldTrackVehicleState make_world_track_vehicle_state(WorldTrackVehicleSpawn spa
     };
     state.physical.position = point_on_track_frame(frame, TrackOffset{lateral, ride_height});
     state.physical.basis = PhysicalVehicleBasis{frame.tangent, frame.normal};
+    const float safe_minimum = -frame.half_width_metres -
+                               definition.collision.local_bounds.center.x +
+                               definition.collision.local_bounds.half_extents.x +
+                               definition.handling.world_recovery_safe_margin_metres;
+    const float safe_maximum = frame.half_width_metres -
+                               definition.collision.local_bounds.center.x -
+                               definition.collision.local_bounds.half_extents.x -
+                               definition.handling.world_recovery_safe_margin_metres;
+    const float safe_lateral =
+        safe_minimum <= safe_maximum ? std::clamp(lateral, safe_minimum, safe_maximum) : 0.0F;
+    PhysicalVehicleState safe_physical = state.physical;
+    safe_physical.position = point_on_track_frame(frame, TrackOffset{safe_lateral, ride_height});
+    ProjectedCourseReference safe_course = state.course;
+    safe_course.location.lateral_offset_metres = safe_lateral;
+    state.contact = SurfaceContactState{
+        .mode = VehicleContactMode::supported,
+        .gravity_up = frame.normal,
+        .unsupported_seconds = 0.0F,
+        .drop_from_last_safe_metres = 0.0F,
+        .last_safe_physical = safe_physical,
+        .last_safe_course = safe_course,
+        .has_last_safe_pose = true,
+    };
     update_presentation_pose(state);
     assert(is_valid(state));
     return state;
@@ -510,7 +800,7 @@ WorldTrackVehicleTickResult simulate_world_track_vehicle(WorldTrackVehicleState&
     assert(is_valid(state));
 
     const float drift = drift_direction(tick.input);
-    const bool drift_active = drift != 0.0F;
+    const bool drift_active = drift != 0.0F && state.contact.mode == VehicleContactMode::supported;
     state.vehicle.forward_speed_metres_per_second =
         std::max(0.0F, math::dot(state.physical.velocity, state.physical.basis.forward));
     const VehicleBoostTickResult boost = advance_vehicle_boost_state(
@@ -526,7 +816,8 @@ WorldTrackVehicleTickResult simulate_world_track_vehicle(WorldTrackVehicleState&
         update_sustained_slip(state, tick, grounded_forces.lateral_speed_after_grip);
     const PropulsionStageResult propulsion =
         apply_propulsion(state, tick, boost, steering, drift_stage, slip);
-    const ContactStageResult contact = integrate_and_resolve_supported_contact(state, tick);
+    apply_gravity_and_hover(state, tick);
+    const ContactStageResult contact = integrate_and_resolve_contact(state, tick);
     state.vehicle.forward_speed_metres_per_second =
         std::max(0.0F, math::dot(state.physical.velocity, state.physical.basis.forward));
     update_vehicle_turn_roll(state.vehicle,
@@ -536,7 +827,18 @@ WorldTrackVehicleTickResult simulate_world_track_vehicle(WorldTrackVehicleState&
     update_presentation_pose(state);
     assert(is_valid(state));
     assert(is_valid(telemetry));
-    return WorldTrackVehicleTickResult{boost.events, telemetry};
+    return WorldTrackVehicleTickResult{
+        .events =
+            WorldTrackVehicleTickEvents{
+                .boost_activated = boost.events.boost_activated,
+                .wall_impact = contact.wall_impact,
+                .support_lost = contact.support_lost,
+                .landed = contact.landed,
+                .recovered = contact.recovered,
+                .wall_impact_speed_metres_per_second = contact.wall_impact_speed,
+            },
+        .telemetry = telemetry,
+    };
 }
 
 } // namespace hover::game
