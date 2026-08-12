@@ -12,7 +12,8 @@ PlayerInput merge(PlayerInput current, const PlayerInput& contribution) {
     }
     current.throttle = std::max(current.throttle, contribution.throttle);
     current.brake = std::max(current.brake, contribution.brake);
-    current.drift = current.drift || contribution.drift;
+    current.drift_left = current.drift_left || contribution.drift_left;
+    current.drift_right = current.drift_right || contribution.drift_right;
     current.boost = current.boost || contribution.boost;
     return current;
 }

@@ -165,7 +165,7 @@ void test_drift_uses_the_same_controls_with_lower_lateral_grip() {
     hover::game::simulate_track_vehicle(
         drifting,
         hover::game::TrackVehicleTick{
-            {.steering = 1.0F, .throttle = 1.0F, .drift = true}, ship, path, tick_seconds});
+            {.steering = 1.0F, .throttle = 1.0F, .drift_right = true}, ship, path, tick_seconds});
 
     check(gripping.lateral_velocity_metres_per_second >
                   drifting.lateral_velocity_metres_per_second &&

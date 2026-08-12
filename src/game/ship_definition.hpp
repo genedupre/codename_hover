@@ -20,6 +20,11 @@ struct HandlingProfile {
     float maximum_lateral_speed_metres_per_second;
     float normal_lateral_grip_per_second;
     float drift_lateral_grip_per_second;
+    float world_lateral_grip_deceleration_metres_per_second_squared;
+    float world_drift_grip_deceleration_metres_per_second_squared;
+    float world_drift_lateral_acceleration_metres_per_second_squared;
+    float world_drift_steering_multiplier;
+    float world_drift_forward_deceleration_metres_per_second_squared;
     float track_ride_height_metres;
     float boost_maximum_speed_multiplier;
     float boost_acceleration_metres_per_second_squared;

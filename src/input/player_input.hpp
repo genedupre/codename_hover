@@ -8,7 +8,8 @@ struct PlayerInput {
     float steering = 0.0F;
     float throttle = 0.0F;
     float brake = 0.0F;
-    bool drift = false;
+    bool drift_left = false;
+    bool drift_right = false;
     bool boost = false;
 };
 

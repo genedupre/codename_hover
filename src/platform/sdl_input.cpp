@@ -19,16 +19,15 @@ input::PlayerInput sample_keyboard_and_mouse() {
     result.steering = keyboard_steering;
     result.throttle = static_cast<float>(keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP]);
     result.brake = static_cast<float>(keys[SDL_SCANCODE_S] || keys[SDL_SCANCODE_DOWN]);
-    result.drift = keys[SDL_SCANCODE_SPACE];
-    result.boost =
-        keys[SDL_SCANCODE_X] || keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT];
+    result.drift_left = keys[SDL_SCANCODE_Q];
+    result.drift_right = keys[SDL_SCANCODE_E];
+    result.boost = keys[SDL_SCANCODE_X] || keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT];
 
     const SDL_MouseButtonFlags mouse_buttons = SDL_GetMouseState(nullptr, nullptr);
     result.throttle =
         std::max(result.throttle, static_cast<float>((mouse_buttons & SDL_BUTTON_LMASK) != 0U));
     result.brake =
         std::max(result.brake, static_cast<float>((mouse_buttons & SDL_BUTTON_RMASK) != 0U));
-    result.drift = result.drift || (mouse_buttons & SDL_BUTTON_X1MASK) != 0U;
     result.boost = result.boost || (mouse_buttons & SDL_BUTTON_X2MASK) != 0U;
     return result;
 }
@@ -39,7 +38,8 @@ input::PlayerInput sample_gamepad(SDL_Gamepad* gamepad) {
         input::AxisSample{SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX), stick_dead_zone});
     analog.brake = input::normalize_trigger(input::AxisSample{
         SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER), trigger_dead_zone});
-    analog.drift = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
+    analog.drift_left = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
+    analog.drift_right = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER);
 
     input::PlayerInput digital{};
     digital.steering =

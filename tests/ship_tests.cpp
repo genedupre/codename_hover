@@ -39,6 +39,14 @@ void test_first_ship_definition() {
     check(ship.handling.maximum_lateral_speed_metres_per_second > 0.0F &&
               ship.handling.track_ride_height_metres > 0.0F,
           "Prototype 01 defines attached-surface movement dimensions explicitly");
+    check(ship.handling.world_lateral_grip_deceleration_metres_per_second_squared >
+                  ship.handling.world_drift_grip_deceleration_metres_per_second_squared &&
+              ship.handling.world_drift_lateral_acceleration_metres_per_second_squared > 0.0F &&
+              ship.handling.world_drift_steering_multiplier > 1.0F &&
+              ship.handling.world_drift_forward_deceleration_metres_per_second_squared > 0.0F,
+          "Prototype 01 defines world-space grip and directional drift explicitly");
+    check(ship.handling.world_lateral_grip_deceleration_metres_per_second_squared == 300.0F,
+          "Prototype 01 retains less normal grip at maximum and boosted speeds");
     check(ship.presentation.maximum_turn_roll_radians > 0.0F &&
               ship.presentation.turn_roll_response_per_second > 0.0F,
           "Prototype 01 defines its visual turn-roll behavior explicitly");

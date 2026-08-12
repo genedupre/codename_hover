@@ -74,7 +74,9 @@ Current scenarios:
 - `oval`: Prototype 01 at the highlighted seam of a generated closed stadium
   track, providing the flat track-attached movement reference.
 - `speedway`: the first map prototype, reusing the oval centerline with level
-  straights, smoothly banked turns, and the same track-attached movement.
+  straights, smoothly banked turns, and the scalar track-attached regression.
+- `speedway_physics`: the same map and spawn using authoritative world momentum,
+  projection-derived progress, velocity-based grip, and directional drifting.
 
 Running without `--scenario` currently defaults to `runway`. The eventual normal
 game/menu boot may replace that default without removing explicit development

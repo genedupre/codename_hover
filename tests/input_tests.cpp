@@ -44,11 +44,12 @@ void test_simultaneous_merge() {
     const hover::input::PlayerInput keyboard{
         .steering = -1.0F,
         .throttle = 1.0F,
-        .drift = true,
+        .drift_left = true,
     };
     const hover::input::PlayerInput controller{
         .steering = 0.65F,
         .brake = 0.75F,
+        .drift_right = true,
         .boost = true,
     };
 
@@ -57,7 +58,8 @@ void test_simultaneous_merge() {
           "steering uses the contribution with greatest magnitude without summing");
     check(nearly_equal(merged.throttle, 1.0F) && nearly_equal(merged.brake, 0.75F),
           "independent throttle and brake actions survive simultaneous sources");
-    check(merged.drift && merged.boost, "digital actions combine with logical OR");
+    check(merged.drift_left && merged.drift_right && merged.boost,
+          "independent digital actions combine with logical OR");
 }
 
 void test_controller_exit_binding() {
@@ -118,6 +120,26 @@ void test_virtual_controller_brake_and_boost_bindings() {
                 check(boost_sample.boost, "X/West activates the digital boost action");
                 check(nearly_equal(boost_sample.brake, 0.0F),
                       "X/West boost no longer contributes braking");
+
+                check(SDL_SetJoystickVirtualButton(joystick, SDL_GAMEPAD_BUTTON_WEST, false),
+                      "virtual X/West button can be released");
+                check(
+                    SDL_SetJoystickVirtualButton(joystick, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, true),
+                    "virtual LB/L1 button can be pressed");
+                SDL_UpdateJoysticks();
+
+                const hover::input::PlayerInput left_drift_sample = input.sample_player_one();
+                check(left_drift_sample.drift_left && !left_drift_sample.drift_right,
+                      "LB/L1 activates only the left-drift action");
+
+                check(
+                    SDL_SetJoystickVirtualButton(joystick, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, true),
+                    "virtual RB/R1 button can be pressed independently");
+                SDL_UpdateJoysticks();
+
+                const hover::input::PlayerInput both_drift_sample = input.sample_player_one();
+                check(both_drift_sample.drift_left && both_drift_sample.drift_right,
+                      "both shoulder drift actions survive sampling independently");
             }
         }
         check(SDL_DetachVirtualJoystick(gamepad_id), "virtual gamepad detaches after mapping test");

@@ -120,8 +120,9 @@ VehicleTickEvents simulate_track_vehicle(TrackVehicleState& state, const TrackVe
         std::clamp(body_forward_speed * std::sin(state.heading_offset_radians),
                    -handling.maximum_lateral_speed_metres_per_second,
                    handling.maximum_lateral_speed_metres_per_second);
-    const float lateral_grip = tick.input.drift ? handling.drift_lateral_grip_per_second
-                                                : handling.normal_lateral_grip_per_second;
+    const bool drift_active = tick.input.drift_left != tick.input.drift_right;
+    const float lateral_grip = drift_active ? handling.drift_lateral_grip_per_second
+                                            : handling.normal_lateral_grip_per_second;
     const float lateral_blend = 1.0F - std::exp(-lateral_grip * tick.tick_seconds);
     state.lateral_velocity_metres_per_second +=
         (target_lateral_velocity - state.lateral_velocity_metres_per_second) * lateral_blend;

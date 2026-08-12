@@ -201,12 +201,14 @@ final physics foundation.
 Migrate in testable slices:
 
 1. Add hint-aware world-point projection without changing playable behavior.
+   Implemented.
 2. Add world velocity and a physical basis beside the existing state; initialize
-   them from the current spawn pose.
+   them from the current spawn pose. Implemented in `speedway_physics`.
 3. Make world integration authoritative in a dedicated physics scenario, then
-   derive path distance/lateral/height through projection.
+   derive path distance/lateral/height through projection. Implemented in
+   `speedway_physics`.
 4. Replace target lateral velocity with local-velocity grip and steering-driven
-   physical orientation.
+   physical orientation. Implemented provisionally and awaiting playtest tuning.
 5. Replace exact ride-height assignment with gravity plus hover spring/damping.
 6. Add explicit wall and open-edge policies before removing the safety clamp.
 7. Add drift forces and tune their interaction with steering, traction, and
@@ -218,3 +220,36 @@ Migrate in testable slices:
 Do not attempt to tune final values while both the scalar-driven and world-driven
 models contribute to the same axis. Each migration step needs deterministic tests
 and an interactive comparison before deleting the superseded behavior.
+
+## First playable world-space checkpoint
+
+`--scenario speedway_physics` reuses the banked Speedway geometry and spawn but
+selects `WorldTrackVehicleState`. The state owns world position, world velocity,
+physical forward/up, the existing gameplay/presentation state, and a derived
+course reference. Each 120 Hz tick rotates physical orientation, updates forward
+propulsion, applies drift and velocity-based grip, integrates a candidate point,
+projects it locally onto the current path, and only then enforces temporary
+ride-height and edge safety constraints.
+
+The current directional drift tune is:
+
+- LB/L1 or Q: left force; RB/R1 or E: right force;
+- both held: no drift force and normal grip;
+- 105 m/s² lateral drift acceleration;
+- 55 m/s² maximum lateral-speed removal while drifting;
+- 300 m/s² maximum lateral-speed removal normally;
+- 1.15× steering response and 20 m/s² forward loss while drifting.
+
+Normal grip is deliberately a fixed maximum amount of sideways velocity removed
+per second, rather than a speed-proportional interpolation. A low-speed steering
+change can therefore remain fully planted while the larger direction change
+created by the same steering rate at base or boost maximum speed exceeds the
+available grip and leaves progressively more lateral slip. The 300 m/s² value was
+lowered from 420 m/s² after the first owner playtest found boosted cornering too
+safe. This is an initial tune, not an accepted final value.
+
+The exact ride height and collider-aware edge remain intentional temporary
+constraints. They remove velocity into the constrained direction rather than
+allowing hidden penetration to accumulate. Gravity, spring/damping hover, contact
+modes, wall/open-edge policies, jumps, and visual-basis smoothing remain later
+steps. Keep the scalar `speedway` scenario until the owner accepts this model.

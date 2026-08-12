@@ -11,6 +11,7 @@
 #include "game/tracks/oval_track.hpp"
 #include "game/tracks/speedway_track.hpp"
 #include "game/vehicle_simulation.hpp"
+#include "game/world_track_vehicle_simulation.hpp"
 #include "hover_math.hpp"
 #include "input/player_input.hpp"
 #include "platform/sdl_input.hpp"
@@ -192,20 +193,23 @@ class FrameStatistics final {
         const double worst_frame_ms = sample_worst_frame_seconds_ * 1000.0;
 
         SDL_Log("Frame timing: %.1f FPS | %.3f ms average | %.3f ms worst | %.1f km/h | "
-                "steer %.2f throttle %.2f brake %.2f boost %s",
+                "steer %.2f throttle %.2f brake %.2f drift L%s/R%s boost %s",
                 frames_per_second, average_frame_ms, worst_frame_ms,
                 static_cast<double>(speed_metres_per_second) * 3.6,
                 static_cast<double>(input.steering), static_cast<double>(input.throttle),
-                static_cast<double>(input.brake), input.boost ? "on" : "off");
+                static_cast<double>(input.brake), input.drift_left ? "on" : "off",
+                input.drift_right ? "on" : "off", input.boost ? "on" : "off");
 
         if (title_updates_enabled_) {
             char title[192]{};
-            SDL_snprintf(title, sizeof(title),
-                         "Codename Hover | %.1f FPS | %.2f ms | %.0f km/h | S %.2f T %.2f B %.2f%s",
-                         frames_per_second, average_frame_ms,
-                         static_cast<double>(speed_metres_per_second) * 3.6,
-                         static_cast<double>(input.steering), static_cast<double>(input.throttle),
-                         static_cast<double>(input.brake), input.boost ? " | BOOST" : "");
+            SDL_snprintf(
+                title, sizeof(title),
+                "Codename Hover | %.1f FPS | %.2f ms | %.0f km/h | S %.2f T %.2f B %.2f%s%s%s",
+                frames_per_second, average_frame_ms,
+                static_cast<double>(speed_metres_per_second) * 3.6,
+                static_cast<double>(input.steering), static_cast<double>(input.throttle),
+                static_cast<double>(input.brake), input.drift_left ? " | DRIFT L" : "",
+                input.drift_right ? " | DRIFT R" : "", input.boost ? " | BOOST" : "");
             if (!SDL_SetWindowTitle(window_, title)) {
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Could not update the window title: %s",
                             SDL_GetError());
@@ -407,21 +411,26 @@ struct SceneMeshes {
     const hover::render::GpuMesh& world;
 };
 
+enum class ScenarioMovement : std::uint8_t {
+    planar,
+    scalar_track,
+    world_track,
+};
+
 struct ScenarioSetup {
     hover::render::MeshData world_mesh;
     std::string_view world_mesh_id;
     hover::game::VehicleState initial_vehicle_state;
     std::optional<hover::game::SampledTrack> driving_track;
+    ScenarioMovement movement;
 };
 
-ScenarioSetup make_track_scenario_setup(hover::game::SampledTrack track,
-                                        std::string_view world_mesh_id) {
+ScenarioSetup
+make_track_scenario_setup(hover::game::SampledTrack track, std::string_view world_mesh_id,
+                          ScenarioMovement movement = ScenarioMovement::scalar_track) {
     hover::render::MeshData world_mesh = hover::assets::generated::make_track_surface_mesh(track);
     return ScenarioSetup{
-        std::move(world_mesh),
-        world_mesh_id,
-        {},
-        std::move(track),
+        std::move(world_mesh), world_mesh_id, {}, std::move(track), movement,
     };
 }
 
@@ -433,6 +442,7 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
             "generated/presentation_pad",
             {},
             std::nullopt,
+            ScenarioMovement::planar,
         };
     case hover::core::DevelopmentScenario::oval: {
         constexpr hover::game::tracks::OvalTrackDefinition oval_definition{
@@ -446,7 +456,8 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
             hover::game::tracks::OvalTrackBuild{oval_definition, sample_count});
         return make_track_scenario_setup(track, "generated/oval_track_surface");
     }
-    case hover::core::DevelopmentScenario::speedway: {
+    case hover::core::DevelopmentScenario::speedway:
+    case hover::core::DevelopmentScenario::speedway_physics: {
         constexpr hover::game::tracks::SpeedwayTrackDefinition speedway_definition{
             .oval =
                 {
@@ -461,7 +472,11 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
         constexpr std::uint32_t sample_count = 512U;
         const hover::game::SampledTrack track = hover::game::tracks::make_sampled_speedway(
             hover::game::tracks::SpeedwayTrackBuild{speedway_definition, sample_count});
-        return make_track_scenario_setup(track, "generated/speedway_track_surface");
+        const ScenarioMovement movement =
+            scenario == hover::core::DevelopmentScenario::speedway_physics
+                ? ScenarioMovement::world_track
+                : ScenarioMovement::scalar_track;
+        return make_track_scenario_setup(track, "generated/speedway_track_surface", movement);
     }
     }
 
@@ -720,12 +735,21 @@ int run(hover::core::DevelopmentScenario scenario) {
     hover::game::VehicleState current_vehicle_state = scenario_setup.initial_vehicle_state;
     constexpr hover::game::TrackPathId primary_path_id{1U};
     std::optional<hover::game::TrackVehicleState> track_vehicle_state;
-    if (scenario_setup.driving_track.has_value()) {
+    std::optional<hover::game::WorldTrackVehicleState> world_track_vehicle_state;
+    if (scenario_setup.driving_track.has_value() &&
+        scenario_setup.movement == ScenarioMovement::scalar_track) {
         track_vehicle_state = hover::game::make_track_vehicle_state(
             {}, ship_definition,
             hover::game::ResolvedTrackPath{primary_path_id, *scenario_setup.driving_track});
         previous_vehicle_state = track_vehicle_state->vehicle;
         current_vehicle_state = track_vehicle_state->vehicle;
+    } else if (scenario_setup.driving_track.has_value() &&
+               scenario_setup.movement == ScenarioMovement::world_track) {
+        world_track_vehicle_state = hover::game::make_world_track_vehicle_state(
+            {}, ship_definition,
+            hover::game::ResolvedTrackPath{primary_path_id, *scenario_setup.driving_track});
+        previous_vehicle_state = world_track_vehicle_state->vehicle;
+        current_vehicle_state = world_track_vehicle_state->vehicle;
     }
     double engine_pulse_elapsed_seconds = 0.0;
     float engine_pulse_intensity = 0.0F;
@@ -757,7 +781,18 @@ int run(hover::core::DevelopmentScenario scenario) {
             for (std::uint32_t tick = 0; tick < step_plan.tick_count; ++tick) {
                 previous_vehicle_state = current_vehicle_state;
                 hover::game::VehicleTickEvents events{};
-                if (track_vehicle_state.has_value()) {
+                if (world_track_vehicle_state.has_value()) {
+                    events = hover::game::simulate_world_track_vehicle(
+                        *world_track_vehicle_state,
+                        hover::game::WorldTrackVehicleTick{
+                            player_input,
+                            ship_definition,
+                            hover::game::ResolvedTrackPath{primary_path_id,
+                                                           *scenario_setup.driving_track},
+                            static_cast<float>(hover::core::simulation_tick_seconds),
+                        });
+                    current_vehicle_state = world_track_vehicle_state->vehicle;
+                } else if (track_vehicle_state.has_value()) {
                     events = hover::game::simulate_track_vehicle(
                         *track_vehicle_state,
                         hover::game::TrackVehicleTick{

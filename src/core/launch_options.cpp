@@ -23,6 +23,11 @@ constexpr std::array scenario_registry{
         "speedway",
         "First map prototype: attached driving on an oval speedway with banked turns.",
     },
+    DevelopmentScenarioInfo{
+        DevelopmentScenario::speedway_physics,
+        "speedway_physics",
+        "Banked speedway using world-space momentum, grip, and directional drift.",
+    },
 };
 
 std::optional<DevelopmentScenario> parse_scenario(std::string_view name) {

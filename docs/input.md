@@ -10,7 +10,7 @@ vehicle simulation never reads SDL devices or button names directly.
 
 - signed analog steering in `[-1.0, 1.0]`;
 - analog throttle and brake in `[0.0, 1.0]`;
-- digital drift and boost actions.
+- independent digital left-drift, right-drift, and boost actions.
 
 A digital button therefore contributes `0.0` or `1.0` to an analog action. Using
 the controller's A/South button for full throttle does not turn throttle into a
@@ -38,7 +38,8 @@ before local multiplayer, but are not part of this one-player prototype.
 | Steer | A/D or Left/Right | Left stick X or D-pad |
 | Throttle | W/Up or left mouse | A/South button, 100% |
 | Brake | S/Down or right mouse | Left trigger analog or B/East button |
-| Drift | Space or mouse X1 | Left shoulder |
+| Drift left | Q | LB/L1/Left shoulder |
+| Drift right | E | RB/R1/Right shoulder |
 | Boost | X, Shift, or mouse X2 | X/West button |
 | Rumble test | R | Y/North button |
 | Escape | Escape/window close | Select/Back/View button |
@@ -46,15 +47,18 @@ before local multiplayer, but are not part of this one-player prototype.
 The Select/Back/View button currently exits because the prototype has no menu flow.
 Start/Menu remains available for a future pause/menu action. B/East contributes
 100% to the analog brake action and the left trigger preserves proportional
-braking. X/West moved from duplicate braking to boost; the right shoulder is
-currently free.
+braking. X/West moved from duplicate braking to boost. The shoulder actions remain
+independent after simultaneous-device merging; holding both produces no drift
+force and uses normal grip in the world-physics prototype.
 
 The right trigger is deliberately unbound for throttle in this checkpoint. The
 logical position names South/East/West/North are authoritative; printed letters
 vary on Nintendo-style and other layouts.
 
-Drift remains represented but does not yet alter the provisional runway
-simulation. Boost uses the rising edge of its merged digital action to start a
+Directional drift affects only `speedway_physics` for now. LB/L1 or Q applies a
+leftward force; RB/R1 or E applies a rightward force even with neutral steering.
+The runway, oval, and scalar speedway retain their existing movement behavior.
+Boost uses the rising edge of its merged digital action to start a
 timed fixed-step burst when throttle is positive and brake is inactive. Holding a
 source does not continuously boost or retrigger the action; after an ineligible
 press, the player must release and press again. A successful activation produces

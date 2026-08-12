@@ -77,6 +77,7 @@ add_library(hover_game STATIC
     src/game/tracks/oval_track.cpp
     src/game/tracks/speedway_track.cpp
     src/game/vehicle_simulation.cpp
+    src/game/world_track_vehicle_simulation.cpp
 )
 target_include_directories(hover_game PUBLIC src)
 target_link_libraries(hover_game PUBLIC hover_input hover_math)
@@ -135,6 +136,15 @@ if(BUILD_TESTING)
     target_link_libraries(hover_track_vehicle_simulation_tests PRIVATE hover_core hover_game)
     hover_enable_warnings(hover_track_vehicle_simulation_tests)
     add_test(NAME hover_track_vehicle_simulation_tests COMMAND hover_track_vehicle_simulation_tests)
+
+    add_executable(hover_world_track_vehicle_simulation_tests
+        tests/world_track_vehicle_simulation_tests.cpp
+    )
+    target_link_libraries(hover_world_track_vehicle_simulation_tests PRIVATE hover_core hover_game)
+    hover_enable_warnings(hover_world_track_vehicle_simulation_tests)
+    add_test(NAME hover_world_track_vehicle_simulation_tests
+        COMMAND hover_world_track_vehicle_simulation_tests
+    )
 
     add_executable(hover_engine_pulse_tests tests/engine_pulse_tests.cpp)
     target_link_libraries(hover_engine_pulse_tests PRIVATE hover_render)

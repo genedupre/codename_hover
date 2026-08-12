@@ -317,6 +317,28 @@ Nintendo content, internal units, or 60/50 Hz per-tick constants. Codename Hover
 implementation, SI-scale tuning, 120 Hz fixed step, route graph, and content remain original. The
 staged migration and verified reference links are recorded in `physics.md`.
 
+### D-023: Validate world motion beside the scalar Speedway
+
+Status: accepted and implemented provisionally on 2026-08-12.
+
+Keep `runway`, `oval`, and `speedway` as existing regressions while
+`speedway_physics` reuses the Speedway geometry and spawn with authoritative world
+position, velocity, and physical basis. Track progress, lateral displacement, and
+height are derived through the bounded projection query after candidate movement.
+The temporary exact ride-height and collider-aware edge constraints remain until
+hover and contact policies are implemented.
+
+Replace the single drift action with independent left and right semantic actions.
+LB/L1 and Q request left drift; RB/R1 and E request right drift. Each produces a
+lateral force without steering input. Holding both cancels drift force and uses
+normal grip. Keep the provisional force, grip, steering, and speed-loss values in
+the ship handling definition so multiple ships can later differ without input or
+renderer special cases.
+
+Do not remove the scalar scenario until the world-space model passes deterministic
+coverage and owner playtests. Do not tune hover, real edges, or jumps inside this
+comparison checkpoint.
+
 ## Deferred decisions
 
 - Final game title, fiction, and visual design language.

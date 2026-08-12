@@ -84,6 +84,11 @@ Its provisional definition currently specifies:
 | Maximum attached lateral speed | 42 m/s |
 | Normal lateral grip | 7.0/s |
 | Drift lateral grip | 2.4/s |
+| World-space normal lateral grip | 300 m/s² |
+| World-space drift lateral grip | 55 m/s² |
+| Directional drift acceleration | 105 m/s² |
+| Drift steering multiplier | 1.15× |
+| Drift forward deceleration | 20 m/s² |
 | Track ride height | 0.62 m |
 | Boost speed multiplier | 1.28× (332.8 m/s ceiling) |
 | Boost acceleration | 145 m/s² |
@@ -122,7 +127,7 @@ collider or handling automatically merely because the authored mesh changed.
 
 ## Current provisional simulation
 
-Prototype 01 consumes semantic input at a fixed 120 Hz in two movement modes. The
+Prototype 01 consumes semantic input at a fixed 120 Hz in three movement modes. The
 `runway` keeps its planar free-driving simulation. `oval` and `speedway` share an
 attached simulation that advances path distance, uses speed-scaled lateral
 heading and grip for steering, keeps the provisional box footprint inside the
@@ -132,6 +137,17 @@ must be steered rather than being followed automatically. Both modes
 share acceleration, braking, coasting, boost, and smoothed visual turn roll.
 Rendering interpolates the previous/current full 3D pose; the camera follows its
 surface-relative up direction without inheriting the additional visual turn roll.
+
+`speedway_physics` is the isolated replacement experiment. It owns world position,
+velocity, and physical orientation; steering rotates the ship without directly
+rotating momentum. Normal grip removes up to 300 m/s² of local sideways velocity.
+Because that is a fixed per-second limit, low-speed turning can remain planted
+while base-maximum and boosted turning produce progressively more slip. This
+value was reduced from 420 m/s² after boosted cornering proved too forgiving in
+the first owner playtest and remains provisional.
+LB/L1 or Q and RB/R1 or E apply opposite 105 m/s² lateral forces, use the lower
+55 m/s² drift grip, multiply steering by 1.15, and apply 20 m/s² forward loss.
+These values are playable starting points, not accepted final balance.
 
 Pressing boost currently starts a one-second burst that accelerates above
 Prototype 01's provisional 260 m/s base ceiling to at most 332.8 m/s. Holding X

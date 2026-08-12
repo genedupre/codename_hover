@@ -72,6 +72,19 @@ tangent. Forward speed is resolved into along-track and sideways components.
 Normal or drift grip controls how quickly actual lateral velocity approaches the
 sideways component, capped by the ship's maximum lateral speed.
 
+The separate `speedway_physics` comparison now implements the intended
+world-authoritative boundary. Steering rotates the physical ship while momentum
+lags; grip removes local sideways velocity by a bounded per-second amount. LB/L1
+and RB/R1 apply directional lateral forces even with neutral steering. The
+existing paragraph above describes only the retained scalar regression.
+
+Normal grip is a fixed lateral-speed removal budget, so it does not scale up to
+cancel the larger velocity-direction error produced by steering at higher speed.
+Prototype 01 is currently tuned to hold low-speed steering more readily, begin
+slipping near its normal maximum, and lose still more directional authority in
+the boost-speed envelope. Proper wall impacts and open-edge consequences are
+still required before that loss of control has its final gameplay cost.
+
 As the path advances, its change in horizontal direction is removed from the
 ship's relative heading. Consequently, entering a horizontal corner without
 steering causes the road to turn underneath the ship and carries it toward the
@@ -87,7 +100,8 @@ sampled road width, preventing it from crossing through the surface edge before
 wall impacts, open edges, falling, and recovery have explicit mechanics.
 
 This does not make the course spline an AI-only rail. Human and AI controllers
-both supply the same semantic throttle, brake, steering, drift, and boost values.
+both supply the same semantic throttle, brake, steering, directional-drift, and
+boost values.
 Course-level logic will later resolve a path ID and perform explicit transitions
 at splits or joins. Jump takeoff retains world motion while support is lost;
 landing selects an eligible path and refreshes the derived course reference.

@@ -109,16 +109,17 @@ Scenario names are parsed into a closed enum so unknown names fail clearly. Keep
 the registry small and retain a scenario when it remains a useful regression or
 hardware diagnostic. The `runway` scenario is the current default and permanent
 free-driving/input sandbox. `oval` is the flat attached-motion reference and
-`speedway` is the first map prototype with banked turns. Both use the same
-track-vehicle simulation; a scenario supplies geometry and spawn configuration,
-not a parallel movement implementation.
+`speedway` is the first map prototype with banked turns. `speedway_physics` reuses
+exactly that geometry and spawn as an isolated comparison for the world-space
+replacement. The temporary movement selector exists only to compare and retire
+the scalar implementation; scenarios do not duplicate rendering or platform code.
 
 ## Input boundary
 
 SDL keyboard, mouse, and gamepad state is translated by platform code into
 semantic `PlayerInput` values before reaching simulation. All connected input
 classes remain active together. Vehicle logic consumes normalized steering,
-throttle, brake, drift, and boost values and does not know which device produced
+throttle, brake, left/right drift, and boost values and does not know which device produced
 them. See `input.md` for merge rules and current prototype bindings.
 
 ## Rendering boundary

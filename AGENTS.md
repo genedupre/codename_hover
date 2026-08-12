@@ -18,17 +18,21 @@ reconnect, and simultaneous keyboard input are verified. Select/Back/View maps t
 the prototype Escape action; Start/Menu remains free, B/East and the analog left
 trigger apply braking, and X/West activates the boost burst.
 
-Three named development scenarios now share that runtime: `runway` preserves the
+Four named development scenarios now share that runtime: `runway` preserves the
 long free-driving/input sandbox; `oval` preserves the flat closed sampled-track
 reference; and `speedway` is the first map prototype, with level straights and
-two turns that smoothly bank to 28 degrees. All spawn at a level seam. The oval
-surface and closed seam were visually verified on the laptop on 2026-08-11;
-the owner visually accepted the standalone `speedway` surface on 2026-08-12.
+two turns that smoothly bank to 28 degrees. `speedway_physics` reuses that map and
+spawn with authoritative world momentum, projection-derived progress,
+velocity-based grip, and directional drift. All track scenarios spawn at a level
+seam. The oval surface and closed seam were visually verified on the laptop on
+2026-08-11; the owner visually accepted the standalone `speedway` surface on
+2026-08-12.
 `runway` remains free and planar. `oval` and `speedway` now use deterministic
 track-attached prototype movement. The ship owns a persistent heading in the
 local surface plane; steering rotates that heading, grip changes lateral velocity
-toward its direction, and centerline curvature is not automatic steering. An unsteered ship
-therefore reaches the outside edge of a horizontal corner. Sampled surface
+toward its direction, and centerline curvature is not automatic steering. An
+unsteered ship therefore reaches the outside edge of a horizontal corner. Sampled
+surface
 orientation still supplies pitch and roll for banks and future loops. The
 ship/camera follow the resulting 3D pose, and the ship's collider-sized footprint
 is provisionally clamped inside the road width. This revised behavior still needs
@@ -40,6 +44,12 @@ onto eligible nearby paths. The current scalar-distance traversal is scaffolding
 not the final movement foundation. True jumps change contact/force policy and may
 land on a different path without changing position representation. See
 `docs/physics.md`; do not jump ahead to race systems.
+
+The first world-physics tune binds Q/LB/L1 to left drift and E/RB/R1 to right
+drift. A single shoulder applies lateral force even with neutral steering; both
+held cancel and use normal grip. `speedway_physics` retains exact ride height and
+the collider-aware edge safety constraint pending hover and contact work. Its
+automated behavior passes, but its handling and camera still need owner playtest.
 
 Prototype 01's acceleration exhaust uses a strongly speed-responsive light-blue
 core and 50%-transparent outer shell. A presentation-only release envelope

@@ -91,10 +91,6 @@ no intentional low-resolution internal renderer yet.
 
 ## Handling follow-up
 
-- [ ] Split the provisional `drift` action into semantic left-drift and
-  right-drift actions. Bind controller LB/L1 to left and RB/R1 to right; choose
-  separate keyboard/mouse defaults and define the both-held policy before the
-  world-space drift-force experiment.
 - [ ] Replace hard ride-height attachment with an explicit hover/suspension
   response when vertical feel becomes the active experiment. Define spring,
   damping, surface attraction, loss-of-contact criteria, and how these behave on

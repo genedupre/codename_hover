@@ -3,6 +3,67 @@
 Use this file for dated build and playtest observations. Keep durable product and
 architecture decisions in `docs/decisions.md` and the relevant topical document.
 
+### 2026-08-12 — boosted cornering grip follow-up
+
+Owner feedback: Prototype 01 could boost and corner without enough visible drift
+or loss of control. The world-space model already separated heading from momentum
+and removed only a bounded amount of lateral speed, but the 420 m/s² normal-grip
+tune and temporary safe edge constraint masked that behavior.
+
+Normal world-space grip is now 300 m/s². A deterministic test verifies that the
+same steering input is planted at low speed, slips at normal maximum speed, and
+slips further at boosted maximum speed. Qualitative handling remains pending
+another owner playtest; the temporary edge clamp still prevents the final wall
+impact or fall-off consequence.
+
+### 2026-08-12 — first world-space Speedway physics checkpoint
+
+Build/revision: pending changes after `15ad089`.
+
+Hardware and OS: HP ZBook Studio 16 G11, Ubuntu 24.04.4 LTS; native Wayland,
+Vulkan SDL_GPU backend, debug validation enabled.
+
+Input device: wired Steam Controller plus virtual SDL gamepad tests and
+deterministic semantic input.
+
+Track/scenario and settings: new `--scenario speedway_physics`; existing banked
+Speedway geometry, 120 Hz fixed simulation, temporary exact ride height and
+collider-aware road-edge safety constraint.
+
+Good:
+
+- World position, velocity, and physical orientation now drive the comparison
+  scenario; bounded course projection derives progress after candidate motion.
+- Steering rotates physical orientation without directly rotating momentum.
+- Normal grip removes lateral velocity by a bounded per-second amount.
+- Q/LB/L1 and E/RB/R1 apply equal opposite directional drift forces; both held
+  cancel drift and use normal grip.
+- Seam projection, banking, boost/braking integration, temporary edge response,
+  and tested 24–360 Hz render schedules have deterministic coverage.
+- The scalar `speedway` remains available for direct comparison.
+- The real scenario opened, accepted steering/throttle/brake/boost input over an
+  extended run, and shut down cleanly without a reported validation error.
+
+Needs work:
+
+- Owner qualitative feedback is not yet recorded for steering inertia, drift
+  strength, grip, speed loss, banking, camera behavior, seam crossing, or the
+  temporary edge response. Current frame diagnostics also do not print the two
+  drift actions, so their live use cannot be confirmed from captured logs alone.
+- Gravity, hover spring/damping, wall/open-edge policy, airborne motion, and jumps
+  are deliberately not part of this checkpoint.
+
+Measurements:
+
+- During the extended 1280×720 debug-validation run, most one-second presentation
+  samples were approximately 135–143 FPS. This is a smoke observation, not a
+  shipping performance result or a claim about game feel.
+
+Next experiment:
+
+- Run `./build/development/codename_hover --scenario speedway_physics` on the
+  laptop and compare it directly with `--scenario speedway`.
+
 ## Entry template
 
 ### YYYY-MM-DD — short description

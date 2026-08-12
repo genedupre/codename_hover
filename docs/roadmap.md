@@ -80,7 +80,11 @@ for both track scenarios. Deterministic tests cover these behaviors across teste
 24–360 Hz render schedules. Direct F-Zero X decompilation research then showed
 that scalar path distance should not remain the movement authority. A bounded,
 hint-aware world-point projection primitive is implemented and tested; staged
-world position/velocity/basis migration is now the active handling work.
+world position/velocity/basis migration is now playable as `speedway_physics`.
+That scenario adds projection-derived progress, momentum-preserving steering,
+velocity-based grip, and directional LB/RB drift while retaining exact ride height
+and edge constraints. Automated coverage passes; interactive laptop feel and
+camera verification are next.
 
 Scope:
 
