@@ -36,47 +36,77 @@ void test_first_ship_definition() {
 
 void test_first_ship_mesh() {
     const hover::render::MeshData mesh = hover::assets::generated::make_prototype_01_mesh();
+    const hover::render::MeshData canopy =
+        hover::assets::generated::make_prototype_01_canopy_mesh();
+    const hover::render::MeshData driver =
+        hover::assets::generated::make_prototype_01_driver_mesh();
     const hover::game::LocalBoxCollider collider =
         hover::game::ships::prototype_01_definition().collision.local_bounds;
 
     check(hover::render::is_valid(mesh), "Prototype 01 produces valid indexed triangles");
+    check(hover::render::is_valid(canopy), "Prototype 01 produces valid canopy triangles");
+    check(hover::render::is_valid(driver), "Prototype 01 produces valid driver triangles");
     check(mesh.vertices.size() >= 150U, "Prototype 01 is more detailed than the bootstrap mesh");
     check(mesh.vertices.size() < 1000U, "Prototype 01 remains deliberately low-poly");
 
     bool all_normals_are_unit_length = true;
     bool all_vertices_are_inside_collider = true;
-    for (const hover::render::Vertex& vertex : mesh.vertices) {
-        const float normal_length = std::sqrt(hover::math::dot(vertex.normal, vertex.normal));
-        all_normals_are_unit_length =
-            all_normals_are_unit_length && std::abs(normal_length - 1.0F) <= tolerance;
+    for (const hover::render::MeshData* part : {&mesh, &canopy, &driver}) {
+        for (const hover::render::Vertex& vertex : part->vertices) {
+            const float normal_length = std::sqrt(hover::math::dot(vertex.normal, vertex.normal));
+            all_normals_are_unit_length =
+                all_normals_are_unit_length && std::abs(normal_length - 1.0F) <= tolerance;
 
-        const hover::math::Vec3 relative = vertex.position - collider.center;
-        all_vertices_are_inside_collider =
-            all_vertices_are_inside_collider &&
-            std::abs(relative.x) <= collider.half_extents.x + tolerance &&
-            std::abs(relative.y) <= collider.half_extents.y + tolerance &&
-            std::abs(relative.z) <= collider.half_extents.z + tolerance;
+            const hover::math::Vec3 relative = vertex.position - collider.center;
+            all_vertices_are_inside_collider =
+                all_vertices_are_inside_collider &&
+                std::abs(relative.x) <= collider.half_extents.x + tolerance &&
+                std::abs(relative.y) <= collider.half_extents.y + tolerance &&
+                std::abs(relative.z) <= collider.half_extents.z + tolerance;
+        }
+    }
+
+    bool canopy_is_half_transparent = true;
+    for (const hover::render::Vertex& vertex : canopy.vertices) {
+        canopy_is_half_transparent =
+            canopy_is_half_transparent && std::abs(vertex.opacity - 0.5F) <= tolerance;
+    }
+    bool driver_is_opaque = true;
+    for (const hover::render::Vertex& vertex : driver.vertices) {
+        driver_is_opaque = driver_is_opaque && std::abs(vertex.opacity - 1.0F) <= tolerance;
     }
 
     check(all_normals_are_unit_length, "Prototype 01 has flat unit-length face normals");
     check(all_vertices_are_inside_collider,
           "Prototype 01 visual geometry fits inside its local collision box");
+    check(canopy_is_half_transparent, "Prototype 01 canopy has 50 percent opacity");
+    check(driver_is_opaque, "Prototype 01 driver silhouette is opaque beneath the canopy");
 }
 
 void test_engine_pulse_mesh() {
-    const hover::render::MeshData mesh = hover::assets::generated::make_engine_pulse_mesh();
-    check(hover::render::is_valid(mesh), "engine pulse produces valid indexed triangles");
-    check(mesh.vertices.size() == 36U && mesh.indices.size() == 36U,
-          "engine pulse remains a deliberately tiny low-poly plume");
+    const hover::render::MeshData outer = hover::assets::generated::make_engine_pulse_outer_mesh();
+    const hover::render::MeshData core = hover::assets::generated::make_engine_pulse_core_mesh();
+    check(hover::render::is_valid(outer) && hover::render::is_valid(core),
+          "both engine pulse layers produce valid indexed triangles");
+    check(outer.vertices.size() == 36U && outer.indices.size() == 36U &&
+              core.vertices.size() == 36U && core.indices.size() == 36U,
+          "each engine pulse layer remains a deliberately tiny low-poly plume");
 
-    bool begins_at_socket_and_extends_rearward = true;
-    for (const hover::render::Vertex& vertex : mesh.vertices) {
-        begins_at_socket_and_extends_rearward = begins_at_socket_and_extends_rearward &&
-                                                vertex.position.z <= 0.0F &&
-                                                vertex.position.z >= -1.35F;
+    bool outer_is_transparent_and_rearward = true;
+    for (const hover::render::Vertex& vertex : outer.vertices) {
+        outer_is_transparent_and_rearward =
+            outer_is_transparent_and_rearward && vertex.position.z <= 0.0F &&
+            vertex.position.z >= -2.85F && std::abs(vertex.opacity - 0.5F) <= tolerance;
     }
-    check(begins_at_socket_and_extends_rearward,
-          "engine pulse is authored behind its local engine socket");
+    bool core_is_opaque_and_rearward = true;
+    for (const hover::render::Vertex& vertex : core.vertices) {
+        core_is_opaque_and_rearward = core_is_opaque_and_rearward && vertex.position.z <= 0.0F &&
+                                      vertex.position.z >= -2.35F &&
+                                      std::abs(vertex.opacity - 1.0F) <= tolerance;
+    }
+    check(outer_is_transparent_and_rearward,
+          "outer engine pulse extends rearward with 50 percent opacity");
+    check(core_is_opaque_and_rearward, "light-blue engine core is opaque and extends rearward");
 }
 
 } // namespace

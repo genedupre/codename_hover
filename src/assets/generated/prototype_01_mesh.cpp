@@ -16,7 +16,9 @@ constexpr Vec3 hull_side{0.11F, 0.28F, 0.72F};
 constexpr Vec3 hull_lower{0.045F, 0.075F, 0.16F};
 constexpr Vec3 wing_top{0.43F, 0.12F, 0.72F};
 constexpr Vec3 wing_side{0.15F, 0.13F, 0.42F};
-constexpr Vec3 canopy{0.015F, 0.28F, 0.36F};
+constexpr Vec3 canopy_glass{0.08F, 0.48F, 0.68F};
+constexpr Vec3 driver_suit{0.018F, 0.028F, 0.055F};
+constexpr Vec3 driver_helmet{0.08F, 0.18F, 0.25F};
 constexpr Vec3 engine_body{0.12F, 0.18F, 0.40F};
 constexpr Vec3 engine_side{0.05F, 0.08F, 0.20F};
 constexpr Vec3 exhaust{1.0F, 0.24F, 0.035F};
@@ -27,6 +29,7 @@ struct OutwardTriangle {
     Vec3 third;
     Vec3 interior;
     Vec3 color;
+    float opacity = 1.0F;
 };
 
 struct OutwardQuad {
@@ -36,6 +39,7 @@ struct OutwardQuad {
     Vec3 fourth;
     Vec3 interior;
     Vec3 color;
+    float opacity = 1.0F;
 };
 
 void add_outward_triangle(MeshBuilder& builder, const OutwardTriangle& surface) {
@@ -50,14 +54,17 @@ void add_outward_triangle(MeshBuilder& builder, const OutwardTriangle& surface) 
     if (math::dot(normal, face_center - surface.interior) < 0.0F) {
         std::swap(second, third);
     }
-    builder.add_triangle(Triangle{surface.first, second, third, surface.color});
+    builder.add_triangle(
+        Triangle{surface.first, second, third, surface.color, surface.opacity});
 }
 
 void add_outward_quad(MeshBuilder& builder, const OutwardQuad& surface) {
     add_outward_triangle(builder, OutwardTriangle{surface.first, surface.second, surface.third,
-                                                  surface.interior, surface.color});
+                                                  surface.interior, surface.color,
+                                                  surface.opacity});
     add_outward_triangle(builder, OutwardTriangle{surface.first, surface.third, surface.fourth,
-                                                  surface.interior, surface.color});
+                                                  surface.interior, surface.color,
+                                                  surface.opacity});
 }
 
 using Ring = std::array<Vec3, 4>;
@@ -179,7 +186,18 @@ void add_engine(MeshBuilder& builder, float center_x) {
     }
 }
 
-void add_canopy(MeshBuilder& builder) {
+void add_canopy_floor(MeshBuilder& builder) {
+    constexpr Vec3 interior{0.0F, 0.40F, 0.22F};
+    constexpr Vec3 front_left{-0.36F, 0.25F, 1.08F};
+    constexpr Vec3 front_right{0.36F, 0.25F, 1.08F};
+    constexpr Vec3 rear_left{-0.42F, 0.30F, -0.70F};
+    constexpr Vec3 rear_right{0.42F, 0.30F, -0.70F};
+
+    add_outward_quad(
+        builder, OutwardQuad{front_left, rear_left, rear_right, front_right, interior, hull_top});
+}
+
+void add_canopy_glass(MeshBuilder& builder) {
     constexpr Vec3 interior{0.0F, 0.40F, 0.22F};
     constexpr Vec3 front_left{-0.36F, 0.25F, 1.08F};
     constexpr Vec3 front_right{0.36F, 0.25F, 1.08F};
@@ -187,17 +205,62 @@ void add_canopy(MeshBuilder& builder) {
     constexpr Vec3 rear_right{0.42F, 0.30F, -0.70F};
     constexpr Vec3 roof_front{0.0F, 0.55F, 0.92F};
     constexpr Vec3 roof_rear{0.0F, 0.63F, -0.48F};
+    constexpr float glass_opacity = 0.5F;
 
-    add_outward_triangle(builder,
-                         OutwardTriangle{front_left, front_right, roof_front, interior, canopy});
-    add_outward_triangle(builder,
-                         OutwardTriangle{rear_right, rear_left, roof_rear, interior, canopy});
-    add_outward_quad(builder,
-                     OutwardQuad{front_left, roof_front, roof_rear, rear_left, interior, canopy});
-    add_outward_quad(builder,
-                     OutwardQuad{front_right, rear_right, roof_rear, roof_front, interior, canopy});
-    add_outward_quad(
-        builder, OutwardQuad{front_left, rear_left, rear_right, front_right, interior, hull_top});
+    add_outward_triangle(
+        builder, OutwardTriangle{front_left, front_right, roof_front, interior, canopy_glass,
+                                 glass_opacity});
+    add_outward_triangle(
+        builder, OutwardTriangle{rear_right, rear_left, roof_rear, interior, canopy_glass,
+                                 glass_opacity});
+    add_outward_quad(builder, OutwardQuad{front_left, roof_front, roof_rear, rear_left, interior,
+                                         canopy_glass, glass_opacity});
+    add_outward_quad(builder, OutwardQuad{front_right, rear_right, roof_rear, roof_front, interior,
+                                         canopy_glass, glass_opacity});
+}
+
+void add_driver(MeshBuilder& builder) {
+    constexpr Vec3 head_center{0.0F, 0.475F, 0.08F};
+    constexpr Vec3 head_top{0.0F, 0.58F, 0.08F};
+    constexpr Vec3 head_bottom{0.0F, 0.38F, 0.08F};
+    constexpr Vec3 head_left{-0.105F, 0.475F, 0.08F};
+    constexpr Vec3 head_right{0.105F, 0.475F, 0.08F};
+    constexpr Vec3 head_front{0.0F, 0.475F, 0.20F};
+    constexpr Vec3 head_rear{0.0F, 0.475F, -0.04F};
+    constexpr std::array head_faces{
+        OutwardTriangle{head_top, head_front, head_right, head_center, driver_helmet},
+        OutwardTriangle{head_top, head_left, head_front, head_center, driver_helmet},
+        OutwardTriangle{head_top, head_rear, head_left, head_center, driver_helmet},
+        OutwardTriangle{head_top, head_right, head_rear, head_center, driver_helmet},
+        OutwardTriangle{head_bottom, head_right, head_front, head_center, driver_helmet},
+        OutwardTriangle{head_bottom, head_front, head_left, head_center, driver_helmet},
+        OutwardTriangle{head_bottom, head_left, head_rear, head_center, driver_helmet},
+        OutwardTriangle{head_bottom, head_rear, head_right, head_center, driver_helmet},
+    };
+    for (const OutwardTriangle& face : head_faces) {
+        add_outward_triangle(builder, face);
+    }
+
+    constexpr Ring torso_front{
+        Vec3{0.0F, 0.41F, 0.26F},
+        Vec3{0.18F, 0.34F, 0.26F},
+        Vec3{0.13F, 0.27F, 0.26F},
+        Vec3{-0.18F, 0.34F, 0.26F},
+    };
+    constexpr Ring torso_rear{
+        Vec3{0.0F, 0.41F, -0.28F},
+        Vec3{0.18F, 0.34F, -0.28F},
+        Vec3{0.13F, 0.27F, -0.28F},
+        Vec3{-0.18F, 0.34F, -0.28F},
+    };
+    constexpr Vec3 torso_center{0.0F, 0.34F, -0.01F};
+    constexpr std::array torso_colors{driver_suit, driver_suit, driver_suit, driver_suit};
+    connect_rings(builder,
+                  RingConnection{torso_front, torso_rear, torso_center, torso_colors});
+    add_outward_quad(builder, OutwardQuad{torso_front[0], torso_front[1], torso_front[2],
+                                          torso_front[3], torso_center, driver_suit});
+    add_outward_quad(builder, OutwardQuad{torso_rear[0], torso_rear[3], torso_rear[2],
+                                          torso_rear[1], torso_center, driver_suit});
 }
 
 } // namespace
@@ -209,7 +272,19 @@ render::MeshData make_prototype_01_mesh() {
     add_wing(builder, -1.0F);
     add_engine(builder, 0.72F);
     add_engine(builder, -0.72F);
-    add_canopy(builder);
+    add_canopy_floor(builder);
+    return std::move(builder).build();
+}
+
+render::MeshData make_prototype_01_canopy_mesh() {
+    MeshBuilder builder;
+    add_canopy_glass(builder);
+    return std::move(builder).build();
+}
+
+render::MeshData make_prototype_01_driver_mesh() {
+    MeshBuilder builder;
+    add_driver(builder);
     return std::move(builder).build();
 }
 

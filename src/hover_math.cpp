@@ -63,10 +63,14 @@ Mat4 translation(Vec3 offset) {
 }
 
 Mat4 scaling(float uniform_scale) {
+    return scaling(Vec3{uniform_scale, uniform_scale, uniform_scale});
+}
+
+Mat4 scaling(Vec3 scale) {
     Mat4 result{};
-    result.at(0, 0) = uniform_scale;
-    result.at(1, 1) = uniform_scale;
-    result.at(2, 2) = uniform_scale;
+    result.at(0, 0) = scale.x;
+    result.at(1, 1) = scale.y;
+    result.at(2, 2) = scale.z;
     result.at(3, 3) = 1.0F;
     return result;
 }

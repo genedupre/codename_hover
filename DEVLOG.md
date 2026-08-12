@@ -731,3 +731,40 @@ Next experiment:
 
 - Continue with oval centerline simulation. Revisit pulse art direction when
   visual feedback or boost behavior provides a concrete reason.
+
+### 2026-08-12 — layered exhaust and visible driver
+
+Build/revision: `2332651` plus the layered-transparency presentation changes.
+
+Hardware and OS: Automated tests and graphical launch on the HP ZBook Studio 16
+G11, Ubuntu 24.04.4 LTS, Wayland and Vulkan.
+
+Input device: Wired Steam Controller. The owner drove the runway and described
+the first light-blue layered exhaust revision as looking cool.
+
+Track/scenario and settings: `--scenario runway`; decorated 1280x720 window,
+Prototype 01's free-planar simulation and follow camera.
+
+Good:
+
+- The accepted exhaust direction uses an opaque light-blue core and a larger
+  50%-transparent shell on a dedicated unlit blended pipeline.
+- This revision makes both plume width and length respond much more strongly to
+  normalized speed, especially near maximum speed.
+- A frame-rate-independent release envelope shrinks the plume over about 0.2
+  seconds instead of switching it off on the first frame without acceleration.
+- Canopy glass is isolated in a lit 50%-transparent mesh and drawn after an opaque
+  low-poly driver silhouette, hull, and world.
+- All eight test executables pass and focused clang-tidy is clean.
+
+Needs work:
+
+- The stronger speed response, release timing, glass color, and driver silhouette
+  still need explicit visual feedback.
+- Transparent faces use a deliberately small fixed draw order suitable for this
+  ship; a general transparent-object sorter is not justified yet.
+
+Next experiment:
+
+- Inspect the revised ship in `runway`, then return to advancing track-relative
+  state along the oval unless the new presentation has a concrete visual defect.

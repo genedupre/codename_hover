@@ -281,7 +281,15 @@ GpuShader load_shader(SDL_GPUDevice* device, const std::string& path, SDL_GPUSha
     return shader;
 }
 
-GraphicsPipeline create_vehicle_pipeline(SDL_GPUDevice* device, SDL_Window* window) {
+struct MeshPipelineConfig {
+    std::string_view fragment_shader_filename;
+    std::string_view debug_name;
+    bool alpha_blending;
+    bool depth_write;
+};
+
+GraphicsPipeline create_mesh_pipeline(SDL_GPUDevice* device, SDL_Window* window,
+                                      MeshPipelineConfig config) {
     const char* base_path = SDL_GetBasePath();
     if (base_path == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not find the executable directory: %s",
@@ -296,8 +304,9 @@ GraphicsPipeline create_vehicle_pipeline(SDL_GPUDevice* device, SDL_Window* wind
         return GraphicsPipeline{nullptr, GraphicsPipelineDeleter{device}};
     }
 
-    GpuShader fragment_shader = load_shader(device, shader_directory + "vehicle_fragment.spv",
-                                            SDL_GPU_SHADERSTAGE_FRAGMENT);
+    GpuShader fragment_shader =
+        load_shader(device, shader_directory + std::string{config.fragment_shader_filename},
+                    SDL_GPU_SHADERSTAGE_FRAGMENT);
     if (!fragment_shader) {
         return GraphicsPipeline{nullptr, GraphicsPipelineDeleter{device}};
     }
@@ -317,7 +326,19 @@ GraphicsPipeline create_vehicle_pipeline(SDL_GPUDevice* device, SDL_Window* wind
                                static_cast<Uint32>(offsetof(hover::render::Vertex, normal))},
         SDL_GPUVertexAttribute{2, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
                                static_cast<Uint32>(offsetof(hover::render::Vertex, color))},
+        SDL_GPUVertexAttribute{3, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,
+                               static_cast<Uint32>(offsetof(hover::render::Vertex, opacity))},
     };
+
+    if (config.alpha_blending) {
+        color_target.blend_state.enable_blend = true;
+        color_target.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+        color_target.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+        color_target.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+        color_target.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+        color_target.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+        color_target.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+    }
 
     SDL_GPUGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.vertex_shader = vertex_shader.get();
@@ -332,7 +353,7 @@ GraphicsPipeline create_vehicle_pipeline(SDL_GPUDevice* device, SDL_Window* wind
     pipeline_info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
     pipeline_info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
     pipeline_info.depth_stencil_state.enable_depth_test = true;
-    pipeline_info.depth_stencil_state.enable_depth_write = true;
+    pipeline_info.depth_stencil_state.enable_depth_write = config.depth_write;
     pipeline_info.target_info.color_target_descriptions = &color_target;
     pipeline_info.target_info.num_color_targets = 1;
     pipeline_info.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
@@ -341,10 +362,12 @@ GraphicsPipeline create_vehicle_pipeline(SDL_GPUDevice* device, SDL_Window* wind
     GraphicsPipeline pipeline{SDL_CreateGPUGraphicsPipeline(device, &pipeline_info),
                               GraphicsPipelineDeleter{device}};
     if (!pipeline) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not create the vehicle pipeline: %s",
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not create the %.*s pipeline: %s",
+                     static_cast<int>(config.debug_name.size()), config.debug_name.data(),
                      SDL_GetError());
     } else {
-        SDL_Log("3D vehicle pipeline created from SPIR-V shaders in '%s'.",
+        SDL_Log("%.*s pipeline created from SPIR-V shaders in '%s'.",
+                static_cast<int>(config.debug_name.size()), config.debug_name.data(),
                 shader_directory.c_str());
     }
 
@@ -371,7 +394,10 @@ void draw_mesh(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_p
 
 struct SceneMeshes {
     const hover::render::GpuMesh& ship;
-    const hover::render::GpuMesh& engine_pulse;
+    const hover::render::GpuMesh& canopy;
+    const hover::render::GpuMesh& driver;
+    const hover::render::GpuMesh& engine_pulse_outer;
+    const hover::render::GpuMesh& engine_pulse_core;
     const hover::render::GpuMesh& world;
 };
 
@@ -419,7 +445,9 @@ ScenarioSetup make_scenario_setup(hover::core::DevelopmentScenario scenario) {
 }
 
 RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
-                          SDL_GPUGraphicsPipeline* pipeline, const SceneMeshes& meshes,
+                          SDL_GPUGraphicsPipeline* opaque_pipeline,
+                          SDL_GPUGraphicsPipeline* transparent_vehicle_pipeline,
+                          SDL_GPUGraphicsPipeline* pulse_pipeline, const SceneMeshes& meshes,
                           const hover::game::VehiclePose& ship_pose,
                           hover::render::EnginePulseSample engine_pulse,
                           DepthTarget& depth_target) {
@@ -487,24 +515,35 @@ RenderResult render_frame(SDL_GPUDevice* device, SDL_Window* window,
 
     SDL_GPURenderPass* render_pass =
         SDL_BeginGPURenderPass(command_buffer, &color_target, 1, &depth_target_info);
-    SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
+    SDL_BindGPUGraphicsPipeline(render_pass, opaque_pipeline);
     draw_mesh(command_buffer, render_pass, meshes.world,
               VertexUniforms{view_projection, hover::math::identity()});
     const hover::math::Mat4 ship_model = hover::game::model_matrix(ship_pose);
+    draw_mesh(command_buffer, render_pass, meshes.ship,
+              VertexUniforms{view_projection, ship_model});
+    draw_mesh(command_buffer, render_pass, meshes.driver,
+              VertexUniforms{view_projection, ship_model});
+    SDL_BindGPUGraphicsPipeline(render_pass, transparent_vehicle_pipeline);
+    draw_mesh(command_buffer, render_pass, meshes.canopy,
+              VertexUniforms{view_projection, ship_model});
     if (engine_pulse.visible) {
         constexpr std::array engine_sockets{
             hover::math::Vec3{0.72F, -0.09F, -2.50F},
             hover::math::Vec3{-0.72F, -0.09F, -2.50F},
         };
+        SDL_BindGPUGraphicsPipeline(render_pass, pulse_pipeline);
         for (const hover::math::Vec3 socket : engine_sockets) {
-            const hover::math::Mat4 pulse_model = ship_model * hover::math::translation(socket) *
-                                                  hover::math::scaling(engine_pulse.uniform_scale);
-            draw_mesh(command_buffer, render_pass, meshes.engine_pulse,
+            const hover::math::Mat4 pulse_model =
+                ship_model * hover::math::translation(socket) *
+                hover::math::scaling(hover::math::Vec3{engine_pulse.radial_scale,
+                                                       engine_pulse.radial_scale,
+                                                       engine_pulse.length_scale});
+            draw_mesh(command_buffer, render_pass, meshes.engine_pulse_outer,
+                      VertexUniforms{view_projection, pulse_model});
+            draw_mesh(command_buffer, render_pass, meshes.engine_pulse_core,
                       VertexUniforms{view_projection, pulse_model});
         }
     }
-    draw_mesh(command_buffer, render_pass, meshes.ship,
-              VertexUniforms{view_projection, ship_model});
     SDL_EndGPURenderPass(render_pass);
 
     if (!SDL_SubmitGPUCommandBuffer(command_buffer)) {
@@ -539,8 +578,22 @@ int run(hover::core::DevelopmentScenario scenario) {
     }
     const GpuWindowClaim gpu_window_claim{gpu_device.get(), window.get()};
 
-    GraphicsPipeline vehicle_pipeline = create_vehicle_pipeline(gpu_device.get(), window.get());
+    GraphicsPipeline vehicle_pipeline =
+        create_mesh_pipeline(gpu_device.get(), window.get(),
+                             MeshPipelineConfig{"vehicle_fragment.spv", "opaque 3D", false, true});
     if (!vehicle_pipeline) {
+        return EXIT_FAILURE;
+    }
+    GraphicsPipeline engine_pulse_pipeline = create_mesh_pipeline(
+        gpu_device.get(), window.get(),
+        MeshPipelineConfig{"engine_pulse_fragment.spv", "blended engine pulse", true, false});
+    if (!engine_pulse_pipeline) {
+        return EXIT_FAILURE;
+    }
+    GraphicsPipeline transparent_vehicle_pipeline = create_mesh_pipeline(
+        gpu_device.get(), window.get(),
+        MeshPipelineConfig{"vehicle_fragment.spv", "transparent 3D", true, false});
+    if (!transparent_vehicle_pipeline) {
         return EXIT_FAILURE;
     }
 
@@ -557,10 +610,25 @@ int run(hover::core::DevelopmentScenario scenario) {
                           ship_definition.visual_mesh_id)) {
         return EXIT_FAILURE;
     }
+    hover::render::GpuMesh canopy_mesh{gpu_device.get()};
+    if (!canopy_mesh.upload(hover::assets::generated::make_prototype_01_canopy_mesh(),
+                            "generated/prototype_01_canopy")) {
+        return EXIT_FAILURE;
+    }
+    hover::render::GpuMesh driver_mesh{gpu_device.get()};
+    if (!driver_mesh.upload(hover::assets::generated::make_prototype_01_driver_mesh(),
+                            "generated/prototype_01_driver")) {
+        return EXIT_FAILURE;
+    }
 
-    hover::render::GpuMesh engine_pulse_mesh{gpu_device.get()};
-    if (!engine_pulse_mesh.upload(hover::assets::generated::make_engine_pulse_mesh(),
-                                  "generated/prototype_01_engine_pulse")) {
+    hover::render::GpuMesh engine_pulse_outer_mesh{gpu_device.get()};
+    if (!engine_pulse_outer_mesh.upload(hover::assets::generated::make_engine_pulse_outer_mesh(),
+                                        "generated/prototype_01_engine_pulse_outer")) {
+        return EXIT_FAILURE;
+    }
+    hover::render::GpuMesh engine_pulse_core_mesh{gpu_device.get()};
+    if (!engine_pulse_core_mesh.upload(hover::assets::generated::make_engine_pulse_core_mesh(),
+                                       "generated/prototype_01_engine_pulse_core")) {
         return EXIT_FAILURE;
     }
 
@@ -569,7 +637,8 @@ int run(hover::core::DevelopmentScenario scenario) {
     if (!world_mesh.upload(scenario_setup.world_mesh, scenario_setup.world_mesh_id)) {
         return EXIT_FAILURE;
     }
-    const SceneMeshes scene_meshes{ship_mesh, engine_pulse_mesh, world_mesh};
+    const SceneMeshes scene_meshes{ship_mesh, canopy_mesh, driver_mesh, engine_pulse_outer_mesh,
+                                   engine_pulse_core_mesh, world_mesh};
     DepthTarget depth_target{gpu_device.get()};
 
     const std::string_view active_scenario = hover::core::scenario_name(scenario);
@@ -607,6 +676,7 @@ int run(hover::core::DevelopmentScenario scenario) {
     hover::game::VehicleState previous_vehicle_state = scenario_setup.initial_vehicle_state;
     hover::game::VehicleState current_vehicle_state = scenario_setup.initial_vehicle_state;
     double engine_pulse_elapsed_seconds = 0.0;
+    float engine_pulse_intensity = 0.0F;
     bool running = true;
     while (running) {
         const double elapsed_seconds = frame_timer.elapsed_seconds();
@@ -642,13 +712,18 @@ int run(hover::core::DevelopmentScenario scenario) {
             const float propulsion_intensity = std::clamp(
                 propulsion_acceleration / handling.forward_acceleration_metres_per_second_squared,
                 0.0F, 1.0F);
+            engine_pulse_intensity = hover::render::advance_engine_pulse_intensity(
+                engine_pulse_intensity, propulsion_intensity, elapsed_seconds);
+            const float speed_ratio = current_vehicle_state.forward_speed_metres_per_second /
+                                      handling.maximum_forward_speed_metres_per_second;
             const hover::render::EnginePulseSample engine_pulse =
                 hover::render::sample_engine_pulse(engine_pulse_elapsed_seconds,
-                                                   propulsion_intensity);
+                                                   engine_pulse_intensity, speed_ratio);
 
-            const RenderResult render_result =
-                render_frame(gpu_device.get(), window.get(), vehicle_pipeline.get(), scene_meshes,
-                             render_pose, engine_pulse, depth_target);
+            const RenderResult render_result = render_frame(
+                gpu_device.get(), window.get(), vehicle_pipeline.get(),
+                transparent_vehicle_pipeline.get(), engine_pulse_pipeline.get(), scene_meshes,
+                render_pose, engine_pulse, depth_target);
             if (render_result == RenderResult::failed) {
                 return EXIT_FAILURE;
             }

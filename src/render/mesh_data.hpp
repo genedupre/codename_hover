@@ -11,6 +11,7 @@ struct Vertex {
     math::Vec3 position;
     math::Vec3 normal;
     math::Vec3 color;
+    float opacity;
 };
 
 struct MeshData {

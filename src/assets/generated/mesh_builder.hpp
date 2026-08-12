@@ -9,6 +9,7 @@ struct Triangle {
     math::Vec3 second;
     math::Vec3 third;
     math::Vec3 color;
+    float opacity = 1.0F;
 };
 
 struct Quad {
@@ -17,6 +18,7 @@ struct Quad {
     math::Vec3 third;
     math::Vec3 fourth;
     math::Vec3 color;
+    float opacity = 1.0F;
 };
 
 class MeshBuilder final {

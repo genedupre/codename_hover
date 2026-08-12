@@ -28,6 +28,11 @@ and surface-normal motion. It is not wired into `oval` yet; the next gameplay
 implementation advances that state along the oval centerline without steering.
 Do not jump ahead to race systems.
 
+Prototype 01's acceleration exhaust uses a strongly speed-responsive light-blue
+core and 50%-transparent outer shell. A presentation-only release envelope
+shrinks it for about 0.2 seconds before it disappears. Its canopy is also a
+separate 50%-transparent mesh over a simple opaque driver silhouette.
+
 The cross-device bootstrap is not complete. A wired Steam Controller was detected
 and used on the laptop on 2026-08-11. The first laptop-built executable and
 shaders were rsynced to the Steam Deck MicroSD card, where the headless scenario

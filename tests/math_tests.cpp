@@ -88,6 +88,15 @@ void test_uniform_scaling() {
           "uniform scaling happens around local origin before translation");
 }
 
+void test_nonuniform_scaling() {
+    const hover::math::Vec4 transformed = hover::math::transform(
+        hover::math::scaling({2.0F, 3.0F, 4.0F}), hover::math::Vec4{1.0F, 2.0F, 3.0F, 1.0F});
+
+    check(nearly_equal(transformed.x, 2.0F) && nearly_equal(transformed.y, 6.0F) &&
+              nearly_equal(transformed.z, 12.0F) && nearly_equal(transformed.w, 1.0F),
+          "nonuniform scaling independently controls three local axes");
+}
+
 } // namespace
 
 int main() {
@@ -96,6 +105,7 @@ int main() {
     test_zero_to_one_projection_depth();
     test_matrix_composition_order();
     test_uniform_scaling();
+    test_nonuniform_scaling();
 
     if (failure_count != 0) {
         std::cerr << failure_count << " math test(s) failed\n";

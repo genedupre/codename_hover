@@ -5,5 +5,7 @@
 namespace hover::assets::generated {
 
 [[nodiscard]] render::MeshData make_prototype_01_mesh();
+[[nodiscard]] render::MeshData make_prototype_01_canopy_mesh();
+[[nodiscard]] render::MeshData make_prototype_01_driver_mesh();
 
 } // namespace hover::assets::generated

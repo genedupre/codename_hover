@@ -149,4 +149,10 @@ hover_add_shader(
     STAGE fragment
 )
 
+hover_add_shader(
+    NAME engine_pulse_fragment
+    SOURCE shaders/engine_pulse.frag.hlsl
+    STAGE fragment
+)
+
 add_dependencies(codename_hover hover_shaders)

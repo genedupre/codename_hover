@@ -7,25 +7,32 @@
 #include <utility>
 
 namespace hover::assets::generated {
+namespace {
 
-render::MeshData make_engine_pulse_mesh() {
-    constexpr std::array base_ring{
-        math::Vec3{0.0F, 0.22F, 0.0F},
-        math::Vec3{0.28F, 0.0F, 0.0F},
-        math::Vec3{0.0F, -0.22F, 0.0F},
-        math::Vec3{-0.28F, 0.0F, 0.0F},
+struct PlumeSpec {
+    float horizontal_radius;
+    float vertical_radius;
+    float length_metres;
+    math::Vec3 color;
+    float opacity;
+};
+
+render::MeshData make_plume(const PlumeSpec& spec) {
+    const std::array base_ring{
+        math::Vec3{0.0F, spec.vertical_radius, 0.0F},
+        math::Vec3{spec.horizontal_radius, 0.0F, 0.0F},
+        math::Vec3{0.0F, -spec.vertical_radius, 0.0F},
+        math::Vec3{-spec.horizontal_radius, 0.0F, 0.0F},
     };
-    constexpr std::array tip_ring{
-        math::Vec3{0.0F, 0.035F, -1.35F},
-        math::Vec3{0.045F, 0.0F, -1.35F},
-        math::Vec3{0.0F, -0.035F, -1.35F},
-        math::Vec3{-0.045F, 0.0F, -1.35F},
+    const float tip_horizontal_radius = spec.horizontal_radius * 0.12F;
+    const float tip_vertical_radius = spec.vertical_radius * 0.12F;
+    const std::array tip_ring{
+        math::Vec3{0.0F, tip_vertical_radius, -spec.length_metres},
+        math::Vec3{tip_horizontal_radius, 0.0F, -spec.length_metres},
+        math::Vec3{0.0F, -tip_vertical_radius, -spec.length_metres},
+        math::Vec3{-tip_horizontal_radius, 0.0F, -spec.length_metres},
     };
-    constexpr std::array colors{
-        math::Vec3{1.0F, 0.22F, 0.025F},
-        math::Vec3{1.0F, 0.62F, 0.055F},
-    };
-    constexpr math::Vec3 tip_center{0.0F, 0.0F, -1.35F};
+    const math::Vec3 tip_center{0.0F, 0.0F, -spec.length_metres};
 
     MeshBuilder builder;
     for (std::size_t side = 0; side < base_ring.size(); ++side) {
@@ -35,16 +42,40 @@ render::MeshData make_engine_pulse_mesh() {
             tip_ring[side],
             tip_ring[next],
             base_ring[next],
-            colors[side % colors.size()],
+            spec.color,
+            spec.opacity,
         });
         builder.add_triangle(Triangle{
             tip_ring[side],
             tip_center,
             tip_ring[next],
-            colors[(side + 1U) % colors.size()],
+            spec.color,
+            spec.opacity,
         });
     }
     return std::move(builder).build();
+}
+
+} // namespace
+
+render::MeshData make_engine_pulse_outer_mesh() {
+    return make_plume(PlumeSpec{
+        .horizontal_radius = 0.38F,
+        .vertical_radius = 0.30F,
+        .length_metres = 2.85F,
+        .color = {0.30F, 0.78F, 1.0F},
+        .opacity = 0.5F,
+    });
+}
+
+render::MeshData make_engine_pulse_core_mesh() {
+    return make_plume(PlumeSpec{
+        .horizontal_radius = 0.20F,
+        .vertical_radius = 0.15F,
+        .length_metres = 2.35F,
+        .color = {0.68F, 0.93F, 1.0F},
+        .opacity = 1.0F,
+    });
 }
 
 } // namespace hover::assets::generated

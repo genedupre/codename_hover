@@ -18,8 +18,8 @@ future Blender GLB ----/
 ShipDefinition -> identity, visual-mesh key, handling, collider, mass, energy
 ```
 
-- `render::MeshData` is CPU-owned position, flat normal, color, and 32-bit index
-  data. Every supported visual source must produce this value.
+- `render::MeshData` is CPU-owned position, flat normal, color, opacity, and
+  32-bit index data. Every supported visual source must produce this value.
 - `render::GpuMesh` validates and uploads a `MeshData`. It owns SDL_GPU vertex and
   index buffers and does not know which ship or source produced them.
 - `game::ShipDefinition` owns gameplay-facing data and references a visual mesh by
@@ -54,15 +54,21 @@ contract for Prototype 01.
 
 Prototype 01 is the first balanced baseline, not a final name or finished design.
 Its generated dart/manta-style mesh contains a faceted central hull, swept wings,
-dark canopy, twin rear engine pods, and colored exhaust faces. Flat shading uses
-one duplicated normal per triangle. The current mesh is 96 triangles; this is
-small enough that duplication is intentional and harmless.
+50%-transparent blue canopy glass, twin rear engine pods, colored exhaust faces,
+and a small three-dimensional driver silhouette beneath the glass. Flat shading
+uses one duplicated normal per triangle. The opaque ship shell is 90 triangles,
+the glass is 6 triangles, and the driver is 20 triangles; this is small enough
+that duplication is intentional and harmless.
 
-A separate 12-triangle low-poly plume is drawn at each engine socket only during
-positive propulsion input. Its presentation-time scale combines two frequencies
-for a slightly irregular pulse and does not alter simulation. The sockets are
-Prototype 01-specific constants for now; make them ship visual data when another
-ship or Blender-authored mesh requires the same effect.
+Two separate 12-triangle low-poly plumes are drawn at each engine socket only
+during positive propulsion input. A light-blue opaque core sits inside a larger,
+longer light-blue shell with 50% opacity. Normalized forward speed strongly grows
+both radial and longitudinal scale and increases its two presentation-time pulse
+frequencies. Releasing propulsion drives a frame-rate-independent 0.2-second
+presentation envelope so the plume becomes very small before disappearing. This
+visual sampling does not alter simulation. The sockets are Prototype 01-specific
+constants for now; make them ship visual data when another ship or
+Blender-authored mesh requires the same effect.
 
 Its provisional definition currently specifies:
 
@@ -119,7 +125,8 @@ the intended track-relative hover physics and its feel is not final.
 
 - `main.cpp` explicitly loads Prototype 01; there is no roster or asset registry.
 - There is no mesh instancing yet.
-- The current vertex format has position, normal, and color but no UV coordinates.
+- The current vertex format has position, normal, color, and opacity but no UV
+  coordinates.
 - Colliders are validated as data but not simulated or drawn.
 - Damage, explosions, boost, hover behavior, and ship selection do not exist.
 - GLB loading and Blender export conventions remain future work.

@@ -36,16 +36,29 @@ visible milestone needs them.
 
 ## Engine pulse presentation
 
-Prototype 01 has a separate tiny low-poly plume mesh drawn at each rear engine
-socket. Positive propulsion input makes it visible; idle, coasting, and net
-braking hide it. Two elapsed-time frequencies modulate uniform scale so the pulse
-has irregular life without feeding variable frame time into deterministic
-simulation. Propulsion strength changes the base scale.
+Prototype 01 has two nested low-poly plume meshes drawn at each rear engine
+socket: an opaque light-blue core and a larger light-blue shell with 50% vertex
+opacity. Positive propulsion input makes them visible. Releasing propulsion uses
+a short presentation-only envelope that shrinks the plume to almost nothing over
+about 0.2 seconds before hiding it; sustained idle and braking remain plume-free.
+Normalized forward speed strongly controls both length and width, with a
+deliberately pronounced change near top speed, and also controls pulse frequency.
+Two elapsed-time frequencies add irregular life without feeding variable frame
+time into deterministic simulation.
 
-The plume currently reuses the simple opaque vertex-color pipeline. Engine socket
-positions live beside the Prototype 01 draw until another ship or authored asset
-proves a reusable attachment boundary is needed. Boost will later use a visibly
-different, more extreme presentation rather than merely increasing this pulse.
+The plumes use a small unlit alpha-blended pipeline so their color stays vivid.
+It depth-tests against the opaque scene but does not write depth; the translucent
+outer shell is drawn before the core. Opaque track and ship drawing remains on its
+original depth-writing pipeline. Engine socket positions live beside the
+Prototype 01 draw until another ship or authored asset proves a reusable
+attachment boundary is needed. Boost will later use a visibly different, more
+extreme presentation rather than merely increasing this pulse.
+
+Prototype 01's canopy glass is a separate 50%-transparent, lit mesh. The opaque
+hull and low-poly driver silhouette draw first and write depth; the canopy then
+draws through the alpha-blended, non-depth-writing 3D pipeline. Keeping glass out
+of the opaque ship mesh avoids making the entire vehicle translucent and leaves a
+clean asset boundary for a future authored ship.
 
 ## Display behavior
 

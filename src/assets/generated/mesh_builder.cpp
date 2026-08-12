@@ -13,17 +13,20 @@ void MeshBuilder::add_triangle(const Triangle& triangle) {
         math::cross(triangle.second - triangle.first, triangle.third - triangle.first));
     const std::uint32_t first_index = static_cast<std::uint32_t>(mesh_.vertices.size());
 
-    mesh_.vertices.push_back(render::Vertex{triangle.first, normal, triangle.color});
-    mesh_.vertices.push_back(render::Vertex{triangle.second, normal, triangle.color});
-    mesh_.vertices.push_back(render::Vertex{triangle.third, normal, triangle.color});
+    mesh_.vertices.push_back(
+        render::Vertex{triangle.first, normal, triangle.color, triangle.opacity});
+    mesh_.vertices.push_back(
+        render::Vertex{triangle.second, normal, triangle.color, triangle.opacity});
+    mesh_.vertices.push_back(
+        render::Vertex{triangle.third, normal, triangle.color, triangle.opacity});
     mesh_.indices.push_back(first_index);
     mesh_.indices.push_back(first_index + 1U);
     mesh_.indices.push_back(first_index + 2U);
 }
 
 void MeshBuilder::add_quad(const Quad& quad) {
-    add_triangle(Triangle{quad.first, quad.second, quad.third, quad.color});
-    add_triangle(Triangle{quad.first, quad.third, quad.fourth, quad.color});
+    add_triangle(Triangle{quad.first, quad.second, quad.third, quad.color, quad.opacity});
+    add_triangle(Triangle{quad.first, quad.third, quad.fourth, quad.color, quad.opacity});
 }
 
 render::MeshData MeshBuilder::build() && { return std::move(mesh_); }
