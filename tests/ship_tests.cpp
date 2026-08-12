@@ -43,7 +43,10 @@ void test_first_ship_definition() {
               ship.handling.boost_acceleration_metres_per_second_squared >
                   ship.handling.forward_acceleration_metres_per_second_squared &&
               ship.handling.boost_excess_speed_decay_metres_per_second_squared > 0.0F &&
-              ship.handling.boost_duration_seconds > 0.0F,
+              ship.handling.boost_duration_seconds > 0.0F &&
+              ship.handling.boost_throttle_release_tail_seconds > 0.0F &&
+              ship.handling.boost_throttle_release_tail_seconds <
+                  ship.handling.boost_duration_seconds,
           "Prototype 01 boost exceeds normal speed and defines its duration and return rate");
     check(ship.collision.maximum_energy == 100.0F,
           "Prototype 01 establishes the baseline energy scale");

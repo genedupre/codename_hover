@@ -87,6 +87,7 @@ Its provisional definition currently specifies:
 | Boost acceleration | 145 m/s² |
 | Excess boost-speed decay | 170 m/s² |
 | Boost burst duration | 1.0 s |
+| Boost throttle-release tail | 0.20 s |
 | Maximum visual turn roll | 0.18 rad (~10.3°) |
 | Visual turn-roll response | 8.0/s |
 | Relative collision mass | 1.0 |
@@ -137,9 +138,11 @@ ends, excess speed returns smoothly to the normal ceiling instead of snapping th
 ship down. Braking cancels a burst. This initial mechanic has no energy cost or
 cooldown and is intended for handling validation, not final balance. Its 145 m/s²
 boost acceleration is the full-throttle value and scales with analog throttle.
-Releasing throttle during a burst applies the existing 90 m/s² coasting
-deceleration from whatever boosted speed the ship has reached; it does not cancel
-the remaining burst presentation or force the ship immediately back to its base
+Activation requires positive throttle and no brake. Releasing throttle during a
+burst applies the existing 90 m/s² coasting deceleration from whatever boosted
+speed the ship has reached and shortens the remaining burst to at most 0.20
+seconds. The short presentation tail remains, but reapplying throttle does not
+restore the discarded burst time or force the ship immediately back to its base
 ceiling.
 
 The prototype camera adds a speed-gated response shared by the current scenario

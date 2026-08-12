@@ -55,12 +55,14 @@ vary on Nintendo-style and other layouts.
 
 Drift remains represented but does not yet alter the provisional runway
 simulation. Boost uses the rising edge of its merged digital action to start a
-timed fixed-step burst; holding a source does not continuously boost or retrigger
-the action. A successful activation produces one semantic event and submits a
-short rumble pulse to every rumble-capable controller currently assigned to the
-prototype player. This also happens when boost is activated by keyboard or mouse;
-simultaneous braking cancels boost and suppresses the pulse. See `game_design.md`
-and `rendering.md`.
+timed fixed-step burst when throttle is positive and brake is inactive. Holding a
+source does not continuously boost or retrigger the action; after an ineligible
+press, the player must release and press again. A successful activation produces
+one semantic event and submits a short rumble pulse to every rumble-capable
+controller currently assigned to the prototype player. This also happens when
+boost is activated by keyboard or mouse. No-throttle presses and simultaneous
+braking suppress both boost and the pulse. See `game_design.md` and
+`rendering.md`.
 
 ## Device lifecycle and capabilities
 

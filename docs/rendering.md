@@ -59,8 +59,10 @@ wider and longer core/shell response, and a separate translucent cyan diamond
 flare at each engine. The extra geometry is only drawn while fixed-step vehicle
 state reports active boost, making boost visually distinct from ordinary
 acceleration. The timed boost flare remains active after throttle release even
-though vehicle acceleration stops and coasting begins; it communicates the
-remaining burst state rather than claiming that throttle is still pressed.
+though vehicle acceleration stops and coasting begins, but only for the
+ship-defined 0.20-second release tail. It communicates the remaining burst state
+rather than claiming that throttle is still pressed, then the existing plume
+release envelope shrinks away.
 
 The boost camera response is a render-time envelope driven by fixed-step boost
 and speed state. It stays off below 65% of the ship's normal maximum speed. Once

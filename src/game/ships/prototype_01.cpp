@@ -20,6 +20,7 @@ const ShipDefinition& prototype_01_definition() {
                 .boost_acceleration_metres_per_second_squared = 145.0F,
                 .boost_excess_speed_decay_metres_per_second_squared = 170.0F,
                 .boost_duration_seconds = 1.0F,
+                .boost_throttle_release_tail_seconds = 0.20F,
             },
         .presentation =
             {

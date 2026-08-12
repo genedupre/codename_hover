@@ -11,14 +11,21 @@ VehicleTickEvents simulate_vehicle(VehicleState& state, const VehicleTick& tick)
     const HandlingProfile& handling = tick.definition.handling;
     const bool boost_just_pressed = tick.input.boost && !state.boost_input_was_down;
     state.boost_input_was_down = tick.input.boost;
-    if (boost_just_pressed) {
+    constexpr float active_input_threshold = 0.001F;
+    const bool throttle_active = tick.input.throttle > active_input_threshold;
+    const bool brake_active = tick.input.brake > active_input_threshold;
+    const bool can_activate_boost = throttle_active && !brake_active;
+    if (boost_just_pressed && can_activate_boost) {
         state.boost_seconds_remaining = handling.boost_duration_seconds;
     }
-    if (tick.input.brake > 0.001F) {
+    if (brake_active) {
         state.boost_seconds_remaining = 0.0F;
+    } else if (!throttle_active && state.boost_seconds_remaining > 0.0F) {
+        state.boost_seconds_remaining =
+            std::min(state.boost_seconds_remaining, handling.boost_throttle_release_tail_seconds);
     }
     state.boosting = state.boost_seconds_remaining > 0.0F;
-    const VehicleTickEvents events{.boost_activated = boost_just_pressed && state.boosting};
+    const VehicleTickEvents events{.boost_activated = boost_just_pressed && can_activate_boost};
     float acceleration =
         tick.input.throttle * handling.forward_acceleration_metres_per_second_squared -
         tick.input.brake * handling.braking_deceleration_metres_per_second_squared;

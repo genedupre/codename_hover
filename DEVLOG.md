@@ -940,3 +940,34 @@ Needs interactive verification:
 - Confirm releasing A/South while the burst is active produces the intended
   boosted-speed coast-down.
 - Confirm the Steam Controller pulse is noticeable but not harsh or too long.
+
+### 2026-08-12 — eligible boost rumble and shorter throttle-release tail
+
+Build/revision: uncommitted changes after `f7dbbff`.
+
+Hardware and OS: Compilation and automated tests on the HP ZBook Studio 16 G11,
+Ubuntu 24.04.4 LTS. Interactive handling and physical rumble are not yet verified.
+
+Track/scenario and settings: `runway` is the intended first test scenario; wired
+Steam Controller is the intended first rumble device.
+
+Implemented:
+
+- A boost rising edge is eligible only with positive throttle and no brake.
+  Ineligible presses start no timer and emit no rumble event; holding the rejected
+  press while adding throttle does not bypass the rising-edge rule.
+- Releasing throttle during an active Prototype 01 burst irreversibly caps its
+  remaining time to 0.20 seconds while applying ordinary coasting deceleration.
+- Once the short tail ends, boosted excess speed uses the existing stronger
+  170 m/s² return rate.
+- The 0.20-second release tail is explicit ship handling data and validated as no
+  longer than the full boost duration.
+- All nine automated test executables pass, including activation eligibility,
+  one-shot feedback, release-tail duration, coasting, and analog throttle tests.
+
+Needs interactive verification:
+
+- Confirm no rumble occurs when X is pressed without A/South held or while
+  braking.
+- Confirm the 0.20-second tail feels short enough and the transition into excess
+  speed decay feels continuous.

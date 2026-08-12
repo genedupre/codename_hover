@@ -209,17 +209,16 @@ void test_boost_acceleration_requires_throttle_and_activation_is_one_event() {
     const hover::game::ShipDefinition& ship = hover::game::ships::prototype_01_definition();
     constexpr float tick_seconds = 1.0F / 90.0F;
 
-    hover::game::VehicleState stopped{};
-    const hover::game::VehicleTickEvents stopped_activation = hover::game::simulate_vehicle(
-        stopped, hover::game::VehicleTick{{.boost = true}, ship, tick_seconds});
-    check(stopped_activation.boost_activated && stopped.boosting,
-          "a rising boost press activates the timed state without throttle");
-    check(nearly_equal(stopped.forward_speed_metres_per_second, 0.0F),
-          "boost does not accelerate a stopped ship without throttle");
-    const hover::game::VehicleTickEvents held_boost = hover::game::simulate_vehicle(
-        stopped, hover::game::VehicleTick{{.boost = true}, ship, tick_seconds});
-    check(!held_boost.boost_activated,
-          "holding boost does not emit another activation event for rumble");
+    hover::game::VehicleState no_throttle{};
+    const hover::game::VehicleTickEvents rejected_activation = hover::game::simulate_vehicle(
+        no_throttle, hover::game::VehicleTick{{.boost = true}, ship, tick_seconds});
+    check(!rejected_activation.boost_activated && !no_throttle.boosting,
+          "boost without throttle neither starts a burst nor emits activation feedback");
+    const hover::game::VehicleTickEvents held_rejected_boost = hover::game::simulate_vehicle(
+        no_throttle,
+        hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
+    check(!held_rejected_boost.boost_activated && !no_throttle.boosting,
+          "adding throttle while boost remains held does not bypass rising-edge activation");
 
     hover::game::VehicleState braking{};
     const hover::game::VehicleTickEvents cancelled_activation = hover::game::simulate_vehicle(
@@ -231,13 +230,33 @@ void test_boost_acceleration_requires_throttle_and_activation_is_one_event() {
     moving.forward_speed_metres_per_second =
         ship.handling.base_maximum_forward_speed_metres_per_second * 1.20F;
     const float speed_before_release = moving.forward_speed_metres_per_second;
-    hover::game::simulate_vehicle(moving,
-                                  hover::game::VehicleTick{{.boost = true}, ship, tick_seconds});
+    moving.boost_seconds_remaining = ship.handling.boost_duration_seconds;
+    moving.boosting = true;
+    hover::game::simulate_vehicle(moving, hover::game::VehicleTick{{}, ship, tick_seconds});
     const float expected_speed =
         speed_before_release -
         ship.handling.coasting_deceleration_metres_per_second_squared * tick_seconds;
     check(moving.boosting && nearly_equal(moving.forward_speed_metres_per_second, expected_speed),
           "releasing throttle during boost coasts down from the boosted speed");
+    check(moving.boost_seconds_remaining < ship.handling.boost_throttle_release_tail_seconds &&
+              moving.boost_seconds_remaining > 0.0F,
+          "releasing throttle shortens the active boost to its brief release tail");
+
+    for (int tick = 0; tick < 20; ++tick) {
+        hover::game::simulate_vehicle(moving, hover::game::VehicleTick{{}, ship, tick_seconds});
+    }
+    check(!moving.boosting && moving.boost_seconds_remaining == 0.0F,
+          "the throttle-release tail ends much sooner than a full boost burst");
+
+    hover::game::VehicleState held_boost{};
+    const hover::game::VehicleTickEvents first_activation = hover::game::simulate_vehicle(
+        held_boost,
+        hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
+    const hover::game::VehicleTickEvents repeated_activation = hover::game::simulate_vehicle(
+        held_boost,
+        hover::game::VehicleTick{{.throttle = 1.0F, .boost = true}, ship, tick_seconds});
+    check(first_activation.boost_activated && !repeated_activation.boost_activated,
+          "an eligible held boost emits only one activation event for rumble");
 
     hover::game::VehicleState partial_throttle{};
     partial_throttle.forward_speed_metres_per_second =

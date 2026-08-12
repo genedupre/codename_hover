@@ -23,6 +23,7 @@ struct HandlingProfile {
     float boost_acceleration_metres_per_second_squared;
     float boost_excess_speed_decay_metres_per_second_squared;
     float boost_duration_seconds;
+    float boost_throttle_release_tail_seconds;
 };
 
 struct CollisionProfile {

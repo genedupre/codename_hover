@@ -44,13 +44,15 @@ visual improvement.
 X/West (plus keyboard X/Shift) now activates a provisional one-second fixed-step
 boost burst: a 1.28× speed ceiling, up to 145 m/s² added acceleration at full
 throttle, and 170 m/s² excess-speed decay afterward. Boost acceleration scales
-with analog throttle; releasing throttle during the burst applies ordinary
-coasting from the current boosted speed while the timed boost presentation stays
-active. Holding the action does not retrigger it; release and press again. B/East
-and the left trigger remain brake and cancel an active burst. A successful rising
-edge submits one 160 ms controller-rumble pulse, including when boost came from
-keyboard input. Boost adds a separate engine flare and stronger plume response
-for the timed state. At 65% of normal maximum speed, an active burst also latches a
+with analog throttle. A burst starts only on a rising boost edge while throttle is
+positive and brake is inactive; rejected presses do not rumble. Releasing throttle
+during the burst applies ordinary coasting from the current boosted speed and
+irreversibly caps the remaining active presentation to a 0.20-second tail. Holding
+the action does not retrigger it; release and press again. B/East and the left
+trigger remain brake and cancel an active burst. A successful rising edge submits
+one 160 ms controller-rumble pulse, including when boost came from keyboard input.
+Boost adds a separate engine flare and stronger plume response for the timed
+state. At 65% of normal maximum speed, an active burst also latches a
 presentation-only camera response for the remainder of that burst: up to 8° more
 vertical FOV, 0.6 m more follow distance, and 0.5 m more look-ahead, with a smooth
 release while excess speed decays. A low-speed boost still works but has no camera

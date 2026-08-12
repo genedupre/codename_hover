@@ -66,23 +66,28 @@ providing substantially more yaw authority near rest and through middle speeds.
 Treat this as playtest tuning, not the final track-relative steering model.
 
 The first boost is deliberately a button-activated, one-second burst with no
-energy or cooldown. A rising boost-action edge starts the timed fixed-step state;
-holding the button cannot retrigger it, so the player must release and press
-again. During the burst it adds acceleration up to a ship-defined boosted speed
-ceiling, with both normal and boost acceleration scaled by the analog throttle
-action. Releasing throttle therefore stops acceleration immediately and applies
-ordinary coasting deceleration from the current speed even while the boost timer,
-flare, and camera state remain active. After the burst, speed above the normal
-ceiling decays at a separate ship-defined rate and settles exactly at the normal
-ceiling before ordinary speed limiting resumes. Braking cancels an active burst.
-This establishes deterministic mechanics and tuning boundaries without
-prematurely designing the final energy system.
+energy or cooldown. A rising boost-action edge starts the timed fixed-step state
+only while throttle is positive and brake is inactive. Holding the button cannot
+retrigger it, so an ineligible press must be released and pressed again after the
+conditions become valid. During the burst it adds acceleration up to a
+ship-defined boosted speed ceiling, with both normal and boost acceleration scaled
+by the analog throttle action.
+
+Releasing throttle stops acceleration immediately, applies ordinary coasting
+deceleration from the current speed, and irreversibly caps that burst to its
+ship-defined release tail. Prototype 01's tail is 0.20 seconds, after which speed
+above the normal ceiling uses the stronger boost-excess decay. Reapplying throttle
+during the tail does not restore discarded burst time. The flare and any latched
+camera feedback remain active for the short tail and then use their normal release
+envelopes. Braking cancels an active burst immediately. This establishes
+deterministic mechanics and tuning boundaries without prematurely designing the
+final energy system.
 
 A successful boost activation emits one semantic simulation event. The current
-single-player runtime maps that event to a 160 ms controller-rumble pulse. Holding
-the boost action emits no additional event, simultaneous braking suppresses it,
-and keyboard or mouse activation can rumble an attached controller because
-feedback follows the gameplay event rather than a particular physical button.
+single-player runtime maps that event to a 160 ms controller-rumble pulse. A press
+without throttle, a press while braking, and a held boost action emit no event.
+Keyboard or mouse activation can rumble an attached controller because feedback
+follows the gameplay event rather than a particular physical button.
 
 Boost camera feedback is presentation-only and speed-gated. When an active burst
 reaches 65% of the ship's normal maximum speed, the response latches for the
